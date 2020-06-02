@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "208485423361",
+    "firebase_url": "https://blerw-master.firebaseio.com",
+    "project_id": "blerw-master",
+    "storage_bucket": "blerw-master.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:208485423361:android:9ab0f15c99cc6e3fb2a300",
+        "android_client_info": {
+          "package_name": "anonymouls.dev.MGCEX"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "208485423361-inabooe6dn3h00ram17k90oassfcv2c3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "anonymouls.dev.MGCEX",
+            "certificate_hash": "91b1484ca98a7279d8be50c213629f16f096de03"
+          }
+        },
+        {
+          "client_id": "208485423361-ms7u0cp5bq6o7e4hv9rsv09franmn0m3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDDp72jNxegsWT7UjwND_rcSrDIzcmkkrk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "208485423361-ms7u0cp5bq6o7e4hv9rsv09franmn0m3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_height="wrap_content"
+    android:layout_width="wrap_content"
+    android:background="#FFFFFF">
+
+
+    <TextView
+        android:id="@+id/infoText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="@string/info_text"
+        android:textSize="8pt" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/developer_mail"
+        android:gravity="center"
+        android:layout_margin="2pt"
+        android:layout_gravity="center"
+        android:selectAllOnFocus="false"
+        android:linksClickable="true"
+        android:autoLink="all"
+        android:layout_marginBottom="2pt"
+        android:textColor="#0000EE"
+        android:textSize="8pt" />
+
+    <TextView
+        android:id="@+id/about_app_page"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_margin="2pt"
+        android:gravity="center"
+        android:text="@string/about_application_page"
+        android:textColor="#0000EE"
+        android:textSize="8pt" />
+
+    <TextView
+        android:id="@+id/privacy_policy_page"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_margin="2pt"
+        android:gravity="center"
+        android:text="@string/privacy_policy"
+        android:textColor="#0000EE"
+        android:textSize="8pt" />
+
+    <View
+        style="@style/horizontalDivider"
+        android:background="#000000"
+        android:layout_height="1pt"
+        />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:orientation="horizontal" >
+
+        <Button
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/infoDialogClose"
+            android:background="@android:color/white"
+            android:text="@string/ok"
+            android:textColor="#5DBCD2"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+</LinearLayout>

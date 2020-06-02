@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/../BLERW-master.iml" filepath="$PROJECT_DIR$/../BLERW-master.iml" group="BLERW-master" />
+      <module fileurl="file://$PROJECT_DIR$/app.iml" filepath="$PROJECT_DIR$/app.iml" group="BLERW-master/app" />
+    </modules>
+  </component>
+</project>

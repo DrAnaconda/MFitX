@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:ads="http://schemas.android.com/apk/res-auto"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".SettingsActivity">
+
+
+    <TextView
+        android:id="@+id/deviceControlText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:text="@string/device_controls"
+        android:textStyle="bold"
+        android:textSize="7pt"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View style="@style/horizontalDivider"
+        android:id="@+id/deviceControlDivider"
+        app:layout_constraintTop_toBottomOf="@+id/deviceControlText"
+        app:layout_constraintStart_toEndOf="parent"/>
+
+    <Button
+        android:id="@+id/LoadPackListBtn"
+        android:layout_width="74dp"
+        android:layout_height="43dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:onClick="OnClickHandler"
+        android:text="@string/filters"
+        app:layout_constraintBottom_toBottomOf="@+id/NotificationsSwitch"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/NotificationsSwitch"
+        app:layout_constraintTop_toTopOf="@+id/NotificationsSwitch" />
+
+    <Button
+        android:id="@+id/RestoreToDefaultsBtn"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:onClick="OnClickHandler"
+        android:textSize="6pt"
+        android:text="@string/restore_to_defaults_str"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/stepSize" />
+
+    <Button
+        android:id="@+id/EraseDataOnRDeviceBtn"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:onClick="OnClickHandler"
+        android:text="@string/erase_data_on_band_str"
+        android:textSize="6pt"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/RestoreToDefaultsBtn" />
+
+    <Switch
+        android:id="@+id/GyroSwitch"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:text="@string/enable_auto_illumination"
+        android:textSize="6pt"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/PhoneSwitch" />
+
+    <Switch
+        android:id="@+id/NotificationsSwitch"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:onClick="OnClickHandler"
+        android:textSize="6pt"
+        android:text="@string/receive_notifications"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/breakConnectionBtn" />
+
+    <Switch
+        android:id="@+id/PhoneSwitch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="8dp"
+        android:textSize="6pt"
+        android:text="@string/receive_phone_call"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/NotificationsSwitch" />
+
+    <TextView
+        android:id="@+id/currentConnectionText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:textColor="@android:color/black"
+        android:text="@string/current_device_default_text"
+        android:textSize="6pt"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/deviceControlDivider" />
+
+    <Button
+        android:id="@+id/breakConnectionBtn"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:textSize="6pt"
+        android:text="@string/disconnect_btn_text"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/currentConnectionText" />
+
+    <EditText
+        android:id="@+id/stepSize"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:hint="@string/step_size_centimeters"
+        android:importantForAutofill="no"
+        android:inputType="numberDecimal"
+        android:text="@string/step_size_centimeters"
+        android:textSize="6pt"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/stepSizeHint"
+        app:layout_constraintTop_toBottomOf="@+id/GyroSwitch" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/EraseDataOnRDeviceBtn"
+        app:layout_constraintVertical_bias="0.0">
+
+        <EditText
+            android:id="@+id/numberRepeatsTextBox"
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginBottom="8dp"
+            android:ems="10"
+            android:inputType="number"
+            app:layout_constraintBottom_toBottomOf="@+id/repeat_notify_text"
+            app:layout_constraintStart_toEndOf="@+id/repeat_notify_text"
+            app:layout_constraintTop_toTopOf="@+id/repeat_notify_text"
+            android:autofillHints="AUTOFILL_HINT_BIRTH_DATE_MONTH"
+            tools:ignore="LabelFor" />
+
+
+        <EditText
+            android:id="@+id/secondsRepeatsText"
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginBottom="8dp"
+            android:ems="10"
+            android:inputType="number"
+            app:layout_constraintBottom_toBottomOf="@id/times_everybox"
+            app:layout_constraintStart_toEndOf="@+id/times_everybox"
+            app:layout_constraintTop_toTopOf="@+id/times_everybox"
+            android:autofillHints="AUTOFILL_HINT_BIRTH_DATE_MONTH"
+            tools:ignore="LabelFor" />
+
+        <TextView
+            android:id="@+id/times_everybox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:text="@string/times_every"
+            android:textColor="@android:color/black"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/numberRepeatsTextBox"
+            app:layout_constraintTop_toTopOf="@+id/numberRepeatsTextBox" />
+
+        <TextView
+            android:id="@+id/repeat_notify_text"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_marginTop="24dp"
+            android:text="@string/repeat_notification"
+            android:textColor="@android:color/black"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/smart_notify_text" />
+
+        <TextView
+            android:id="@+id/smart_notify_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/smart_notification_settings"
+            android:textColor="@android:color/black"
+            android:textSize="7pt"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/secondsText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:text="@string/seconds"
+            android:textColor="@android:color/black"
+            android:textSize="6pt"
+            app:layout_constraintBottom_toBottomOf="@+id/secondsRepeatsText"
+            app:layout_constraintStart_toEndOf="@+id/secondsRepeatsText"
+            app:layout_constraintTop_toTopOf="@+id/secondsRepeatsText" />
+
+        <View
+            android:id="@+id/notifyControlDivider"
+            style="@style/horizontalDivider"
+            app:layout_constraintStart_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/smart_notify_text" />
+
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <TextView
+        android:id="@+id/stepSizeHint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:text="@string/step_size_n_centimeters"
+        app:layout_constraintBottom_toTopOf="@+id/RestoreToDefaultsBtn"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/GyroSwitch" />
+
+    <LinearLayout
+        android:id="@+id/deviceControllerAdsHolder"
+        android:layout_width="wrap_content"
+        android:gravity="center"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:orientation="horizontal">
+
+        <com.google.android.gms.ads.AdView
+            android:id="@+id/dcAD"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            ads:adSize="BANNER"
+            ads:adUnitId="@string/default_banner_id"
+            />
+
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
