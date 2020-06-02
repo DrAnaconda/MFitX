@@ -6,8 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.AsyncTask
 import android.view.View
-import anonymouls.dev.MGCEX.util.TopExceptionHandler
-import java.lang.Exception
 
 class UartServiceBroadcastInterpreter : BroadcastReceiver() {
 
@@ -26,7 +24,8 @@ class UartServiceBroadcastInterpreter : BroadcastReceiver() {
             }
             NotificationService.NotifyAction -> {
                 val extras = intent.extras
-                val Title = extras!!.get("title") as String
+                //val app = extras!!.get("app") as String // TODO integrations
+                val Title = extras?.get("title") as String
                 val Text = extras.get("text") as String
                 val Message = Title + "\n" + Text
                 Algorithm.SelfPointer?.postShortMessageDivider(Message)
@@ -61,7 +60,7 @@ class UartServiceBroadcastInterpreter : BroadcastReceiver() {
         val dataToHandle = ArrayList<ByteArray>()
 
         override fun doInBackground(vararg params: Void?): Void? {
-            Thread.currentThread().name = "Database Inserter";
+            Thread.currentThread().name = "Database Inserter"
             while (true) {
                 try {
                     for (x in 0 until dataToHandle.size-1) {

@@ -12,7 +12,6 @@ import anonymouls.dev.MGCEX.DatabaseProvider.DatabaseController
 import anonymouls.dev.MGCEX.DatabaseProvider.HRRecordsTable
 import anonymouls.dev.MGCEX.DatabaseProvider.MainRecordsTable
 import anonymouls.dev.MGCEX.util.*
-import org.w3c.dom.Text
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -62,7 +61,7 @@ class MultitaskActivity : Activity() {
                 this.text = bundle?.getString(TextIntent, "")
                 loadText()
             }
-            else -> finish()
+            //else -> finish()
         }
     }
 
@@ -72,12 +71,12 @@ class MultitaskActivity : Activity() {
         container = findViewById(R.id.mainContainer)
     }
     private fun fillOverallStatsData(){
-        createTextView("Overall Stats", true)
+        createTextView(getString(R.string.overall_stats), true)
         initDataBlock(null, null)
-        createTextView("Today Stats", true)
+        createTextView(getString(R.string.today_report), true)
 
         var from = Calendar.getInstance()
-        var to = Calendar.getInstance()
+        val to = Calendar.getInstance()
 
         from.set(Calendar.HOUR_OF_DAY, 0)
         to.set(Calendar.HOUR_OF_DAY, 23)
@@ -85,15 +84,16 @@ class MultitaskActivity : Activity() {
         val data = initDataBlock(from, to)
         Analytics.getInstance(this)?.sendHRData(data.MinHR, data.AvgHR, data.MaxHR)
 
-        var SDF = SimpleDateFormat("d LLL", Locale.getDefault())
+        val SDF = SimpleDateFormat("d LLL", Locale.getDefault())
         from.add(Calendar.DAY_OF_MONTH, -7)
-        createTextView("Last Week Stats ("+SDF.format(from.time)+" — "+SDF.format(to.time)+" )", true)
+        createTextView(getString(R.string.last_week_stats) + SDF.format(from.time) + " — " + SDF.format(to.time) + " )", true)
         initDataBlock(from, to)
 
         from = Calendar.getInstance()
         from.set(Calendar.HOUR_OF_DAY, 0)
-        from.add(Calendar.DAY_OF_MONTH, -30)
-        createTextView("Last Month Stats ("+SDF.format(from.time)+" — "+SDF.format(to.time)+" )", true)
+        from.set(Calendar.DAY_OF_MONTH, 1)
+        from.add(Calendar.MONTH, -1)
+        createTextView(getString(R.string.last_month_stats) + SDF.format(from.time) + " — " + SDF.format(to.time) + " )", true)
         initDataBlock(from, to)
 
     }
@@ -135,7 +135,7 @@ class MultitaskActivity : Activity() {
             createTextView(getString(R.string.no_hearth_rate_data), false)
         }else {
             var hrAnalytics = getString(R.string.min_HR) + overallHRReport.MinHR + getString(R.string.avg_HR) + overallHRReport.AvgHR + getString(R.string.max_HR) + overallHRReport.MaxHR + "\n"
-            hrAnalytics += getString(R.string.anomalies) + overallHRReport.anomaliesPercent.toInt() + "%"
+            hrAnalytics += getString(R.string.anomalies) + overallHRReport.anomaliesPercent + "%"
             createTextView(hrAnalytics, false)
 
             when (HRAnalyzer.determineHRMainType(overallHRReport.AvgHR)){
@@ -161,7 +161,7 @@ class MultitaskActivity : Activity() {
         text.text = this.text
         text.isVerticalScrollBarEnabled = true
         text.movementMethod = ScrollingMovementMethod()
-        text.textSize = 16.0f
+    text.textSize = 24.0f
         container?.addView(text)
     }
 //endregion

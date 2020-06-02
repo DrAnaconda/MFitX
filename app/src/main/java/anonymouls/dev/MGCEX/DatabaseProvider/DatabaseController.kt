@@ -1,14 +1,13 @@
 package anonymouls.dev.MGCEX.DatabaseProvider
 
-import android.content.ContentValues
+import android.Manifest
+import android.app.Activity
 import android.content.Context
+import android.content.pm.PackageManager
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.os.Build
 import android.os.Environment
-import android.os.Handler
-import android.os.Looper
-import anonymouls.dev.MGCEX.App.Algorithm
-import anonymouls.dev.MGCEX.util.HRAnalyzer
 import java.io.File
 import java.util.*
 
@@ -30,8 +29,8 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
         db.execSQL(HRRecordsTable.GetCreateTableCommand())
         db.execSQL(AlarmsTable.GetCreateTableCommand())
         db.execSQL(NotifyFilterTable.GetCreateTableCommand())
-        db.execSQL(SleepSessionsTable.GetCreateTableCommand());
-        db.execSQL(SleepRecordsTable.GetCreateTableCommand());
+        db.execSQL(SleepSessionsTable.GetCreateTableCommand())
+        db.execSQL(SleepRecordsTable.GetCreateTableCommand())
         db.execSQL(MainRecordsTable.GetCreateTableCommand())
         db.execSQL(MainRecordsTable.getCreateTableCommandClone())
     }
@@ -61,33 +60,41 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
         SleepRecordsTable.fixDurations(db)
     }
 
-    private fun tempDataMerger( db: SQLiteDatabase){
-        val tmp = SQLiteDatabase.openDatabase( Environment.getExternalStorageDirectory().toString()+File.separator+"MGCEX.db", null, SQLiteDatabase.OPEN_READONLY)
-        val curs = tmp.query(MainRecordsTableName,
-        arrayOf(MainRecordsTable.ColumnNames[1], MainRecordsTable.ColumnNames[2], MainRecordsTable.ColumnNames[3]),
-        null, null, null, null, null)
-        curs?.moveToFirst()
-        do{
-            val cc = ContentValues()
-            cc.put(MainRecordsTable.ColumnNames[1], curs?.getLong(0))
-            cc.put(MainRecordsTable.ColumnNames[2], curs?.getInt(1))
-            cc.put(MainRecordsTable.ColumnNames[3], curs?.getInt(2))
-            db.insert(MainRecordsTableName+"COPY", null, cc)
-        }while (curs!!.moveToNext())
-        curs?.close()
-    }
+        init {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 
+                if (context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    DatabaseDir = context.applicationInfo.dataDir
+                    DatabaseName = DatabaseDir + File.separator + "MGCEX.db"
+                }
+            }
+            if (!File(DatabaseName).exists()) {
+                val newDatabase = SQLiteDatabase.openOrCreateDatabase(DatabaseName, null)
+                onCreate(newDatabase)
+                CurrentDataBase = newDatabase
+            }
+            CurrentDataBase = SQLiteDatabase.openOrCreateDatabase(DatabaseName, null)
+        }
+
+        fun migrateToExternal(activity: Activity?) {
+            val newDatabaseDir = Environment.getExternalStorageDirectory().toString() + File.separator + "Android" + File.separator + "Data" + File.separator + "dev.anonymouls.MGCEX"
+            val newDatabaseName = Environment.getExternalStorageDirectory().toString() + File.separator + "Android" + File.separator + "Data" + File.separator + "dev.anonymouls.MGCEX" + File.separator + "MGCEX.db"
+            if (!File(newDatabaseName).exists()) {
+                File(newDatabaseDir).mkdirs()
+                File(DatabaseName).renameTo(File(newDatabaseName))
+            }
+        }
 
     companion object {
         var DatabaseDir = Environment.getExternalStorageDirectory().toString() + File.separator + "Android" + File.separator + "Data" + File.separator + "dev.anonymouls.MGCEX"
         var DatabaseName = Environment.getExternalStorageDirectory().toString() + File.separator + "Android" + File.separator + "Data" + File.separator + "dev.anonymouls.MGCEX" + File.separator + "MGCEX.db"
-        val SleepSessionTableName = "SleepSessions"
-        val SleepRecordsTableName = "SleepRecords"
-        val AlarmsTableName = "Alarms"
-        val HRRecordsTableName = "HRRecords"
-        val MainRecordsTableName = "MainRecords"
-        val NotifyFilterTableName = "Notify"
-        private val DatabaseVersion = 1
+        const val SleepSessionTableName = "SleepSessions"
+        const val SleepRecordsTableName = "SleepRecords"
+        const val AlarmsTableName = "Alarms"
+        const val HRRecordsTableName = "HRRecords"
+        const val MainRecordsTableName = "MainRecords"
+        const val NotifyFilterTableName = "Notify"
+        private const val DatabaseVersion = 1
 
         var DCObject: DatabaseController? = null
 

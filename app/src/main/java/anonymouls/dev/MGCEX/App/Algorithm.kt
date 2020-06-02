@@ -1,20 +1,14 @@
 package anonymouls.dev.MGCEX.App
 
-import android.annotation.SuppressLint
-import android.app.*
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.content.ServiceConnection
-import android.content.SharedPreferences
+import android.app.IntentService
+import android.app.Service
+import android.content.*
 import android.content.pm.PackageManager
-import android.os.*
+import android.os.AsyncTask
+import android.os.Binder
+import android.os.Build
+import android.os.IBinder
 import androidx.core.app.NotificationManagerCompat
-
-import java.text.SimpleDateFormat
-
-import anonymouls.dev.MGCEX.DatabaseProvider.AlarmsTable
 import anonymouls.dev.MGCEX.DatabaseProvider.CustomDatabaseUtils
 import anonymouls.dev.MGCEX.DatabaseProvider.DatabaseController
 import anonymouls.dev.MGCEX.DatabaseProvider.HRRecordsTable
@@ -22,6 +16,7 @@ import anonymouls.dev.MGCEX.DatabaseProvider.MainRecordsTable
 import anonymouls.dev.MGCEX.util.HRAnalyzer
 import anonymouls.dev.MGCEX.util.TopExceptionHandler
 import anonymouls.dev.MGCEX.util.Utils
+import java.text.SimpleDateFormat
 import java.util.*
 
 class Algorithm : IntentService("Syncer") {
@@ -64,9 +59,8 @@ class Algorithm : IntentService("Syncer") {
         IsActive = false
         return super.stopService(name)
     }
-    @SuppressLint("WrongConstant")
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        return super.onStartCommand(intent, Service.START_STICKY, startId)
+        return super.onStartCommand(intent, Service.START_FLAG_RETRY, startId)
     }
     fun init(){
         if (IsInit) return
@@ -226,6 +220,7 @@ class Algorithm : IntentService("Syncer") {
         workInProgress = true
         getLastHRSync()
         getLastMainSync()
+        if (IsFromActivity) forceSyncHR()
         postCommand(CommandInterpreter.requestHRHistory(LastHRSync), false)
         customWait(1000)
         postCommand(CommandInterpreter.SyncTime(Calendar.getInstance()), false)
@@ -298,9 +293,7 @@ class Algorithm : IntentService("Syncer") {
             if (DeviceControllerActivity.isFirstLaunch){
                 this.lastStatus = getString(R.string.connected_syncing)
                 changeStatus(getString(R.string.connected_syncing))
-                postCommand(CommandInterpreter.HRRealTimeControl(true), false)
-                customWait(12000)
-                postCommand(CommandInterpreter.HRRealTimeControl(false), true)
+                forceSyncHR()
                 DeviceControllerActivity.isFirstLaunch = false
             }
             executeForceSync(false)
@@ -309,13 +302,19 @@ class Algorithm : IntentService("Syncer") {
             this.lastStatus = getString(R.string.next_sync_status) + SimpleDateFormat("HH:mm", Locale.getDefault()).format(NextSync!!.time)
             changeStatus(LastStatus)
             if (!DatabaseController.getDCObject(this).currentDataBase!!.inTransaction() && hardTask == null){
-                hardTask = AsyncCollapser()
+                hardTask = AsyncCollapser(this)
                 hardTask!!.execute()
             }
             workInProgress = false
             customWait(MainSyncPeriodSeconds.toLong())
             workInProgress = true
         }
+    }
+
+    private fun forceSyncHR() {
+        postCommand(CommandInterpreter.HRRealTimeControl(true), false)
+        customWait(12000)
+        postCommand(CommandInterpreter.HRRealTimeControl(false), true)
     }
 
     inner class LocalBinder : Binder() {
@@ -325,9 +324,6 @@ class Algorithm : IntentService("Syncer") {
     override fun onBind(intent: Intent): IBinder? {
         init()
         return mBinder
-    }
-    override fun onUnbind(intent: Intent): Boolean {
-        return super.onUnbind(intent)
     }
 
     companion object {
@@ -384,30 +380,34 @@ class Algorithm : IntentService("Syncer") {
             }
 
         }
+
+        class AsyncCollapser(private val algorithm: Algorithm) : AsyncTask<Void, Void, Void>() {
+
+            private var exceptionHandler: TopExceptionHandler = TopExceptionHandler(SelfPointer!!.applicationContext)
+
+            override fun doInBackground(vararg params: Void?): Void? {
+                MainRecordsTable.executeDataCollapse(algorithm.Prefs!!.getLong(MainRecordsTable.SharedPrefsMainCollapsedConst, 0), algorithm.Prefs!!, algorithm.Database!!.currentDataBase!!)
+                return null
+            }
+
+            override fun onCancelled(result: Void?) {
+                algorithm.hardTask = null
+                super.onCancelled(result)
+            }
+
+            override fun onCancelled() {
+                algorithm.hardTask = null
+                super.onCancelled()
+            }
+
+            override fun onPostExecute(result: Void?) {
+                algorithm.hardTask = null
+                super.onPostExecute(result)
+            }
+        }
     }
 
 
-    inner class AsyncCollapser: AsyncTask<Void, Void, Void>(){
-
-        private var exceptionHandler: TopExceptionHandler = TopExceptionHandler(SelfPointer!!.applicationContext)
-
-        override fun doInBackground(vararg params: Void?): Void? {
-            MainRecordsTable.executeDataCollapse(Prefs!!.getLong(MainRecordsTable.SharedPrefsMainCollapsedConst, 0), Prefs!!, Database!!.currentDataBase!!)
-            return null
-        }
-        override fun onCancelled(result: Void?) {
-            hardTask = null
-            super.onCancelled(result)
-        }
-        override fun onCancelled() {
-            hardTask = null
-            super.onCancelled()
-        }
-        override fun onPostExecute(result: Void?) {
-            hardTask = null
-            super.onPostExecute(result)
-        }
-    }
 }
 
 // TODO Integrate sleeping data. Develop and test algos.

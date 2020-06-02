@@ -5,9 +5,6 @@
     android:versionCode="1"
     android:versionName="1.0">
 
-    <uses-feature
-        android:name="android.hardware.bluetooth_le"
-        android:required="true" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -52,16 +49,7 @@
         <activity
             android:name=".DeviceControllerActivity"
             android:label="Device Control"
-            android:showOnLockScreen="true">
-
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-<!-- TODO Delete/Comment -->
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-
-        </activity>
-
+            android:showOnLockScreen="true" />
 
         <activity
             android:name=".DataView"
@@ -99,5 +87,10 @@
             android:name=".Algorithm"
             android:enabled="true" />
     </application>
+
+
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="true" />
 
 </manifest>

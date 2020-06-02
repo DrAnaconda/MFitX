@@ -18,18 +18,18 @@ class DeviceAdapter(context: Context, private val mResId: Int, var mList: Mutabl
     }
 
     override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-        var convertView = convertView
+        var newConvertView = convertView
         val item = getItem(position)
 
-        if (convertView == null) {
-            convertView = mInflater.inflate(mResId, null)
+        if (newConvertView == null) {
+            newConvertView = mInflater.inflate(mResId, null)
         }
-        val name = convertView!!.findViewById<View>(R.id.device_name) as TextView
+        val name = newConvertView!!.findViewById<View>(R.id.device_name) as TextView
         name.text = item!!.name
-        val address = convertView.findViewById<View>(R.id.device_address) as TextView
+        val address = newConvertView.findViewById<View>(R.id.device_address) as TextView
         address.text = item.address
 
-        return convertView
+        return newConvertView
     }
 
     fun update(newDevice: BluetoothDevice?) {

@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.Bundle
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
-import java.lang.Exception
 
 
 class Analytics(context: Context) {
@@ -12,16 +11,17 @@ class Analytics(context: Context) {
     private val fireInstance: FirebaseAnalytics = FirebaseAnalytics.getInstance(context)
     private val fireCrash: FirebaseCrashlytics = FirebaseCrashlytics.getInstance()
 
-    private val isAllowed: Boolean? = Utils.SharedPrefs?.getBoolean(HelpData, true) // TODO false
+    private val isAllowed: Boolean? = Utils.SharedPrefs?.getBoolean(HelpData, true)
     private val userID = Utils.SharedPrefs?.getString(UserID, "")
 
     private fun checkEnabled(): Boolean{
         fireInstance.setUserId(userID)
         fireCrash.setUserId(userID!!)
-
-        fireCrash.setCrashlyticsCollectionEnabled(isAllowed!!)
-        fireInstance.setAnalyticsCollectionEnabled(isAllowed!!)
-        return !(isAllowed == null || !isAllowed!!)
+        return if (isAllowed != null) {
+            fireCrash.setCrashlyticsCollectionEnabled(isAllowed)
+            fireInstance.setAnalyticsCollectionEnabled(isAllowed)
+            isAllowed
+        } else false
     }
     fun sendHRData(minHR: Int, avgHR: Int, maxHR: Int){
         if (!checkEnabled()) return
@@ -32,13 +32,15 @@ class Analytics(context: Context) {
         fireInstance.logEvent("Stats_Opened", bundle)
     }
     fun sendCustomEvent(event: String, param: String?){
+        var newEvent = event
+        newEvent = newEvent.replace('.', '_')
         if (!checkEnabled()) return
-        var bundle = Bundle()
+        val bundle = Bundle()
         if (param != null){
             bundle.putString("Param", param)
-            fireInstance.logEvent(event, bundle)
+            fireInstance.logEvent(newEvent, bundle)
         } else
-            fireInstance.logEvent(event, null)
+            fireInstance.logEvent(newEvent, null)
     }
     fun recordCrash(ex: Throwable){
         if (!checkEnabled()) return

@@ -10,6 +10,7 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.Toast
+import anonymouls.dev.MGCEX.App.DeviceControllerActivity
 
 import anonymouls.dev.MGCEX.App.R
 import java.text.DecimalFormat
@@ -21,6 +22,7 @@ object Utils {
     const val LocationPermissionRequest = 2
     const val PermissionsRequest = 3
     const val PermsRequest = 4
+    const val PermsAdvancedRequest = 5
     var SharedPrefs: SharedPreferences? = null
 
     var IsStorageAccess = true
@@ -65,7 +67,37 @@ object Utils {
         }
         return true
     }
-    fun RequestPermissions(ContextActivity: Activity, NeededPerms: Array<String>) {
+
+    fun requestPermissionsAdvanced(activity: Activity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (activity.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                    && activity.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+                DeviceControllerActivity.ViewDialog(activity.getString(R.string.location_perm_req), DeviceControllerActivity.ViewDialog.DialogTask.Permission, Manifest.permission.ACCESS_COARSE_LOCATION).showDialog(activity)
+                return
+            }
+            if (activity.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+                    && activity.shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                val dialog = DeviceControllerActivity.ViewDialog(activity.getString(R.string.storage_perm_request), DeviceControllerActivity.ViewDialog.DialogTask.Permission, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                dialog.showDialog(activity)
+                return
+            }
+            if (activity.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED
+                    && activity.shouldShowRequestPermissionRationale(Manifest.permission.READ_PHONE_STATE)) {
+                val dialog = DeviceControllerActivity.ViewDialog(activity.getString(R.string.phonestate_perm_req), DeviceControllerActivity.ViewDialog.DialogTask.Permission, Manifest.permission.READ_PHONE_STATE)
+                dialog.showDialog(activity)
+                return
+            }
+
+            if (activity.checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED
+                    && activity.shouldShowRequestPermissionRationale(Manifest.permission.READ_CONTACTS)) {
+                val dialog = DeviceControllerActivity.ViewDialog(activity.getString(R.string.contacts_perm_req), DeviceControllerActivity.ViewDialog.DialogTask.Permission, Manifest.permission.READ_CONTACTS)
+                dialog.showDialog(activity)
+                return
+            }
+        }
+    }
+
+    fun requestPermissionsDefault(ContextActivity: Activity, NeededPerms: Array<String>) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val Req = ArrayList<String>()
             for (Perm in NeededPerms) {
@@ -79,22 +111,24 @@ object Utils {
             }
         }
     }
+
+
     fun RequestToBindNotifyService(ContextActivity: Activity){
         val ReqIntent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
         ContextActivity.startActivity(ReqIntent)
     }
     fun bigNumberToString(number: Int, divider: Int): String{
-        var number: Float = number.toFloat()/divider
+        val newNumber: Float = number.toFloat() / divider
         val format = DecimalFormat("0.###")
-        return if (number < 1000) {
-            format.format(number)
+        return if (newNumber < 1000) {
+            format.format(newNumber)
         }
         else {
-            if (number > 1000000){
-                val millions: Float = number/1000000;
+            if (newNumber > 1000000) {
+                val millions: Float = newNumber / 1000000
                 format.format(millions)+" M"
             }else {
-                val thousands: Int = number.toInt()/1000
+                val thousands: Int = newNumber.toInt() / 1000
                 "$thousands K"
             }
         }

@@ -1,12 +1,8 @@
 package anonymouls.dev.MGCEX.DatabaseProvider
 
 import android.content.ContentValues
-import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import anonymouls.dev.MGCEX.DatabaseProvider.SleepRecordsTable.ColumnNames
-
-import java.util.ArrayList
-import java.util.Calendar
+import java.util.*
 
 object SleepRecordsTable {
     val ColumnNames = arrayOf("ID", "Timestamp", "IDSS", "Duration", "Type")
@@ -25,12 +21,18 @@ object SleepRecordsTable {
 
     fun InsertRecord(RecordTime: Calendar, SSID: Long, Duration: Int, Type: Int, Operator: SQLiteDatabase): Long {
         val Values = ContentValues()
-        Values.put(ColumnNames[1], CustomDatabaseUtils.CalendarToLong(RecordTime, true))
+        val recordDate = CustomDatabaseUtils.CalendarToLong(RecordTime, true)
+        Values.put(ColumnNames[1], recordDate)
         Values.put(ColumnNames[2], SSID)
         Values.put(ColumnNames[3], Duration)
         Values.put(ColumnNames[4], Type)
         return try{
-            Operator.insert(DatabaseController.SleepRecordsTableName, null, Values)
+            val curs = Operator.query(DatabaseController.SleepRecordsTableName, arrayOf(ColumnNames[1]), ColumnNames[1] + " = ?", arrayOf(recordDate.toString()),
+                    null, null, null)
+            if (curs.count > 0) {
+                curs.close(); -1
+            } else
+                Operator.insert(DatabaseController.SleepRecordsTableName, null, Values)
         }catch (ex: Exception) {
             -1
         }
@@ -41,12 +43,13 @@ object SleepRecordsTable {
         val SelectArg = CustomDatabaseUtils.CalendarToLong(Argument, false)
         val SSID = GetIDSleepSession(SelectArg, Operator)
         val Records = Operator.query(DatabaseController.SleepRecordsTableName, ColumnNames,
-                ColumnNames[2] + "=?", arrayOf(java.lang.Long.toString(SSID)), null, null, ColumnNames[1] + " DESC")
+                ColumnNames[2] + "=?", arrayOf(SSID.toString()), null, null, ColumnNames[1] + " DESC")
         Records.moveToFirst()
         do {
             Results.add(SleepRecord(CustomDatabaseUtils.LongToCalendar(Records.getLong(1), true),
                     Records.getInt(3), Records.getInt(4)))
         } while (Records.moveToNext())
+        Records.close()
         return Results
     }
 
@@ -72,11 +75,12 @@ object SleepRecordsTable {
         val Record = Operator.query(DatabaseController.SleepSessionTableName,
                 SleepSessionsTable.ColumnNames,
                 SleepSessionsTable.ColumnNames[1] + " =?", arrayOf(java.lang.Long.toString(Argument)), null, null, null)
-        if (Record.count == 0)
-            return -1
+        return if (Record.count == 0) {
+            Record.close(); -1
+        }
         else {
             Record.moveToFirst()
-            return Record.getLong(0)
+            Record.getLong(0)
         }
     }
 

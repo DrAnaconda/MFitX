@@ -52,6 +52,12 @@ class NotificationService : NotificationListenerService() {
             return
         val extras = sbn.notification.extras
         var title = extras.getString("android.title")
+        var applicationName = ""
+        try {
+            applicationName = this.packageManager.getApplicationLabel(packageManager.getApplicationInfo(sbn.packageName, 0)).toString()
+        } catch (ex: Exception) {
+        }
+
         var text = "-----"
         try {
             text = Objects.requireNonNull(extras.getCharSequence("android.text")).toString()
@@ -60,7 +66,7 @@ class NotificationService : NotificationListenerService() {
         }
 
         val msgrcv = Intent(NotifyAction)
-        msgrcv.putExtra("app", pack)
+        msgrcv.putExtra("app", applicationName)
         msgrcv.putExtra("title", title)
         msgrcv.putExtra("text", text)
         if (UartService.instance != null && (UartService.instance!!.mConnectionState >= STATE_CONNECTED
@@ -81,11 +87,10 @@ class NotificationService : NotificationListenerService() {
         return super.onBind(intent)
     }
 
-    inner class CustomNotification(AppText : String, TitleText : String, ContentText : String, sbn: StatusBarNotification) {
+    inner class CustomNotification(AppText: String, TitleText: String, ContentText: String, private val sbn: StatusBarNotification) {
         private var titleText   : String = ""
         private var contentText : String = ""
         private var appText     : String = ""
-        private var sbn : StatusBarNotification = sbn
 
         var ID          : Int    = -1
         var repeats     : Int    = 0
@@ -96,7 +101,6 @@ class NotificationService : NotificationListenerService() {
 
 
         init {
-            this.sbn = sbn
             this.titleText   = TitleText
             this.contentText = ContentText
             this.ID          = sbn.id
@@ -117,7 +121,7 @@ class NotificationService : NotificationListenerService() {
         }
         fun sendToDevice(){
             if (!isLocked){
-                isLocked = true;
+                isLocked = true
                 return
             } else {
                 if (!ready || !checkIsActive()) return

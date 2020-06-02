@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
-import android.util.Log
 import java.util.*
 
 class UartService : Service() {
@@ -35,8 +34,6 @@ class UartService : Service() {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 mConnectionState = STATE_DISCOVERED
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED)
-            } else {
-                Log.e(TAG, "onServicesDiscovered received: $status")
             }
         }
 
@@ -62,13 +59,12 @@ class UartService : Service() {
         val intent = Intent(action)
         if (TX_CHAR_UUID == characteristic.uuid) {
             intent.putExtra(EXTRA_DATA, characteristic.value)
-        } else {
-
         }
         sendBroadcast(intent)
     }
 
-    inner class LocalBinder : Binder() {}
+    inner class LocalBinder : Binder()
+
     override fun onBind(intent: Intent): IBinder? {
         instance = this
         Thread.currentThread().priority = Thread.NORM_PRIORITY
@@ -170,11 +166,11 @@ class UartService : Service() {
 
     fun writeRXCharacteristic(value: ByteArray) : Boolean {
         if (mBluetoothGatt == null) {
-            Log.d(TAG, "BluetoothGatt is null")
+            // here possible error
             return false
         }
         val RxService = mBluetoothGatt!!.getService(RX_SERVICE_UUID)
-        Log.d(TAG, "mBluetoothGatt null" + mBluetoothGatt!!)
+        // here possible error
         if (RxService == null) {
             broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_UART)
             return false

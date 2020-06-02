@@ -14,6 +14,7 @@ import android.widget.*
 
 import anonymouls.dev.MGCEX.DatabaseProvider.DatabaseController
 import anonymouls.dev.MGCEX.DatabaseProvider.NotifyFilterTable
+import anonymouls.dev.MGCEX.util.Analytics
 import anonymouls.dev.MGCEX.util.Utils
 
 class SettingsActivity : Activity() {
@@ -85,8 +86,8 @@ class SettingsActivity : Activity() {
         ReceivePhoneCallBox!!.isChecked = SharedPrefs!!.getBoolean("ReceiveCalls", true)
         EnableAutoIllumination!!.isChecked = SharedPrefs!!.getBoolean("Illumination", false)
         if (SharedPrefs!!.contains("IsConnected") && SharedPrefs!!.getBoolean("IsConnected", false)) {
-            currentConnectionBox!!.text = "Current connection : " + SharedPrefs!!.getString("BandAddress", null)
-            breakConnectionBtn!!.visibility = View.VISIBLE;
+            currentConnectionBox!!.text = getString(R.string.current_connection) + SharedPrefs!!.getString("BandAddress", null)
+            breakConnectionBtn!!.visibility = View.VISIBLE
         } else {
             currentConnectionBox!!.text = getString(R.string.connection_not_established)
             breakConnectionBtn!!.visibility = View.GONE
@@ -97,7 +98,7 @@ class SettingsActivity : Activity() {
     }
 
     private fun showNotConnectedErrorToast() {
-        Toast.makeText(this, "Connection to device is not established.", Toast.LENGTH_LONG).show()
+        Toast.makeText(this, getString(R.string.connection_not_established), Toast.LENGTH_LONG).show()
     }
 
     private fun SendEraseDatabaseCommand() {
@@ -125,7 +126,7 @@ class SettingsActivity : Activity() {
         }
     }
     private fun AddToTable(Content: String, IsEnabled: Int) {
-        var drop: Boolean = false
+        var drop = false
         val SW = Switch(this)
         val TR = CustomTableRow(this, Content, SW)
         val Info = TextView(this)
@@ -159,7 +160,7 @@ class SettingsActivity : Activity() {
         Info.gravity = Gravity.CENTER
 
         SW.isChecked = IsEnabled == 1
-        SW.gravity = Gravity.RIGHT
+        SW.gravity = Gravity.END
         SW.layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.WRAP_CONTENT)
 
         TR.addView(appIcon)
@@ -217,6 +218,7 @@ class SettingsActivity : Activity() {
             R.id.RestoreToDefaultsBtn  -> SendResetCommand()
             R.id.EraseDataOnRDeviceBtn -> SendEraseDatabaseCommand()
             R.id.breakConnectionBtn -> DeAuthDevice()
+            R.id.analyticsOn -> Utils.SharedPrefs?.edit()?.putBoolean(Analytics.HelpData, findViewById<Switch>(R.id.analyticsOn).isChecked)?.apply()
         }
     }
     override fun onBackPressed() {

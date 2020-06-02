@@ -3,6 +3,7 @@
 package anonymouls.dev.MGCEX.util
 
 import android.content.ContentValues
+import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.os.AsyncTask
 import anonymouls.dev.MGCEX.App.Algorithm
@@ -24,10 +25,11 @@ object HRAnalyzer{
                 else -> MainHRTypes.Normal
             }
         }
-        fun isAnomaly(HR: Int, avgHR: Int): Boolean{
+
+    fun isAnomaly(HR: Int, avgHR: Int, context: Context): Boolean {
             var avgHR = avgHR
             if (avgHR <= 0){
-                avgHR = HRRecordsTable.getOverallAverage(DatabaseController.DCObject!!.writableDatabase)
+                avgHR = HRRecordsTable.getOverallAverage(DatabaseController.getDCObject(context).writableDatabase)
             }
             val lowerDelta: Float = avgHR-(avgHR*0.2f)
             val upperDelta: Float = avgHR+(avgHR*0.2f)
@@ -58,18 +60,19 @@ object HRAnalyzer{
 
 
     class AnalyzeSMD: AsyncTask<Void, Void, Void>() {
-        var Operator: SQLiteDatabase? = null;
+        lateinit var Operator: SQLiteDatabase
         private var ready = true
 
         override fun doInBackground(vararg params: Void?): Void? {
-            val curs = Operator!!.query(DatabaseController.MainRecordsTableName+"COPY",
+            if (Operator == null) return null
+            val curs = Operator.query(DatabaseController.MainRecordsTableName + "COPY",
                     arrayOf(MainRecordsTable.ColumnNames[0],MainRecordsTable.ColumnNames[2],MainRecordsTable.ColumnNames[1]), null, null, null,null, "Date")
-            if (curs.count == 0) return null
+            if (curs?.count == 0) return null
             ready = false
             var prevSteps = -1
             var prevTime: Long = -1
             var prevID: Long = -1
-            curs.moveToFirst()
+            curs?.moveToFirst()
             do{
                 val currentSteps = curs.getInt(1)
                 val currentTime = curs.getLong(2)
@@ -80,16 +83,16 @@ object HRAnalyzer{
                 val phStress = physicalStressDetermining(deltaSteps, deltaTime)
                 val values = ContentValues()
                 values.put(HRRecordsTable.ColumnsNames[3], HRRecordsTable.AnalyticTypes.valueOf(phStress.name).type)
-                val test = Operator!!.update(DatabaseController.HRRecordsTableName, values,
+                Operator.update(DatabaseController.HRRecordsTableName, values,
                         " "+HRRecordsTable.ColumnsNames[1]+" BETWEEN ? AND ? ",
                         arrayOf(prevTime.toString(), currentTime.toString()))
                 prevSteps = currentSteps
                 prevTime = currentTime
-                Operator!!.delete(DatabaseController.MainRecordsTableName+"COPY", " DATE = ?", arrayOf(prevID.toString()))
+                Operator.delete(DatabaseController.MainRecordsTableName + "COPY", " DATE = ?", arrayOf(prevID.toString()))
                 prevID = currentID
             }while (curs.moveToNext())
             curs.close()
-            Operator!!.delete(DatabaseController.MainRecordsTableName+"COPY", " DATE = ?", arrayOf(prevID.toString()))
+            Operator.delete(DatabaseController.MainRecordsTableName + "COPY", " DATE = ?", arrayOf(prevID.toString()))
             return null
         }
 

@@ -5,29 +5,19 @@ import android.database.Cursor
 import android.graphics.Color
 import android.os.AsyncTask
 import android.os.Bundle
-import android.os.Handler
-import androidx.core.content.ContextCompat
 import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.view.ViewManager
-import android.widget.RadioButton
-import android.widget.RadioGroup
-import android.widget.TableLayout
-import android.widget.TableRow
-import android.widget.TextView
-
-import com.squareup.timessquare.CalendarPickerView
-
-import java.text.SimpleDateFormat
-
+import android.widget.*
 import anonymouls.dev.MGCEX.DatabaseProvider.CustomDatabaseUtils
 import anonymouls.dev.MGCEX.DatabaseProvider.DatabaseController
 import anonymouls.dev.MGCEX.DatabaseProvider.HRRecordsTable
 import anonymouls.dev.MGCEX.DatabaseProvider.MainRecordsTable
 import anonymouls.dev.MGCEX.util.AdsController
 import anonymouls.dev.MGCEX.util.HRAnalyzer
+import com.squareup.timessquare.CalendarPickerView
+import java.text.SimpleDateFormat
 import java.util.*
 
 @Suppress("NAME_SHADOWING")
@@ -98,7 +88,7 @@ class DataView : Activity() {
     private fun HeaderChooser() {
         when (Data) {
             "HR" -> if (Mode == 1)
-                ExecuteTableHeaderCreation(DataView.HRColumns)
+                ExecuteTableHeaderCreation(HRColumns)
             else
                 ExecuteTableHeaderCreation(HRColumnsComplex)
             "CALORIES" -> if (Mode == 1)
@@ -131,7 +121,7 @@ class DataView : Activity() {
                                 TextColor: Int): TextView {
         var Text = Text
         try {
-            if (Data == "HR" && HRAnalyzer.isAnomaly(Text.toInt(), -1))
+            if (Data == "HR" && HRAnalyzer.isAnomaly(Text.toInt(), -1, this))
             {
                 Text += " !!!"
             }
@@ -277,8 +267,8 @@ class DataView : Activity() {
         super.onBackPressed()
     }
 
-    inner class DataComplexer(private val DC: DatabaseController, private val From: Calendar, private val To: Calendar,
-                                       Mode: Int, private val DataType: Int, ViewStyle: Int, private val DV: DataView) {
+    inner class DataComplexer(private val DC: DatabaseController, From: Calendar, To: Calendar,
+                              Mode: Int, private val DataType: Int, ViewStyle: Int, private val DV: DataView) {
         private val FromLong: Long
         private val ToLong: Long
         private var CurrentLock: Long = 0

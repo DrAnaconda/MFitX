@@ -14,9 +14,9 @@ class TopExceptionHandler(context: Context) : Thread.UncaughtExceptionHandler {
     private var context: Context? = null
 
     init {
-        //this.defaultUEH = Thread.getDefaultUncaughtExceptionHandler()
-        //this.context = context
-        //Thread.setDefaultUncaughtExceptionHandler(this)
+        this.defaultUEH = Thread.getDefaultUncaughtExceptionHandler()
+        this.context = context
+        Thread.setDefaultUncaughtExceptionHandler(this)
     }
 
     override fun uncaughtException(t: Thread, e: Throwable) {
@@ -39,8 +39,8 @@ class TopExceptionHandler(context: Context) : Thread.UncaughtExceptionHandler {
             }
         }
         val sdf = SimpleDateFormat("dMYYYYHHmmss", Locale.getDefault())
-        var path = File(Environment.getExternalStorageDirectory().toString() + File.separator + "Android" + File.separator + "Data" +
-                File.separator + "dev.anonymouls.MGCEX");
+        val path = File(Environment.getExternalStorageDirectory().toString() + File.separator + "Android" + File.separator + "Data" +
+                File.separator + "dev.anonymouls.MGCEX")
         if (!path.exists()) path.mkdirs()
         try {
             val outputStreamWriter = OutputStreamWriter(FileOutputStream(

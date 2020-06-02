@@ -7,7 +7,6 @@ import android.database.sqlite.SQLiteDatabase
 import anonymouls.dev.MGCEX.App.SettingsActivity
 import anonymouls.dev.MGCEX.util.Utils
 import java.lang.Math.abs
-import java.sql.Time
 import java.util.*
 
 object MainRecordsTable {
@@ -54,24 +53,29 @@ object MainRecordsTable {
         val curs = Operator.query(DatabaseController.MainRecordsTableName, arrayOf(ColumnNames[1], ColumnNames[2], ColumnNames[3]),
             " "+ ColumnNames[1]+" BETWEEN ? AND ?", arrayOf(from.toString(), to.toString()), null,null,null,"1")
 
-        if (curs.count > 0) {
+        return if (curs.count > 0) {
             curs.moveToFirst()
             if (curs.getLong(1) > Steps || curs.getLong(2) > Calories)
                 throw Exception("Corrupted Data")
-            return curs.getLong(0)
-        } else return null
+            val result = curs.getLong(0); curs.close(); result
+        } else null
     }
 
     fun insertRecordV2(TimeRecord: Calendar, Steps: Int, Calories: Int, Operator: SQLiteDatabase): Long {
         if (CustomDatabaseUtils.CalendarToLong(TimeRecord, false) >
                 CustomDatabaseUtils.CalendarToLong(Calendar.getInstance(), true)) return -1
         val Values = ContentValues()
-        Values.put(ColumnNames[1], CustomDatabaseUtils.CalendarToLong(TimeRecord, true))
+        val recordDate = CustomDatabaseUtils.CalendarToLong(TimeRecord, true)
+        Values.put(ColumnNames[1], recordDate)
         Values.put(ColumnNames[2], Steps)
         Values.put(ColumnNames[3], Calories)
         HRRecordsTable.updateAnalyticalViaMainInfo(TimeRecord, Steps, Operator)
         try {
-            Operator.insert(DatabaseController.MainRecordsTableName + "COPY", null, Values)
+            val curs = Operator.query(DatabaseController.MainRecordsTableName + "COPY", arrayOf(ColumnNames[1]), " " + ColumnNames[1] + " = ?",
+                    arrayOf(recordDate.toString()), null, null, null)
+            if (curs.count == 0)
+                Operator.insert(DatabaseController.MainRecordsTableName + "COPY", null, Values)
+            curs.close()
         }catch (ex: Exception){ }
         return try {
             val checker = checkIsExistsToday(TimeRecord, Operator, Steps, Calories)
@@ -106,6 +110,7 @@ object MainRecordsTable {
             Results.add(MainRecord(CustomDatabaseUtils.LongToCalendar(Records.getLong(1), true),
                     Records.getInt(2), Records.getInt(3)))
         } while (Records.moveToNext())
+        Records.close()
         return Results
     }
     fun ExtractRecords(From: Long, To: Long, Operator: SQLiteDatabase): Cursor {
@@ -131,15 +136,9 @@ object MainRecordsTable {
         return Record
     }
 
-    fun GetLastSync(Operator: SQLiteDatabase): Calendar {
-        val Record = Operator.query(DatabaseController.MainRecordsTableName, ColumnNames, null, null, null, null, ColumnNames[1] + " DESC", "1")
-        Record.moveToFirst()
-        return CustomDatabaseUtils.LongToCalendar(Record.getLong(1), true)
-    }
-
     fun generateReport(From: Calendar?, To: Calendar?, Operator: SQLiteDatabase): MainReport{
-        var from: Long
-        var to: Long
+        val from: Long
+        val to: Long
         if (From == null || To == null){
             from = 0
             to = Long.MAX_VALUE
@@ -151,9 +150,11 @@ object MainRecordsTable {
         arrayOf(CustomDatabaseUtils.niceSQLFunctionBuilder("COUNT", "*"),
                 CustomDatabaseUtils.niceSQLFunctionBuilder("SUM", ColumnNames[2]),
                 CustomDatabaseUtils.niceSQLFunctionBuilder("SUM", ColumnNames[3])),
-                ColumnNames[1] + " BETWEEN ? AND ?", arrayOf(from.toString(), to.toString()), null, null, null);
+                ColumnNames[1] + " BETWEEN ? AND ?", arrayOf(from.toString(), to.toString()), null, null, null)
         curs.moveToFirst()
-        return MainReport(curs.getInt(1), curs.getInt(2), curs.getInt(0), null)
+        val result = MainReport(curs.getInt(1), curs.getInt(2), curs.getInt(0), null)
+        curs.close()
+        return result
     }
 
 //region optimization algos
@@ -172,10 +173,12 @@ object MainRecordsTable {
     }
     private fun getFirstDate(Operator: SQLiteDatabase): Long{
         val curs = Operator.query(DatabaseController.MainRecordsTableName, arrayOf(ColumnNames[1]), null, null, null, null, ColumnNames[1], "1")
-        if (curs.count > 0) {
+        return if (curs.count > 0) {
             curs.moveToFirst()
-            return curs.getLong(0)
-        } else return 0
+            val result = curs.getLong(0)
+            curs.close()
+            result
+        } else 0
     }
     private fun deleteNotActualData(curs: Cursor, Operator: SQLiteDatabase){
         if (curs.count <= 1) return
@@ -242,9 +245,10 @@ object MainRecordsTable {
     class MainRecord(private val RTime: Calendar, private val Steps: Int, private val Calories: Int)
 
     class MainReport(var stepsCount: Int = -1,  var caloriesCount: Int = -1,  var recordsCount: Int = -1, var analytics: String? = null){
-        var passedKm: Float = 0.0f;
+        var passedKm: Float = 0.0f
+
         init {
-            passedKm = Utils.SharedPrefs!!.getFloat(SettingsActivity.stepsSize, 0.5f)*stepsCount;
+            passedKm = Utils.SharedPrefs!!.getFloat(SettingsActivity.stepsSize, 0.5f) * stepsCount
         }
     }
 

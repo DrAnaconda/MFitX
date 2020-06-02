@@ -2,11 +2,10 @@
 
 package anonymouls.dev.MGCEX.App
 
-import android.util.Log
 import java.nio.ByteBuffer
 import java.util.*
 
-class CommandInterpreter() {
+class CommandInterpreter {
 
     private object WeekDaysIDs {
         val Monday = 1
@@ -24,7 +23,7 @@ class CommandInterpreter() {
         fun HRIncome(Time: Calendar, HRValue: Int)
         fun HRHistoryRecord(Time: Calendar, HRValue: Int)
         fun MainHistoryRecord(Time: Calendar, Steps: Int, Calories: Int)
-        fun SleepHistoryRecord(Time: Calendar, Duration: Int, Type: Int);
+        fun SleepHistoryRecord(Time: Calendar, Duration: Int, Type: Int)
     }
 
     companion object {
@@ -48,7 +47,7 @@ class CommandInterpreter() {
 
         private fun hexStringToByteArray(s: String): ByteArray {
             var s = s
-            s = s.toUpperCase()
+            s = s.toUpperCase(Locale.ROOT)
             val len = s.length
             val data = ByteArray(len / 2)
             var i = 0
@@ -60,38 +59,18 @@ class CommandInterpreter() {
         }
         fun SubIntegerConversionCheck(CheckIn: String): String {
             return if (CheckIn.length != 2) {
-                "0" + CheckIn.toUpperCase()
+                "0" + CheckIn.toUpperCase(Locale.ROOT)
             } else
                 CheckIn
         }
         private fun GetCalendarValueInHex(CUtil: Calendar, CField: Int): String {
             var Value: Int? = CUtil.get(CField)
-            if (CField == Calendar.MONTH) Value = Value?.plus(1);
+            if (CField == Calendar.MONTH) Value = Value?.plus(1)
             return if (Value!! < 10) {
                 "0$Value"
             } else {
                 SubIntegerConversionCheck(Integer.toHexString(Value))
             }
-        }
-        private fun DayStringToHex(Input: String): String {
-            var Input = Input
-            Input = Input.toUpperCase()
-            val InputStr = StringBuilder(Input)
-            InputStr.deleteCharAt(Input.length - 1)
-            val ChoosedDays = Input.split("|".toRegex()).dropLastWhile({ it.isEmpty() }).toTypedArray()
-            var Output = 0
-            for (i in ChoosedDays.indices) {
-                when (ChoosedDays[i]) {
-                    "MONDAY" -> Output += WeekDaysIDs.Monday
-                    "TUESDAY" -> Output += WeekDaysIDs.Tuesday
-                    "WEDNESDAY" -> Output += WeekDaysIDs.Wednesday
-                    "THURSDAY" -> Output += WeekDaysIDs.Thursday
-                    "FRIDAY" -> Output += WeekDaysIDs.Friday
-                    "SATURDAY" -> Output += WeekDaysIDs.Saturday
-                    "SUNDAY" -> Output += WeekDaysIDs.Sunday
-                }
-            }
-            return Integer.toHexString(Output)
         }
         fun GetMainInfoRequest(): ByteArray {
             val CUtil = Calendar.getInstance()
@@ -203,10 +182,12 @@ class CommandInterpreter() {
             var Request = (LongMessageHeaderPartOne + SubIntegerConversionCheck(Integer.toHexString(Lenght))
                     + LongMessageHeaderPartTwo)
             for (i in 0..11) {
-                if (i < MessageBytes.size)
-                    Request += SubIntegerConversionCheck(Integer.toHexString(MessageBytes[i].toInt()))
-                else
-                    break
+                if (i < MessageBytes.size) {
+                    if (MessageBytes[i] > 0)
+                        Request += SubIntegerConversionCheck(Integer.toHexString(MessageBytes[i].toInt()))
+                    else
+                        Request += SubIntegerConversionCheck(Integer.toHexString(MessageBytes[i].toInt() and 0xFF))
+                } else break
             }
             return hexStringToByteArray(Request)
         }
@@ -230,8 +211,7 @@ class CommandInterpreter() {
                 CRecord.set(CRecord.get(Calendar.YEAR), Input[7] - 1, Input[8].toInt(), Input[9].toInt(), Input[10].toInt())
                 Callback?.HRHistoryRecord(CRecord, Input[11].toInt())
             } catch (Ex: Exception) {
-                Log.e("Err", Ex.message)
-                // todo analyse it ??? need info
+
             }
 
         }

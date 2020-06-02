@@ -75,9 +75,9 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
 
     override fun SleepHistoryRecord(Time: Calendar, Duration: Int, Type: Int) {
         try{
-            var Duration = Duration
-            if (Duration < 0) Duration = (Duration and 0xFF)
-            SleepRecordsTable.InsertRecord(Time, -1, Duration, Type, database)
+            var newDuration = Duration
+            if (newDuration < 0) newDuration = (newDuration and 0xFF)
+            SleepRecordsTable.InsertRecord(Time, -1, newDuration, Type, database)
         }catch (ex: Exception){
 
         }

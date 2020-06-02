@@ -13,7 +13,7 @@ import anonymouls.dev.MGCEX.util.Utils
 class PhoneStateListenerBroadcast : BroadcastReceiver() {
     // TODO Fix and test, not working
     override fun onReceive(context: Context, intent: Intent) {
-        if (DeviceControllerActivity.StatusCode == 3) {
+        if (DeviceControllerActivity.StatusCode >= 3) {
             if (!Utils.SharedPrefs!!.getBoolean("ReceiveCalls", true)) return
             val extras = intent.extras
             val State = extras!!.getString(TelephonyManager.EXTRA_STATE)

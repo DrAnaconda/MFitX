@@ -1,6 +1,5 @@
 package anonymouls.dev.MGCEX.App
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Dialog
 import android.app.NotificationManager
@@ -8,13 +7,15 @@ import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.Color
+import android.content.pm.PackageManager
 import android.os.AsyncTask
+import android.os.Build
 import android.os.Bundle
 import android.text.method.LinkMovementMethod
 import android.view.View
 import android.view.Window
 import android.widget.*
+import anonymouls.dev.MGCEX.DatabaseProvider.DatabaseController
 import anonymouls.dev.MGCEX.util.AdsController
 import anonymouls.dev.MGCEX.util.Analytics
 import anonymouls.dev.MGCEX.util.TopExceptionHandler
@@ -58,11 +59,10 @@ class DeviceControllerActivity : Activity() {
         startService(Intent(this, Algorithm::class.java))
     }
 
-    @SuppressLint("SetTextI18n", "SimpleDateFormat")
     fun reInit(){
         try {
             if (!IsActive)
-                syncerObj = UIDataSyncer()
+                syncerObj = UIDataSyncer(this)
             syncerObj.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
         } catch (Ex : IllegalStateException){
             // Ignore
@@ -81,6 +81,26 @@ class DeviceControllerActivity : Activity() {
 
     //region default android
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        if (requestCode == Utils.PermsAdvancedRequest) {
+            if (permissions.contains(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) && grantResults.contains(PackageManager.PERMISSION_GRANTED)) {
+                DatabaseController.DCObject?.migrateToExternal(this)
+            }
+            if (grantResults.contains(PackageManager.PERMISSION_DENIED)) {
+                Analytics.getInstance(this)?.sendCustomEvent(permissions[0], "rejected")
+            }
+        } else {
+            var shouldRetry = false
+            for (x in grantResults.indices) {
+                if (grantResults[x] == PackageManager.PERMISSION_DENIED) {
+                    Analytics.getInstance(this)?.sendCustomEvent(permissions[x], "denied")
+                    shouldRetry = true
+                }
+            }
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+            if (shouldRetry) Utils.requestPermissionsAdvanced(this)
+        }
+    }
     override fun onLowMemory() {
         isFirstLaunch = true
         super.onLowMemory()
@@ -108,10 +128,10 @@ class DeviceControllerActivity : Activity() {
         }
         super.onActivityResult(requestCode, resultCode, data)
     }
-    @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         this.exceptionHandler = TopExceptionHandler(this.applicationContext)
+        Utils.requestPermissionsDefault(this, Utils.UsedPerms)
         setContentView(R.layout.activity_device_controller)
         initViews()
         Analytics.getInstance(this)?.sendCustomEvent(FirebaseAnalytics.Event.APP_OPEN, null)
@@ -150,7 +170,6 @@ class DeviceControllerActivity : Activity() {
         newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         startActivity(newIntent)
     }
-    @SuppressLint("SetTextI18n")
     fun OnClickHandler(view: View) {
         val ID = view.id
         when (ID) {
@@ -203,7 +222,7 @@ class DeviceControllerActivity : Activity() {
                 reportIntent.putExtra(MultitaskActivity.TaskTypeIntent, 0)
                 startActivity(reportIntent)
             }
-            R.id.InfoContainer -> ViewDialog().showDialog(this)
+            R.id.InfoContainer -> ViewDialog(getString(R.string.info_text), ViewDialog.DialogTask.About).showDialog(this)
             R.id.SleepContainer -> {
                 val reportIntent = Intent(baseContext, MultitaskActivity::class.java)
                 reportIntent.putExtra(MultitaskActivity.TaskTypeIntent, 1)
@@ -219,84 +238,56 @@ class DeviceControllerActivity : Activity() {
         }
     }
 
-    class ViewDialog {
+    class ViewDialog(private val message: String, private val task: DialogTask, private val param: String? = null) {
+
+        enum class DialogTask { About, Permission, Intent }
+
         fun showDialog(activity: Activity?) {
             val dialog = Dialog(activity!!)
             dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
             dialog.setCancelable(false)
             dialog.setContentView(R.layout.about_dialog)
-            val about_page = dialog.findViewById<TextView>(R.id.about_app_page)
-            about_page.movementMethod = LinkMovementMethod.getInstance();
-            val privacy_page = dialog.findViewById<TextView>(R.id.privacy_policy_page)
-            privacy_page.movementMethod = LinkMovementMethod.getInstance();
+
+            val infoText = dialog.findViewById<TextView>(R.id.infoText)
+            infoText.text = message
+
+            val aboutPage = dialog.findViewById<TextView>(R.id.about_app_page)
+            aboutPage.movementMethod = LinkMovementMethod.getInstance()
+            val privacyPage = dialog.findViewById<TextView>(R.id.privacy_policy_page)
+            val contact = dialog.findViewById<TextView>(R.id.contactMail)
+            privacyPage.movementMethod = LinkMovementMethod.getInstance()
+
+            when (task) {
+                DialogTask.About -> {
+                }
+                else -> {
+                    privacyPage.visibility = View.GONE
+                    aboutPage.visibility = View.GONE
+                    contact.visibility = View.GONE
+                }
+            }
+
             val dialogButton = dialog.findViewById<View>(R.id.infoDialogClose) as Button
-            dialogButton.setOnClickListener { dialog.dismiss() }
+            dialogButton.setOnClickListener {
+                dialog.dismiss()
+                when (task) {
+                    DialogTask.Permission -> {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            activity.requestPermissions(arrayOf(param), Utils.PermsAdvancedRequest)
+                        }
+                    }
+                    DialogTask.Intent -> {
+                        activity.startActivity(Intent(param))
+                    }
+                    else -> {
+                    }
+                }
+
+            }
             dialog.show()
         }
     }
 
-
-    open inner class UIDataSyncer : AsyncTask<Void, Void, Void>() {
-
-        private var LastSyncedSteps  : Int = -1
-        private var LastSyncedCcals  : Int = -1
-        private var LastSyncedHR     : Int = -1
-        private var LastBatteryChrg  : Int = -1
-        private var LastSyncedStatus : String = ""
-        private var IsUpdateRequired = false
-        private var lastWork = true
-
-        override fun doInBackground(vararg params: Void?): Void {
-            Thread.currentThread().name = "UISyncer"
-            Thread.currentThread().priority = Thread.MIN_PRIORITY
-            while (true){
-                if (LastBatteryChrg != Algorithm.BatteryHolder){
-                    LastBatteryChrg = Algorithm.BatteryHolder
-                    IsUpdateRequired = true
-                }
-                if (LastSyncedSteps != Algorithm.LastStepsIncomed) {
-                    LastSyncedSteps = Algorithm.LastStepsIncomed
-                    IsUpdateRequired = true
-                }
-                if (LastSyncedHR != Algorithm.LastHearthRateIncomed){
-                    LastSyncedHR = Algorithm.LastHearthRateIncomed
-                    IsUpdateRequired = true
-                }
-                if (LastSyncedCcals != Algorithm.LastCcalsIncomed){
-                    LastSyncedCcals = Algorithm.LastCcalsIncomed
-                    IsUpdateRequired = true
-                }
-                if (LastSyncedStatus != Algorithm.LastStatus){
-                    LastSyncedStatus = Algorithm.LastStatus
-                    IsUpdateRequired = true
-                }
-                if (lastWork != Algorithm.SelfPointer?.workInProgress){
-                    IsUpdateRequired = true
-                    if (Algorithm.SelfPointer != null) lastWork = Algorithm.SelfPointer!!.workInProgress
-                }
-                if (IsUpdateRequired){
-                    publishProgress()
-                    IsUpdateRequired = false
-                }
-                Thread.sleep(2000)
-            }
-        }
-        override fun onProgressUpdate(vararg values: Void?) {
-            val progress: ProgressBar = findViewById(R.id.syncInProgress)
-            if (Algorithm.SelfPointer!!.workInProgress) {
-                progress.visibility = View.VISIBLE
-            }else {
-                progress.visibility = View.GONE
-            }
-
-            if (LastSyncedCcals!=-1) caloriesText.text      = LastSyncedCcals.toString()
-            if (LastSyncedSteps!=-1) stepsText.text         = LastSyncedSteps.toString()
-            if (LastSyncedHR!=-1)    HRValue.text       = LastSyncedHR.toString()
-            if (LastSyncedStatus!="") statusText.text   = LastSyncedStatus
-            if (LastBatteryChrg!=-1) batteryStatusText.text = LastBatteryChrg.toString()
-            super.onProgressUpdate()
-        }
-    }
 
     companion object {
 
@@ -323,9 +314,69 @@ class DeviceControllerActivity : Activity() {
             intentFilter.addAction("AlarmAction")
             return intentFilter
         }
+
+        class UIDataSyncer(private val deviceControllerActivity: DeviceControllerActivity) : AsyncTask<Void, Void, Void>() {
+
+            private var LastSyncedSteps: Int = -1
+            private var LastSyncedCcals: Int = -1
+            private var LastSyncedHR: Int = -1
+            private var LastBatteryChrg: Int = -1
+            private var LastSyncedStatus: String = ""
+            private var IsUpdateRequired = false
+            private var lastWork = true
+
+            override fun doInBackground(vararg params: Void?): Void {
+                Thread.currentThread().name = "UISyncer"
+                Thread.currentThread().priority = Thread.MIN_PRIORITY
+                while (true) {
+                    if (LastBatteryChrg != Algorithm.BatteryHolder) {
+                        LastBatteryChrg = Algorithm.BatteryHolder
+                        IsUpdateRequired = true
+                    }
+                    if (LastSyncedSteps != Algorithm.LastStepsIncomed) {
+                        LastSyncedSteps = Algorithm.LastStepsIncomed
+                        IsUpdateRequired = true
+                    }
+                    if (LastSyncedHR != Algorithm.LastHearthRateIncomed) {
+                        LastSyncedHR = Algorithm.LastHearthRateIncomed
+                        IsUpdateRequired = true
+                    }
+                    if (LastSyncedCcals != Algorithm.LastCcalsIncomed) {
+                        LastSyncedCcals = Algorithm.LastCcalsIncomed
+                        IsUpdateRequired = true
+                    }
+                    if (LastSyncedStatus != Algorithm.LastStatus) {
+                        LastSyncedStatus = Algorithm.LastStatus
+                        IsUpdateRequired = true
+                    }
+                    if (lastWork != Algorithm.SelfPointer?.workInProgress) {
+                        IsUpdateRequired = true
+                        if (Algorithm.SelfPointer != null)
+                            lastWork = Algorithm.SelfPointer!!.workInProgress
+                    }
+                    if (IsUpdateRequired) {
+                        publishProgress()
+                        IsUpdateRequired = false
+                    }
+                    Thread.sleep(2000)
+                }
+            }
+
+            override fun onProgressUpdate(vararg values: Void?) {
+                val progress: ProgressBar = deviceControllerActivity.findViewById(R.id.syncInProgress)
+                if (Algorithm.SelfPointer!!.workInProgress) {
+                    progress.visibility = View.VISIBLE
+                } else {
+                    progress.visibility = View.GONE
+                }
+
+                if (LastSyncedCcals != -1) deviceControllerActivity.caloriesText.text = LastSyncedCcals.toString()
+                if (LastSyncedSteps != -1) deviceControllerActivity.stepsText.text = LastSyncedSteps.toString()
+                if (LastSyncedHR != -1) deviceControllerActivity.HRValue.text = LastSyncedHR.toString()
+                if (LastSyncedStatus != "") deviceControllerActivity.statusText.text = LastSyncedStatus
+                if (LastBatteryChrg != -1) deviceControllerActivity.batteryStatusText.text = LastBatteryChrg.toString()
+                super.onProgressUpdate()
+            }
+        }
     }
 }
-
-
-// TODO integrate adds
-// TODO disable crash
