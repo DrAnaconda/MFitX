@@ -244,10 +244,10 @@ class DataView : Activity() {
         val extras = intent.extras
         data = extras!!.get(ExtraDataToLoad) as String
         ViewMode = extras.get(ExtraViewMode) as Int
-        val TodayStart = Calendar.getInstance()
-        TodayStart.set(Calendar.HOUR_OF_DAY, 0)
-        TodayStart.set(Calendar.MINUTE, 0)
-        TodayStart.set(Calendar.SECOND, 0)
+        val todayStart = Calendar.getInstance()
+        todayStart.set(Calendar.HOUR_OF_DAY, 0)
+        todayStart.set(Calendar.MINUTE, 0)
+        todayStart.set(Calendar.SECOND, 0)
         val todayEnd = Calendar.getInstance()
         todayEnd.set(Calendar.HOUR_OF_DAY, 23)
         todayEnd.set(Calendar.MINUTE, 59)
@@ -255,7 +255,7 @@ class DataView : Activity() {
         mainTable!!.isEnabled = true
         mainTable!!.visibility = View.VISIBLE
         headerChooser()
-        loadData(TodayStart, todayEnd)
+        loadData(todayStart, todayEnd)
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
