@@ -41,7 +41,7 @@ class SettingsActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
-        SharedPrefs = Utils.GetSharedPrefs(this)
+        SharedPrefs = Utils.getSharedPrefs(this)
         InitViews()
     }
 
@@ -101,21 +101,23 @@ class SettingsActivity : Activity() {
         Toast.makeText(this, getString(R.string.connection_not_established), Toast.LENGTH_LONG).show()
     }
 
-    private fun SendEraseDatabaseCommand() {
+    private fun sendEraseDatabaseCommand() {
         if (DeviceControllerActivity.StatusCode >= 3) {
             Algorithm.postCommand(CommandInterpreter.EraseDatabase(), false)
         } else {
             showNotConnectedErrorToast()
         }
     }
-    private fun SendResetCommand() {
+
+    private fun sendResetCommand() {
         if (DeviceControllerActivity.StatusCode >= 3) {
             Algorithm.postCommand(CommandInterpreter.RestoreToDefaults(), false)
         } else {
             showNotConnectedErrorToast()
         }
     }
-    private fun DeAuthDevice() {
+
+    private fun deAuthDevice() {
         val IsConnected = SharedPrefs!!.getBoolean("IsConnected", false)
         if (IsConnected) {
             SharedPrefs!!.edit().putBoolean("IsConnected", false).apply()
@@ -125,7 +127,8 @@ class SettingsActivity : Activity() {
             finish()
         }
     }
-    private fun AddToTable(Content: String, IsEnabled: Int) {
+
+    private fun addToTable(Content: String, IsEnabled: Int) {
         var drop = false
         val SW = Switch(this)
         val TR = CustomTableRow(this, Content, SW)
@@ -173,7 +176,8 @@ class SettingsActivity : Activity() {
         TR.layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.MATCH_PARENT)
         PackagesList!!.addView(TR)
     }
-    private fun LoadPackagesBtn() {
+
+    private fun loadPackagesBtn() {
         setContentView(R.layout.activity_data_without_calendartool)
         InitViews()
         val I = Intent(Intent.ACTION_MAIN, null)
@@ -182,7 +186,7 @@ class SettingsActivity : Activity() {
         val Old = NotifyFilterTable.ExtractRecords(DatabaseController.getDCObject(this).currentDataBase!!)
         if (Old != null && Old.count > 0) {
             do {
-                AddToTable(Old.getString(0), Old.getInt(1))
+                addToTable(Old.getString(0), Old.getInt(1))
             } while (Old.moveToNext())
         }
         for (Pack in PackList) {
@@ -196,28 +200,28 @@ class SettingsActivity : Activity() {
         }
     }
 
-    fun OnClickHandler(v: View) {
+    fun onClickHandler(v: View) {
         when (v.id) {
             R.id.LoadPackListBtn -> {
                 DataView = true
-                LoadPackagesBtn()
+                loadPackagesBtn()
             }
             R.id.NotificationsSwitch -> {
-                Utils.RequestToBindNotifyService(this)
-                if (!Algorithm.isNotifyServiceAlive(this)) {
+                if (NotificationService.IsActive) {
                     Algorithm.tryForceStartListener(this)
                 } else {
-                    SharedPrefs!!.edit().putBoolean("NotificationGranted", true).apply()
+                    Utils.RequestToBindNotifyService(this)
                 }
+                SharedPrefs!!.edit().putBoolean("NotificationGranted", true).apply()
             }
             R.id.GyroSwitch -> {
                 CommandInterpreter.SetGyroAction(EnableAutoIllumination!!.isChecked)
                 SharedPrefs!!.edit().putBoolean("Illumination", EnableAutoIllumination!!.isChecked).apply()
             }
             R.id.PhoneSwitch -> SharedPrefs!!.edit().putBoolean("ReceiveCalls", ReceivePhoneCallBox!!.isChecked).apply()
-            R.id.RestoreToDefaultsBtn  -> SendResetCommand()
-            R.id.EraseDataOnRDeviceBtn -> SendEraseDatabaseCommand()
-            R.id.breakConnectionBtn -> DeAuthDevice()
+            R.id.RestoreToDefaultsBtn -> sendResetCommand()
+            R.id.EraseDataOnRDeviceBtn -> sendEraseDatabaseCommand()
+            R.id.breakConnectionBtn -> deAuthDevice()
             R.id.analyticsOn -> Utils.SharedPrefs?.edit()?.putBoolean(Analytics.HelpData, findViewById<Switch>(R.id.analyticsOn).isChecked)?.apply()
         }
     }

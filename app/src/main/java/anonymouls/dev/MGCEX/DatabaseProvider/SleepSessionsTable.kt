@@ -1,12 +1,8 @@
 package anonymouls.dev.MGCEX.DatabaseProvider
 
 import android.content.ContentValues
-import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import anonymouls.dev.MGCEX.DatabaseProvider.SleepSessionsTable.ColumnNames
-
-import java.util.ArrayList
-import java.util.Calendar
+import java.util.*
 
 object SleepSessionsTable {
     val ColumnNames = arrayOf("ID", "Date", "Durability", "DeepDurability")

@@ -13,10 +13,10 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
 
     override fun MainInfo(Steps: Int, Calories: Int) {
         try {
-            MainRecordsTable.insertRecordV2(Calendar.getInstance(), Steps, Calories, database)
             lastSyncMain = CustomDatabaseUtils.CalendarToLong(Calendar.getInstance(), true)
             Algorithm.LastStepsIncomed = Steps
             Algorithm.LastCcalsIncomed = Calories
+            MainRecordsTable.insertRecordV2(Calendar.getInstance(), Steps, Calories, database)
         } catch (Ex: Exception) {
 
         }
@@ -35,13 +35,14 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
         var ResultHR = HRValue
         if (ResultHR < 0) ResultHR = (ResultHR and 0xFF)
         //if (Algorithm.IsAlarmWaiting) Algorithm.SelfPointer?.alarmTriggerDecider(ResultHR)
-        if (lastSyncHR < CustomDatabaseUtils.CalendarToLong(Time, true) && DeviceControllerActivity.isFirstLaunch) {
+        if (lastSyncHR <= CustomDatabaseUtils.CalendarToLong(Time, true)) {
             Algorithm.LastHearthRateIncomed = ResultHR
             lastSyncHR = CustomDatabaseUtils.CalendarToLong(Time, true)
         }
     }
 
     override fun HRHistoryRecord(Time: Calendar, HRValue: Int) {
+        if (Time.time > Calendar.getInstance().time) return
         try {
             var ResultHR = HRValue
             if (ResultHR < 0) ResultHR = (ResultHR and 0xFF)
@@ -58,10 +59,12 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
     }
 
     override fun MainHistoryRecord(Time: Calendar, Steps: Int, Calories: Int) {
+        if (Time.time > Calendar.getInstance().time) return
         if (Steps <= 0 || Calories <= 0) return
         try {
             if (MainRecordsTable.insertRecordV2(Time, Steps, Calories, database)>0) {
-                if (CustomDatabaseUtils.CalendarToLong(Time,true) > lastSyncMain) {
+                val current = CustomDatabaseUtils.CalendarToLong(Time, true)
+                if (current > lastSyncMain) {
                     Algorithm.LastCcalsIncomed = Calories
                     Algorithm.LastStepsIncomed = Steps
                     lastSyncMain = CustomDatabaseUtils.CalendarToLong(Time, true)

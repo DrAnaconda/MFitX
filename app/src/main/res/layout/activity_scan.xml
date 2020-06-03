@@ -5,10 +5,20 @@
     android:orientation="vertical"
     tools:context=".ScanActivity" >
 
+    <ProgressBar
+        android:id="@+id/scanInProgress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:indeterminateDrawable="@drawable/indeterminate_drawable"
+        android:indeterminateTint="#ff0000"
+        android:progressDrawable="@drawable/indeterminate_drawable"
+        android:visibility="gone" />
+
     <ListView
         android:id="@+id/list"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" >
-
     </ListView>
+
 </LinearLayout>

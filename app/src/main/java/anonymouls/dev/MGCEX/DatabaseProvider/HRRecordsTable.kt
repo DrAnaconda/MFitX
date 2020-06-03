@@ -3,12 +3,8 @@ package anonymouls.dev.MGCEX.DatabaseProvider
 import android.content.ContentValues
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import android.icu.text.AlphabeticIndex
-import android.provider.ContactsContract
 import anonymouls.dev.MGCEX.util.HRAnalyzer
-import java.lang.Exception
-
-import java.util.Calendar
+import java.util.*
 import kotlin.math.abs
 
 object HRRecordsTable {
@@ -59,7 +55,7 @@ object HRRecordsTable {
         val from = CustomDatabaseUtils.CalendarToLong(RecordTime, true)-10
         val to = from+20
         val curs = Operator.query(DatabaseController.MainRecordsTableName, arrayOf(MainRecordsTable.ColumnNames[2]), " "+MainRecordsTable.ColumnNames[1]+" BETWEEN ? AND ?",
-            arrayOf(from.toString(), to.toString()), null, null, null, "1");
+                arrayOf(from.toString(), to.toString()), null, null, null, "1")
         if (curs.count > 0){
             curs.moveToFirst()
             val values = ContentValues()
@@ -108,10 +104,10 @@ object HRRecordsTable {
 //endregion
 
     fun generateReport(From: Calendar?, To: Calendar?, Operator: SQLiteDatabase): HRReport{
-        var from: Long;
-        var to: Long;
+        var from: Long
+        var to: Long
         if (From == null || To == null){
-            from = 0;
+            from = 0
             to = Long.MAX_VALUE
         } else {
             from = CustomDatabaseUtils.CalendarToLong(From, true)
@@ -122,15 +118,15 @@ object HRRecordsTable {
                         CustomDatabaseUtils.niceSQLFunctionBuilder("AVG", ColumnsNames[2]),//1
                         CustomDatabaseUtils.niceSQLFunctionBuilder("MIN", ColumnsNames[2]),//2
                         CustomDatabaseUtils.niceSQLFunctionBuilder("MAX", ColumnsNames[2])),//3
-                ColumnsNames[1] + " BETWEEN ? AND ?", arrayOf(from.toString(), to.toString()), null, null, null);
+                ColumnsNames[1] + " BETWEEN ? AND ?", arrayOf(from.toString(), to.toString()), null, null, null)
         curs.moveToFirst()
         return HRReport(curs.getInt(2), curs.getInt(1), curs.getInt(3), curs.getInt(0), countAnomalies(From, To, curs.getInt(1), Operator))
     }
     private fun countAnomalies(From: Calendar?, To: Calendar?, avgHR: Int, Operator: SQLiteDatabase): Int{
-        var from: Long;
-        var to: Long;
+        var from: Long
+        var to: Long
         if (From == null || To == null){
-            from = 0;
+            from = 0
             to = Long.MAX_VALUE
         } else {
             from = CustomDatabaseUtils.CalendarToLong(From, true)

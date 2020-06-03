@@ -72,24 +72,31 @@ object HRAnalyzer{
             var prevSteps = -1
             var prevTime: Long = -1
             var prevID: Long = -1
+            var errorCount = 0
             curs?.moveToFirst()
             do{
-                val currentSteps = curs.getInt(1)
-                val currentTime = curs.getLong(2)
-                val currentID = curs.getLong(0)
-                if (prevSteps < 0 || (prevSteps > 0 && currentSteps == 0)){  prevSteps = currentSteps; prevTime = currentTime; prevID = currentID; continue; }
-                val deltaSteps = currentSteps-prevSteps
-                val deltaTime = getDeltaMinutes(CustomDatabaseUtils.LongToCalendar(prevTime, true), CustomDatabaseUtils.LongToCalendar(currentTime, true))
-                val phStress = physicalStressDetermining(deltaSteps, deltaTime)
-                val values = ContentValues()
-                values.put(HRRecordsTable.ColumnsNames[3], HRRecordsTable.AnalyticTypes.valueOf(phStress.name).type)
-                Operator.update(DatabaseController.HRRecordsTableName, values,
-                        " "+HRRecordsTable.ColumnsNames[1]+" BETWEEN ? AND ? ",
-                        arrayOf(prevTime.toString(), currentTime.toString()))
-                prevSteps = currentSteps
-                prevTime = currentTime
-                Operator.delete(DatabaseController.MainRecordsTableName + "COPY", " DATE = ?", arrayOf(prevID.toString()))
-                prevID = currentID
+                try {
+                    val currentSteps = curs.getInt(1)
+                    val currentTime = curs.getLong(2)
+                    val currentID = curs.getLong(0)
+                    if (prevSteps < 0 || (prevSteps > 0 && currentSteps == 0)) {
+                        prevSteps = currentSteps; prevTime = currentTime; prevID = currentID; continue; }
+                    val deltaSteps = currentSteps - prevSteps
+                    val deltaTime = getDeltaMinutes(CustomDatabaseUtils.LongToCalendar(prevTime, true), CustomDatabaseUtils.LongToCalendar(currentTime, true))
+                    val phStress = physicalStressDetermining(deltaSteps, deltaTime)
+                    val values = ContentValues()
+                    values.put(HRRecordsTable.ColumnsNames[3], HRRecordsTable.AnalyticTypes.valueOf(phStress.name).type)
+                    Operator.update(DatabaseController.HRRecordsTableName, values,
+                            " " + HRRecordsTable.ColumnsNames[1] + " BETWEEN ? AND ? ",
+                            arrayOf(prevTime.toString(), currentTime.toString()))
+                    prevSteps = currentSteps
+                    prevTime = currentTime
+                    Operator.delete(DatabaseController.MainRecordsTableName + "COPY", " DATE = ?", arrayOf(prevID.toString()))
+                    prevID = currentID
+                } catch (ex: Exception) {
+                    Thread.sleep(15000)
+                    if (errorCount++ > 2) break
+                }
             }while (curs.moveToNext())
             curs.close()
             Operator.delete(DatabaseController.MainRecordsTableName + "COPY", " DATE = ?", arrayOf(prevID.toString()))

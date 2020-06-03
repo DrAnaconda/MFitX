@@ -5,10 +5,6 @@ import android.bluetooth.le.ScanResult
 
 class ScannerCallback(private val ScannerActivity: ScanActivity) : ScanCallback() {
 
-    override fun onScanFailed(errorCode: Int) {
-        super.onScanFailed(errorCode)
-    }
-
     override fun onScanResult(callbackType: Int, result: ScanResult) {
         super.onScanResult(callbackType, result)
         ScannerActivity.runOnUiThread { ScannerActivity.mDeviceAdapter.update(result.device) }

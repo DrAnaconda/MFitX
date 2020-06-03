@@ -2,6 +2,7 @@ package anonymouls.dev.MGCEX.App
 
 import android.app.Activity
 import android.database.Cursor
+import android.database.sqlite.SQLiteDatabase
 import android.graphics.Color
 import android.os.AsyncTask
 import android.os.Bundle
@@ -16,195 +17,185 @@ import anonymouls.dev.MGCEX.DatabaseProvider.HRRecordsTable
 import anonymouls.dev.MGCEX.DatabaseProvider.MainRecordsTable
 import anonymouls.dev.MGCEX.util.AdsController
 import anonymouls.dev.MGCEX.util.HRAnalyzer
+import com.google.android.gms.ads.AdView
 import com.squareup.timessquare.CalendarPickerView
 import java.text.SimpleDateFormat
 import java.util.*
 
-@Suppress("NAME_SHADOWING")
 class DataView : Activity() {
 
-    private var DC: DatabaseController? = null
-    private var DHRC : DataComplexer? = null
+    enum class DataTypes { HR, Steps, Calories }
+    enum class Scalings { Day, Week, Month }
 
-    private var LastValue = -1
+    private lateinit var complexColumnsUniversal: Array<String>
+    private lateinit var hrColumns: Array<String>
+    private lateinit var mainCaloriesColumns: Array<String>
+    private lateinit var mainStepsColumns: Array<String>
+    private lateinit var mainColumns: Array<String>
 
-    private var CalendarTool: CalendarPickerView? = null
-    private var ConfirmBtn: MenuItem? = null
-    private var RequestBtn: MenuItem? = null
-    private var Data: String? = null
-    private var MainTable: TableLayout? = null
-    private var ScaleGroup: RadioGroup? = null
-    private var DayScale: RadioButton? = null
-    private var WeekScale: RadioButton? = null
-    private var MonthScale: RadioButton? = null
+    private lateinit var database: SQLiteDatabase
+    private var dataComplexer: DataComplexer? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        AdsController.showUltraRare(this)
-        setContentView(R.layout.activity_data_view)
-        init()
-        val Extras = intent.extras
-        Data = Extras!!.get(ExtraDataToLoad) as String
-        ViewMode = Extras.get(ExtraViewMode) as Int
-        val TodayStart = Calendar.getInstance()
-        TodayStart.set(Calendar.HOUR_OF_DAY, 0)
-        TodayStart.set(Calendar.MINUTE, 0)
-        TodayStart.set(Calendar.SECOND, 0)
-        val TodayEnd = CustomDatabaseUtils.GetLastSyncFromTable(DatabaseController.HRRecordsTableName,
-                HRRecordsTable.ColumnsNames, true, DC!!.currentDataBase!!)
-        MainTable!!.isEnabled = true
-        MainTable!!.visibility = View.VISIBLE
-        HeaderChooser()
-        LoadData(TodayStart, TodayEnd)
-    }
+    private var lastValue = -1
+
+    private var calendarTool: CalendarPickerView? = null
+    private var confirmBtn: MenuItem? = null
+    private var requestBtn: MenuItem? = null
+    private var data: String? = null
+    private var mainTable: TableLayout? = null
+    private var scaleGroup: RadioGroup? = null
+    private var dayScale: RadioButton? = null
+    private var weekScale: RadioButton? = null
+    private var monthScale: RadioButton? = null
+    private var ad: AdView? = null
+
+    private var scale = Scalings.Day
 
     private fun init() {
-        CalendarTool = findViewById(R.id.CalendarTool)
+        complexColumnsUniversal = arrayOf(getString(R.string.date_str),
+                getString(R.string.min_str), getString(R.string.avg_str), getString(R.string.max_str))
+        hrColumns = arrayOf(getString(R.string.DateTime), getString(R.string.value_str))
+        mainCaloriesColumns = arrayOf(getString(R.string.DateTime), getString(R.string.calories_str))
+        mainStepsColumns = arrayOf(getString(R.string.DateTime), getString(R.string.steps_str))
+        mainColumns = arrayOf(getString(R.string.DateTime), getString(R.string.calories_str), getString(R.string.steps_str))
+
+
+        ad = findViewById(R.id.dataAD)
+        AdsController.initAdBanned(ad!!, this)
+
+        calendarTool = findViewById(R.id.CalendarTool)
         val To = Calendar.getInstance()
         To.add(Calendar.DAY_OF_MONTH, 1)
         val From = Calendar.getInstance()
         From.add(Calendar.YEAR, -1)
-        CalendarTool!!.init(From.time, To.time, Locale.ENGLISH)
+        calendarTool!!.init(From.time, To.time, Locale.ENGLISH)
                 .inMode(CalendarPickerView.SelectionMode.RANGE)
-        CalendarTool!!.scrollToDate(To.time)
-        CalendarTool!!.selectedDates
-        DC = DatabaseController.getDCObject(this)
+        calendarTool!!.scrollToDate(To.time)
+        calendarTool!!.selectedDates
+        database = DatabaseController.getDCObject(this).readableDatabase
 
-        ScaleGroup = findViewById(R.id.ScaleGroup)
-        MainTable = findViewById(R.id.MainTable)
-        DayScale = findViewById(R.id.DayScale)
-        WeekScale = findViewById(R.id.WeekScale)
-        MonthScale = findViewById(R.id.MonthScale)
+        scaleGroup = findViewById(R.id.ScaleGroup)
+        mainTable = findViewById(R.id.MainTable)
+        dayScale = findViewById(R.id.DayScale)
+        weekScale = findViewById(R.id.WeekScale)
+        monthScale = findViewById(R.id.MonthScale)
         when (ViewMode) {
             0 -> {
             }
             else -> {
-                MainTable!!.visibility = View.VISIBLE
-                MainTable!!.isEnabled = true
+                mainTable!!.visibility = View.VISIBLE
+                mainTable!!.isEnabled = true
             }
         }///graph add?
     }
 
-    private fun HeaderChooser() {
-        when (Data) {
-            "HR" -> if (Mode == 1)
-                ExecuteTableHeaderCreation(HRColumns)
-            else
-                ExecuteTableHeaderCreation(HRColumnsComplex)
-            "CALORIES" -> if (Mode == 1)
-                ExecuteTableHeaderCreation(MainCaloriesColumns)
-            else
-                ExecuteTableHeaderCreation(MainCaloriesComplex)
-            "STEPS" -> if (Mode == 1)
-                ExecuteTableHeaderCreation(MainStepsColumns)
-            else
-                ExecuteTableHeaderCreation(MainStepsColumns)
-            "MAIN" -> if (Mode == 1)
-                ExecuteTableHeaderCreation(MainColumns)
-            else
-                ExecuteTableHeaderCreation(MainColumnsComplex)
+    private fun headerChooser() {
+        if (scale == Scalings.Day) {
+            when (data) {
+                "HR" -> executeTableHeaderCreation(hrColumns)
+                "CALORIES" -> executeTableHeaderCreation(mainCaloriesColumns)
+                "STEPS" -> executeTableHeaderCreation(mainStepsColumns)
+                "MAIN" -> executeTableHeaderCreation(mainColumns)
+            }
+        } else {
+            executeTableHeaderCreation(complexColumnsUniversal)
         }
     }
 
-    private fun ExecuteTableHeaderCreation(Target: Array<String>) {
-        MainTable!!.removeAllViews()
+    private fun executeTableHeaderCreation(Target: Array<String>) {
+        mainTable!!.removeAllViews()
         val Header = TableRow(this)
         //      Header.setLayoutParams(new TableLayout.LayoutParams(TableRow.LayoutParams.MATCH_PARENT,
         //                    TableRow.LayoutParams.MATCH_PARENT));
         for (Column in Target) {
-            Header.addView(TextViewCreator(Column, 22, true, -1))
+            Header.addView(textViewCreator(Column, 22, true, -1))
         }
-        MainTable!!.addView(Header)
+        mainTable!!.addView(Header)
     }
 
-    private fun TextViewCreator(Text: String, TextSizeValue: Int, IsHeader: Boolean,
+    private fun textViewCreator(Text: String, TextSizeValue: Int, IsHeader: Boolean,
                                 TextColor: Int): TextView {
         var Text = Text
+        val result = TextView(this)
         try {
-            if (Data == "HR" && HRAnalyzer.isAnomaly(Text.toInt(), -1, this))
+            if (data == "HR" && HRAnalyzer.isAnomaly(Text.toInt(), -1, this))
             {
-                Text += " !!!"
+                result.setTextColor(Color.parseColor("#ff0000"))
             }
         }catch (ex: Exception){
 
         }
-        val Result = TextView(this)
-        Result.layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT,
+        result.layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT,
                 TableRow.LayoutParams.WRAP_CONTENT)
-        Result.setPadding(5, 5, 5, 5)
-        Result.gravity = Gravity.CENTER
-        Result.textSize = TextSizeValue.toFloat()
-        if (TextColor != -1) Result.setTextColor(TextColor)
-        if (IsHeader) Result.setBackgroundColor(Color.GRAY)
-        Result.text = Text
-        return Result
+        result.setPadding(5, 5, 5, 5)
+        result.gravity = Gravity.CENTER
+        result.textSize = TextSizeValue.toFloat()
+        if (TextColor != -1) result.setTextColor(TextColor)
+        if (IsHeader) result.setBackgroundColor(Color.GRAY)
+        result.text = Text
+        return result
     }
 
-    private fun UpdateView(Rec: DataComplexer.Record) {
+    private fun updateView(Rec: DataComplexer.Record) {
         if (Rec.MainValue == 0) return
-        if (Rec.MainValue == LastValue)
+        if (Rec.MainValue == lastValue)
             return
         else
-            LastValue = Rec.MainValue
+            lastValue = Rec.MainValue
 
-        if (Mode != 1 && (Rec.MinValue == 0 || Rec.MaxValue == 0)) return
+        if (scale != Scalings.Day && (Rec.MinValue == 0 || Rec.MaxValue == 0)) return
 
         val Row = TableRow(this)
         Row.layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.MATCH_PARENT, TableRow.LayoutParams.WRAP_CONTENT)
         lateinit var SDF: SimpleDateFormat
-        if (DayScale!!.isChecked)
+        if (dayScale!!.isChecked)
             SDF = SimpleDateFormat("LLLL d H:mm", Locale.ENGLISH)
-        else if (WeekScale!!.isChecked)
+        else if (weekScale!!.isChecked)
             SDF = SimpleDateFormat("LLLL W yyyy", Locale.ENGLISH)
-        else if (MonthScale!!.isChecked)
+        else if (monthScale!!.isChecked)
             SDF = SimpleDateFormat("LLLL yyyy", Locale.ENGLISH)
-        if (Mode == 1) {
-            Row.addView(TextViewCreator(SDF.format(Rec.WhenCalendar.time),
+        if (scale == Scalings.Day) {
+            Row.addView(textViewCreator(SDF.format(Rec.whenCalendar.time),
                     18, false, -1))
-            Row.addView(TextViewCreator(Integer.toString(Rec.MainValue), 18,
+            Row.addView(textViewCreator(Integer.toString(Rec.MainValue), 18,
                     false, -1))
         } else {
-            Row.addView(TextViewCreator(SDF.format(Rec.WhenCalendar.time), 18,
+            Row.addView(textViewCreator(SDF.format(Rec.whenCalendar.time), 18,
                     false, -1))
-            Row.addView(TextViewCreator(Integer.toString(Rec.MinValue), 18,
+            Row.addView(textViewCreator(Integer.toString(Rec.MinValue), 18,
                     false, -1))
-            Row.addView(TextViewCreator(Integer.toString(Rec.MainValue), 18,
+            Row.addView(textViewCreator(Integer.toString(Rec.MainValue), 18,
                     false, -1))
-            Row.addView(TextViewCreator(Integer.toString(Rec.MaxValue), 18,
+            Row.addView(textViewCreator(Integer.toString(Rec.MaxValue), 18,
                     false, -1))
         }
-        MainTable!!.addView(Row,
+        mainTable!!.addView(Row,
                 TableLayout.LayoutParams(TableLayout.LayoutParams.MATCH_PARENT,
                         TableLayout.LayoutParams.WRAP_CONTENT))
 
     }
 
-    private fun ExecuteTableCreation(From: Calendar, To: Calendar, DataType: Int) {
-        HeaderChooser()
-        DHRC = DataComplexer(DC!!, From, To, Mode, DataType, 1, this)
-        DHRC?.Compute()
+    private fun executeTableCreation(From: Calendar, To: Calendar, DataType: DataTypes) {
+        headerChooser()
+        dataComplexer = DataComplexer(database, From, To, scale, DataType, 1, this)
+        dataComplexer?.compute()
+        findViewById<ProgressBar>(R.id.loadingInProgress).visibility = View.VISIBLE
     }
 
 
-    private fun LoadData(From: Calendar, To: Calendar) {
-        when (Data) {
+    private fun loadData(From: Calendar, To: Calendar) {
+        when (data) {
             "HR" -> if (ViewMode != 0)
-            //              ExecuteGraphBuilding(From, To,2);
-            //else
-                ExecuteTableCreation(From, To, 2)
+                executeTableCreation(From, To, DataTypes.HR)
             "STEPS" -> if (ViewMode != 0)
-            //            ExecuteGraphBuilding(From, To,3);
-            //  else
-                ExecuteTableCreation(From, To, 3)
+                executeTableCreation(From, To, DataTypes.Steps)
             "CALORIES" -> if (ViewMode != 0)
-            //          ExecuteGraphBuilding(From, To,4);
-            //    else
-                ExecuteTableCreation(From, To, 4)
+                executeTableCreation(From, To, DataTypes.Calories)
         }
     }
 
-    private fun GetLastOrFirstDate(IsFromNeeded: Boolean): Calendar {
-        val Dates = CalendarTool!!.selectedDates
+    private fun getLastOrFirstDate(IsFromNeeded: Boolean): Calendar {
+        val Dates = calendarTool!!.selectedDates
         val Result = Calendar.getInstance()
         val Output: Date
         if (IsFromNeeded)
@@ -224,152 +215,194 @@ class DataView : Activity() {
         return Result
     }
 
+    private fun hideCalendar() {
+        requestBtn!!.isVisible = true
+        scaleGroup!!.visibility = View.INVISIBLE
+        calendarTool!!.visibility = View.INVISIBLE
+        mainTable!!.visibility = View.VISIBLE
+        ad!!.visibility = View.VISIBLE
+    }
+
+    private fun showCalendar() {
+        confirmBtn!!.isVisible = true
+        scaleGroup!!.visibility = View.VISIBLE
+        calendarTool!!.visibility = View.VISIBLE
+        calendarTool!!.clearHighlightedDates()
+        mainTable!!.visibility = View.INVISIBLE
+        ad!!.visibility = View.INVISIBLE
+    }
+
+
+//region Default Android
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        AdsController.showUltraRare(this)
+        setContentView(R.layout.activity_data_view)
+        AdsController.showUltraRare(this)
+        init()
+        val extras = intent.extras
+        data = extras!!.get(ExtraDataToLoad) as String
+        ViewMode = extras.get(ExtraViewMode) as Int
+        val TodayStart = Calendar.getInstance()
+        TodayStart.set(Calendar.HOUR_OF_DAY, 0)
+        TodayStart.set(Calendar.MINUTE, 0)
+        TodayStart.set(Calendar.SECOND, 0)
+        val todayEnd = Calendar.getInstance()
+        todayEnd.set(Calendar.HOUR_OF_DAY, 23)
+        todayEnd.set(Calendar.MINUTE, 59)
+        todayEnd.set(Calendar.SECOND, 59)
+        mainTable!!.isEnabled = true
+        mainTable!!.visibility = View.VISIBLE
+        headerChooser()
+        loadData(TodayStart, todayEnd)
+    }
+
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        ConfirmBtn = menu.findItem(R.id.ConfirmMenuBtn)
-        RequestBtn = menu.findItem(R.id.RequestHistory)
+        confirmBtn = menu.findItem(R.id.ConfirmMenuBtn)
+        requestBtn = menu.findItem(R.id.RequestHistory)
         return super.onPrepareOptionsMenu(menu)
     }
+
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.data_menu, menu)
         return super.onCreateOptionsMenu(menu)
     }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.ConfirmMenuBtn -> {
-                MainTable!!.removeAllViews()
-                if (DayScale!!.isChecked)
-                    Mode = 1
-                else if (WeekScale!!.isChecked)
-                    Mode = 2
+                mainTable!!.removeAllViews()
+                if (dayScale!!.isChecked)
+                    scale = Scalings.Day
+                else if (weekScale!!.isChecked)
+                    scale = Scalings.Week
                 else
-                    Mode = 3
+                    scale = Scalings.Month
                 item.isVisible = false
-                RequestBtn!!.isVisible = true
-                ScaleGroup!!.visibility = View.INVISIBLE
-                CalendarTool!!.visibility = View.INVISIBLE
-                MainTable!!.visibility = View.VISIBLE
-                LoadData(GetLastOrFirstDate(true), GetLastOrFirstDate(false))
+                hideCalendar()
+                loadData(getLastOrFirstDate(true), getLastOrFirstDate(false))
             }
             R.id.RequestHistory -> {
-                item.isVisible = false
-                ConfirmBtn!!.isVisible = true
-                ScaleGroup!!.visibility = View.VISIBLE
-                CalendarTool!!.visibility = View.VISIBLE
-                CalendarTool!!.clearHighlightedDates()
-                MainTable!!.visibility = View.INVISIBLE
-            }
+                item.isVisible = false; showCalendar(); }
         }
         return super.onOptionsItemSelected(item)
     }
-
     override fun onBackPressed() {
-        finish()
+        if (confirmBtn!!.isVisible) {
+            hideCalendar()
+        } else finish()
         super.onBackPressed()
     }
 
-    inner class DataComplexer(private val DC: DatabaseController, From: Calendar, To: Calendar,
-                              Mode: Int, private val DataType: Int, ViewStyle: Int, private val DV: DataView) {
-        private val FromLong: Long
-        private val ToLong: Long
-        private var CurrentLock: Long = 0
-        private var StaticOffset: Long = 0
-        private var Mode = 2
-        var Output: List<Record> = ArrayList()
-        private var ViewStyle = 0
-        private lateinit var TaskerObject : AsyncTasker
+    override fun onDestroy() {
+        dayScale?.isSelected = true
+        monthScale?.isSelected = false
+        weekScale?.isSelected = false
+        AdsController.cancelBigAD()
+        super.onDestroy()
+    }
+
+//endregion
+
+
+    inner class DataComplexer(private val database: SQLiteDatabase, From: Calendar, To: Calendar,
+                              private val scale: Scalings, private val DataType: DataTypes, private val ViewStyle: Int, private val DV: DataView) {
+
+        private val fromLong = CustomDatabaseUtils.CalendarToLong(From, true)
+        private val toLong = CustomDatabaseUtils.CalendarToLong(To, true)
+        private var currentLock: Long = 0
+        private var staticOffset: Long = 0
+        private lateinit var taskerObject: AsyncTasker
+        private var grouping = true
 
         init {
-            this.Mode = Mode
-            this.ViewStyle = ViewStyle
-            //if (DataType > 2) {
-            ToLong = CustomDatabaseUtils.CalendarToLong(To, true)
-            FromLong = CustomDatabaseUtils.CalendarToLong(From, true)
-            //}
-            /*else{
-            ToLong = CustomDatabaseUtils.CalendarToLong(To, false);
-            FromLong = CustomDatabaseUtils.CalendarToLong(From,false);}*/
             From.add(Calendar.DAY_OF_MONTH, -1)
-            CurrentLock = this.FromLong
-            SetOffset()
+            currentLock = this.fromLong
+            setOffset()
+            if (scale == Scalings.Day) grouping = false
         }
-        private fun SetOffset() {
-            when (Mode) {
-                1 -> StaticOffset = CustomDatabaseUtils.CalculateOffsetValue(5, Calendar.MINUTE, false)
-                2 -> StaticOffset = CustomDatabaseUtils.CalculateOffsetValue(7, Calendar.DAY_OF_MONTH, false)
-                3 -> StaticOffset = CustomDatabaseUtils.CalculateOffsetValue(1, Calendar.MONTH, false)
+
+        private fun setOffset() {
+            staticOffset = when (scale) {
+                Scalings.Day -> CustomDatabaseUtils.CalculateOffsetValue(5, Calendar.MINUTE, false)
+                Scalings.Week -> CustomDatabaseUtils.CalculateOffsetValue(7, Calendar.DAY_OF_MONTH, false)
+                Scalings.Month -> CustomDatabaseUtils.CalculateOffsetValue(1, Calendar.MONTH, false)
             }
         }
-        fun Compute() {
-            TaskerObject = AsyncTasker()
-            TaskerObject.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
+
+        fun compute() {
+            taskerObject = AsyncTasker()
+            taskerObject.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
         }
-        inner class Record(Result: Cursor, When: Long, Mode: Int, DataPosition: Int) {
-            private val When: Long
-            var WhenCalendar: Calendar
+
+        inner class Record(Result: Cursor, private var recordDate: Long, isGrouping: Boolean) {
+            var whenCalendar: Calendar
             var MainValue: Int = 0// AVG + Default
             var MinValue: Int = 0
             var MaxValue: Int = 0
 
             init {
-                var When = When
-                this.When = When
-                WhenCalendar = CustomDatabaseUtils.LongToCalendar(When, true)
-                if (Mode != 1) {
+                whenCalendar = CustomDatabaseUtils.LongToCalendar(recordDate, true)
+                if (isGrouping) {
                     MainValue = Result.getInt(0)//AVG
                     MinValue = Result.getInt(1)//MIN
                     MaxValue = Result.getInt(2)//MAX
                 } else {
-                    When = Result.getLong(0)
-                    WhenCalendar = CustomDatabaseUtils.LongToCalendar(When, true)
-                    MainValue = Result.getInt(DataPosition - 1)
+                    recordDate = Result.getLong(0)
+                    whenCalendar = CustomDatabaseUtils.LongToCalendar(recordDate, true)
+                    MainValue = Result.getInt(1)
                 }
             }
         }
 
         inner class AsyncTasker : AsyncTask<Void, Record, Boolean>() {
             override fun onProgressUpdate(vararg values: Record?) {
-                for (NewRec in values)
-                    DV.UpdateView(NewRec!!)
+                for (value in values) {
+                    if (value == null) continue
+                    DV.updateView(value)
+                }
                 super.onProgressUpdate(*values)
             }
             override fun doInBackground(vararg params: Void?): Boolean {
                 Thread.currentThread().name = "DataLoader"
-                while (CurrentLock < ToLong) {
-                    val Results: Cursor?
-                    if (Mode != 1) {
+                while (currentLock < toLong) {
+                    var results: Cursor? = null
                         when (DataType) {
-                            2 -> Results = HRRecordsTable.ExtractFuncOnInterval(CurrentLock, CustomDatabaseUtils.SumLongs(CurrentLock, StaticOffset + 1, false), DC.currentDataBase!!)
-                            4 -> Results = MainRecordsTable.ExtractFuncOnIntervalCalories(CurrentLock, CustomDatabaseUtils.SumLongs(CurrentLock, StaticOffset + 1, false), DC.currentDataBase!!)
-                            3 -> Results = MainRecordsTable.ExtractFuncOnIntervalSteps(CurrentLock, CustomDatabaseUtils.SumLongs(CurrentLock, StaticOffset + 1, false), DC.currentDataBase!!)
-                            else -> Results = null
+                            DataTypes.HR -> {
+                                results = if (grouping)
+                                    HRRecordsTable.ExtractFuncOnInterval(currentLock, CustomDatabaseUtils.SumLongs(currentLock, staticOffset + 1, false), database)
+                                else
+                                    HRRecordsTable.ExtractRecords(currentLock, CustomDatabaseUtils.SumLongs(currentLock, staticOffset + 1, false), database)
+                            }
+                            DataTypes.Calories -> {
+                                results = if (grouping)
+                                    MainRecordsTable.ExtractFuncOnIntervalCalories(currentLock, CustomDatabaseUtils.SumLongs(currentLock, staticOffset + 1, false), database)
+                                else
+                                    MainRecordsTable.ExtractRecords(currentLock, CustomDatabaseUtils.SumLongs(currentLock, staticOffset + 1, false), database)
+                            }
+                            DataTypes.Steps -> {
+                                results = if (grouping)
+                                    MainRecordsTable.ExtractFuncOnIntervalSteps(currentLock, CustomDatabaseUtils.SumLongs(currentLock, staticOffset + 1, false), database)
+                                else
+                                    MainRecordsTable.ExtractRecords(currentLock, CustomDatabaseUtils.SumLongs(currentLock, staticOffset + 1, false), database)
+                            }
                         }
-                    } else {
-                        when (DataType) {
-                            2 -> Results = HRRecordsTable.ExtractRecords(CurrentLock, CustomDatabaseUtils.SumLongs(CurrentLock, StaticOffset + 1, false), DC.currentDataBase!!)
-                            else -> Results = MainRecordsTable.ExtractRecords(CurrentLock, CustomDatabaseUtils.SumLongs(CurrentLock, StaticOffset + 1, false), DC.currentDataBase!!)
-                        }
-                    }
                     try {
-                        if (DataType != 2) {
-                            val Rec = Record(Results!!, CurrentLock, Mode, DataType - 1)
-                            //Output.add(new Record(Results, CurrentLock, Mode, DataType - 1));
-                            //DV.Hndlr.post { DV.UpdateView(Rec) }
-                            publishProgress(Rec)
-                        } else {
-                            val Rec = Record(Results!!, CurrentLock, Mode, DataType)
-                            //Output.add(new Record(Results, CurrentLock, Mode, DataType));
-                            //DV.Hndlr.post { DV.UpdateView(Rec) }
-                            publishProgress(Rec)
-                        }
+                        if (results != null) publishProgress(Record(results, currentLock, grouping))
                     } catch (E: Exception) {
-                        // pofig
+                        //CurrentLock = CustomDatabaseUtils.SumLongs(CurrentLock, StaticOffset, false)
                     } finally {
-                        CurrentLock = CustomDatabaseUtils.SumLongs(CurrentLock, StaticOffset, false)
+                        currentLock = CustomDatabaseUtils.SumLongs(currentLock, staticOffset, false)
                     }
                 }
                 return true
             }
 
+            override fun onPostExecute(result: Boolean?) {
+                findViewById<ProgressBar>(R.id.loadingInProgress).visibility = View.GONE
+                super.onPostExecute(result)
+            }
         }
 
     }
@@ -379,23 +412,7 @@ class DataView : Activity() {
         var ExtraDataToLoad = "EXTRA_DATA"
         var ExtraViewMode = "EXTRA_VIEW_MODE"
 
-        private var Mode = 1
         private var ViewMode = 0
-
-        private val DayScaleMode = 1
-        private val WeekScaleMode = 2
-        private val MonthScaleMode = 3
-
-        private val HRColumns = arrayOf("Date\\Time", "Value")
-        private val HRColumnsComplex = arrayOf("Date", "Min", "Average", "Maximum")
-        private val MainCaloriesColumns = arrayOf("Date\\Time", "Value")
-        private val MainCaloriesComplex = arrayOf("Date", "Calories")
-        private val MainStepsColumns = arrayOf("Date\\Time", "Steps")
-        private val MainStepsComplex = arrayOf("Date", "Value")
-        private val MainColumns = arrayOf("Date\\Time", "Calories", "Steps")
-        private val MainColumnsComplex = arrayOf("Date\\Time", "Calories", "Steps")
-        private val MainSummaryColumns = arrayOf("Date", "Calories", "Steps", "Minimal HR", "Average HR", "Highest HR")
     }
-
 
 }

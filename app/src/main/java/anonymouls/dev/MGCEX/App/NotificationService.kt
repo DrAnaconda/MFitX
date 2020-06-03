@@ -11,7 +11,6 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import anonymouls.dev.MGCEX.DatabaseProvider.DatabaseController
 import anonymouls.dev.MGCEX.DatabaseProvider.NotifyFilterTable
-import anonymouls.dev.MGCEX.util.TopExceptionHandler
 import anonymouls.dev.MGCEX.util.Utils
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -64,16 +63,12 @@ class NotificationService : NotificationListenerService() {
         } catch (ex: NullPointerException) {
 
         }
-
-        val msgrcv = Intent(NotifyAction)
-        msgrcv.putExtra("app", applicationName)
-        msgrcv.putExtra("title", title)
-        msgrcv.putExtra("text", text)
         if (UartService.instance != null && (UartService.instance!!.mConnectionState >= STATE_CONNECTED
                         || DeviceControllerActivity.StatusCode >= 3)) {
-            sendBroadcast(msgrcv)
-            if (title == null) title = ""
-            PendingList.add(CustomNotification(pack, title, text, sbn))
+            if (title != null)
+                PendingList.add(CustomNotification(pack, title, text, sbn))
+            else
+                PendingList.add(CustomNotification(pack, applicationName, text, sbn))
         }
         else
             return
@@ -158,12 +153,9 @@ class NotificationService : NotificationListenerService() {
         }
 
         class AsyncRepeater : AsyncTask<String, Void, Boolean>(){
-
-            private var topExceptionHandler: TopExceptionHandler = TopExceptionHandler(instance!!.applicationContext)
-
             override fun doInBackground(vararg params: String?): Boolean {
                 if (sharedPrefs == null)
-                    sharedPrefs = Utils.GetSharedPrefs(instance!!)
+                    sharedPrefs = Utils.getSharedPrefs(instance!!)
                 Thread.currentThread().name = "NotifyRepeaters"
                 Thread.currentThread().priority = Thread.MIN_PRIORITY
                 while (IsActive){

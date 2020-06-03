@@ -15,7 +15,9 @@ import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.ListView
+import android.widget.ProgressBar
 import android.widget.Toast
 import anonymouls.dev.MGCEX.util.Analytics
 import anonymouls.dev.MGCEX.util.Utils
@@ -63,7 +65,7 @@ class ScanActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_scan)
-        Prefs = Utils.GetSharedPrefs(this)
+        Prefs = Utils.getSharedPrefs(this)
         if (Prefs!!.contains("IsConnected") && Prefs!!.contains("BandAddress")) {
             if (Prefs!!.getBoolean("IsConnected", false)) {
                 openDeviceControlActivity(this.baseContext, Prefs!!.getString("BandAddress", null))
@@ -109,9 +111,9 @@ class ScanActivity : Activity() {
     private fun init() {
         Utils.requestPermissionsDefault(this, Utils.UsedPerms)
         BManager = getSystemService(Service.BLUETOOTH_SERVICE) as BluetoothManager
-        Utils.BluetoothEngaging(this)
+        Utils.bluetoothEngaging(this)
         val deviceListView = findViewById<ListView>(R.id.list)
-        mDeviceAdapter = DeviceAdapter(this, R.layout.listitem_device, ArrayList())
+        mDeviceAdapter = DeviceAdapter(this, R.xml.listitem_device, ArrayList())
         deviceListView.adapter = mDeviceAdapter
         deviceListView.setOnItemClickListener { _, _, position, _ ->
             val item = mDeviceAdapter.getItem(position)
@@ -147,16 +149,26 @@ class ScanActivity : Activity() {
             }
         }
         val service = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        if (!service.isLocationEnabled) {
-            DeviceControllerActivity.ViewDialog(getString(R.string.enable_location_services),
-                    DeviceControllerActivity.ViewDialog.DialogTask.Intent,
-                    android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS).showDialog(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            if (!service.isLocationEnabled) {
+                DeviceControllerActivity.ViewDialog(getString(R.string.enable_location_services),
+                        DeviceControllerActivity.ViewDialog.DialogTask.Intent,
+                        android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS).showDialog(this)
+                return false
+            }
+        } else {
+            if (!service.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                DeviceControllerActivity.ViewDialog(getString(R.string.enable_location_services),
+                        DeviceControllerActivity.ViewDialog.DialogTask.Intent,
+                        android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS).showDialog(this)
+                return false
+            }
         }
         return true
     }
     private fun startScan() {
         if (!checkLocationEnabled()) return
-
+        findViewById<ProgressBar>(R.id.scanInProgress).visibility = View.VISIBLE
         if (BManager != null && BManager!!.adapter.isEnabled) {
             mBTAdapter = BManager!!.adapter
             if (mScanner == null) mScanner = mBTAdapter!!.bluetoothLeScanner
@@ -172,7 +184,7 @@ class ScanActivity : Activity() {
             mScanner!!.stopScan(LECallback)
         }
         mIsScanning = false
-        setProgressBarIndeterminateVisibility(false) // TODO create custom
+        findViewById<ProgressBar>(R.id.scanInProgress).visibility = View.GONE
         invalidateOptionsMenu()
     }
 

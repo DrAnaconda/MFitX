@@ -11,7 +11,6 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.Toast
 import anonymouls.dev.MGCEX.App.DeviceControllerActivity
-
 import anonymouls.dev.MGCEX.App.R
 import java.text.DecimalFormat
 import java.util.*
@@ -35,7 +34,7 @@ object Utils {
 
     private val hexArray = "0123456789ABCDEF".toCharArray()
 
-    fun GetSharedPrefs(context: Context?): SharedPreferences {
+    fun getSharedPrefs(context: Context?): SharedPreferences {
         if (SharedPrefs == null || context != null)
             SharedPrefs = context!!.getSharedPreferences("MainPrefs", Context.MODE_PRIVATE)
         if (!SharedPrefs!!.contains(Analytics.UserID))
@@ -52,7 +51,8 @@ object Utils {
             context.finish()
         }
     }
-    fun BluetoothEngaging(AContext: Activity): Boolean {
+
+    fun bluetoothEngaging(AContext: Activity): Boolean {
         val bManager = AContext.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         if (bManager == null) {
             Toast.makeText(AContext, R.string.BluetoothIsNotSupported, Toast.LENGTH_SHORT).show()

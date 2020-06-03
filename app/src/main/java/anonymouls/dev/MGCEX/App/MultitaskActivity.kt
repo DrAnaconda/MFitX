@@ -11,7 +11,10 @@ import android.widget.TextView
 import anonymouls.dev.MGCEX.DatabaseProvider.DatabaseController
 import anonymouls.dev.MGCEX.DatabaseProvider.HRRecordsTable
 import anonymouls.dev.MGCEX.DatabaseProvider.MainRecordsTable
-import anonymouls.dev.MGCEX.util.*
+import anonymouls.dev.MGCEX.util.AdsController
+import anonymouls.dev.MGCEX.util.Analytics
+import anonymouls.dev.MGCEX.util.HRAnalyzer
+import anonymouls.dev.MGCEX.util.Utils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -26,7 +29,6 @@ class MultitaskActivity : Activity() {
 
     enum class TaskTypes(val type: Int) { OverallStats(0), SimpleText(1) }
 
-    private lateinit var topExceptionHandler: TopExceptionHandler
     private lateinit var taskType: TaskTypes
     private var text: String? = null
 
@@ -38,7 +40,6 @@ class MultitaskActivity : Activity() {
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        topExceptionHandler = TopExceptionHandler(this.applicationContext)
         AdsController.showUltraRare(this)
         setContentView(R.layout.activity_report_activity)
         val bundle = intent.extras
@@ -114,7 +115,7 @@ class MultitaskActivity : Activity() {
     @SuppressLint("SetTextI18n")
     private fun initDataBlock(fromPeriod: Calendar?, toPeriod: Calendar?): HRRecordsTable.HRReport {
 
-        LayoutInflater.from(this).inflate(R.layout.horizontal_divider, container!!)
+        LayoutInflater.from(this).inflate(R.xml.horizontal_divider, container!!)
 
         val overallMainReport = MainRecordsTable.generateReport(fromPeriod, toPeriod, DatabaseController.getDCObject(this).currentDataBase!!)
         val overallHRReport = HRRecordsTable.generateReport(fromPeriod, toPeriod, DatabaseController.getDCObject(this).currentDataBase!!)

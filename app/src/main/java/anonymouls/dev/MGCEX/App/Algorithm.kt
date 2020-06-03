@@ -14,7 +14,6 @@ import anonymouls.dev.MGCEX.DatabaseProvider.DatabaseController
 import anonymouls.dev.MGCEX.DatabaseProvider.HRRecordsTable
 import anonymouls.dev.MGCEX.DatabaseProvider.MainRecordsTable
 import anonymouls.dev.MGCEX.util.HRAnalyzer
-import anonymouls.dev.MGCEX.util.TopExceptionHandler
 import anonymouls.dev.MGCEX.util.Utils
 import java.text.SimpleDateFormat
 import java.util.*
@@ -75,14 +74,14 @@ class Algorithm : IntentService("Syncer") {
         }
         if (!isNotifyServiceAlive(this))
             tryForceStartListener(this)
-        LockedAddress = Utils.GetSharedPrefs(this).getString("BandAddress", null)
-        Prefs = Utils.GetSharedPrefs(this)
+        LockedAddress = Utils.getSharedPrefs(this).getString("BandAddress", null)
+        Prefs = Utils.getSharedPrefs(this)
         PhoneListener = PhoneStateListenerBroadcast()
         SBIReceiver = UartServiceBroadcastInterpreter()
         registerReceiver(SBIReceiver, DeviceControllerActivity.makeGattUpdateIntentFilter())
         val IF = IntentFilter("android.intent.action.PHONE_STATE")
 
-        if (Utils.GetSharedPrefs(this).getBoolean("ReceiveCalls", true))
+        if (Utils.getSharedPrefs(this).getBoolean("ReceiveCalls", true))
             registerReceiver(PhoneListener, IF)
 
         IsInit = true
@@ -239,6 +238,8 @@ class Algorithm : IntentService("Syncer") {
 
     private fun changeStatus(Text: String) {
         var text = Text
+        if (Text.isNotEmpty())
+            this.lastStatus = Text
         if (!text.isNotEmpty() && this.lastStatus.isNotEmpty())
             text = this.lastStatus
         if (HRAnalyzer.isShadowAnalyzerRunning)
@@ -261,7 +262,7 @@ class Algorithm : IntentService("Syncer") {
                     -2 -> {
                         if(DeviceControllerActivity.IsActive) {
                             Utils.RequestEnableBluetooth(DeviceControllerActivity.instance!!)
-                            if (Utils.BluetoothEngaging(DeviceControllerActivity.instance!!)) {
+                            if (Utils.bluetoothEngaging(DeviceControllerActivity.instance!!)) {
                                 DeviceControllerActivity.StatusCode = 0
                                 changeStatus(getString(R.string.status_engaging))
                             } else{
@@ -288,11 +289,9 @@ class Algorithm : IntentService("Syncer") {
                 }
                 continue
             }
-            //if (!IsAlarmWaiting) checkForAlarms()
-            if (!ServiceObject!!.isBinderAlive && !isNotifyServiceAlive(this)) tryForceStartListener(this)
-            if (DeviceControllerActivity.isFirstLaunch){
-                this.lastStatus = getString(R.string.connected_syncing)
-                changeStatus(getString(R.string.connected_syncing))
+            changeStatus(getString(R.string.connected_syncing))
+            if (!isNotifyServiceAlive(this)) tryForceStartListener(this)
+            if (DeviceControllerActivity.isFirstLaunch) {
                 forceSyncHR()
                 DeviceControllerActivity.isFirstLaunch = false
             }
@@ -300,7 +299,7 @@ class Algorithm : IntentService("Syncer") {
             NextSync = Calendar.getInstance()
             NextSync!!.add(Calendar.MILLISECOND, MainSyncPeriodSeconds)
             this.lastStatus = getString(R.string.next_sync_status) + SimpleDateFormat("HH:mm", Locale.getDefault()).format(NextSync!!.time)
-            changeStatus(LastStatus)
+            changeStatus(lastStatus)
             if (!DatabaseController.getDCObject(this).currentDataBase!!.inTransaction() && hardTask == null){
                 hardTask = AsyncCollapser(this)
                 hardTask!!.execute()
@@ -328,7 +327,6 @@ class Algorithm : IntentService("Syncer") {
 
     companion object {
         var NextSync: Calendar? = null
-        var IsRealTimeSynced = false
         var SelfPointer: Algorithm? = null
         var BatteryHolder : Int = -1
         var LastHearthRateIncomed : Int = -1
@@ -382,9 +380,6 @@ class Algorithm : IntentService("Syncer") {
         }
 
         class AsyncCollapser(private val algorithm: Algorithm) : AsyncTask<Void, Void, Void>() {
-
-            private var exceptionHandler: TopExceptionHandler = TopExceptionHandler(SelfPointer!!.applicationContext)
-
             override fun doInBackground(vararg params: Void?): Void? {
                 MainRecordsTable.executeDataCollapse(algorithm.Prefs!!.getLong(MainRecordsTable.SharedPrefsMainCollapsedConst, 0), algorithm.Prefs!!, algorithm.Database!!.currentDataBase!!)
                 return null

@@ -1,209 +1,227 @@
 package anonymouls.dev.MGCEX.App
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
-import android.database.Cursor
 import android.graphics.Color
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.widget.Button
-import android.widget.CheckBox
-import android.widget.EditText
-import android.widget.RelativeLayout
-import android.widget.Switch
-import android.widget.TableLayout
-import android.widget.TableRow
-import android.widget.TextView
-import android.widget.Toast
-
-import java.nio.ByteBuffer
-import java.util.ArrayList
-import java.util.Random
-
+import android.view.Gravity
+import android.view.Menu
+import android.view.MenuItem
+import android.view.View
+import android.widget.*
+import androidx.constraintlayout.widget.ConstraintLayout
 import anonymouls.dev.MGCEX.DatabaseProvider.AlarmsTable
 import anonymouls.dev.MGCEX.DatabaseProvider.DatabaseController
 
-import android.graphics.Color.GRAY
-import android.view.*
-
 class AlarmActivity : Activity() {
 
-    private var Table: TableLayout? = null
-    private var AddAlarmContainer: ConstraintLayout? = null
+    private var table: TableLayout? = null
+    private var addAlarmContainer: ConstraintLayout? = null
 
-    private var ConfirmBtn: MenuItem? = null
-    private var AddBtn: MenuItem? = null
+    private var confirmBtn: MenuItem? = null
+    private var addBtn: MenuItem? = null
 
-    private var StartHours: EditText? = null
-    private var Hours: EditText? = null
-    private var StartMinutes: EditText? = null
-    private var Minutes: EditText? = null
-    private var Monday: CheckBox? = null
-    private var Tuesday: CheckBox? = null
-    private var Wednesday: CheckBox? = null
-    private var Thursday: CheckBox? = null
-    private var Friday: CheckBox? = null
-    private var Saturday: CheckBox? = null
-    private var Sunday: CheckBox? = null
-    private var Enabled: Switch? = null
-    private var Syncable: Switch? = null
-    private var DeleteBtn: Button? = null
-    private var CurrentProvider: AlarmProvider? = null
+    private var startHours: EditText? = null
+    private var hours: EditText? = null
+    private var startMinutes: EditText? = null
+    private var minutes: EditText? = null
+    private var monday: CheckBox? = null
+    private var tuesday: CheckBox? = null
+    private var wednesday: CheckBox? = null
+    private var thursday: CheckBox? = null
+    private var friday: CheckBox? = null
+    private var saturday: CheckBox? = null
+    private var sunday: CheckBox? = null
+    private var enabled: Switch? = null
+    private var syncable: Switch? = null
+    private var deleteBtn: Button? = null
+    private var currentProvider: AlarmProvider? = null
 
-    private val AlarmClick = { v:View ->
+    private val alarmClick = { v: View ->
         val ATR = v as AdvancedTableRow
         setContentView(R.layout.activity_alarm_add)
-        InitView()
-        StartHours!!.setText(Integer.toString(ATR.AP.HourStart))
-        Hours!!.setText(Integer.toString(ATR.AP.Hour))
-        StartMinutes!!.setText(Integer.toString(ATR.AP.MinuteStart))
-        Minutes!!.setText(Integer.toString(ATR.AP.Minute))
+        initView()
+        startHours!!.setText(ATR.AP.HourStart.toString())
+        hours!!.setText(ATR.AP.Hour.toString())
+        startMinutes!!.setText(ATR.AP.MinuteStart.toString())
+        minutes!!.setText(ATR.AP.Minute.toString())
         var DayMask = ATR.AP.DayMask
         if (DayMask != 128) {
             if (DayMask - 64 > -1) {
-                Sunday!!.isChecked = true
+                sunday!!.isChecked = true
                 DayMask -= 64
             }
             if (DayMask - 32 > -1) {
-                Saturday!!.isChecked = true
+                saturday!!.isChecked = true
                 DayMask -= 32
             }
             if (DayMask - 16 > -1) {
-                Friday!!.isChecked = true
+                friday!!.isChecked = true
                 DayMask -= 16
             }
             if (DayMask - 8 > -1) {
-                Thursday!!.isChecked = true
+                thursday!!.isChecked = true
                 DayMask -= 8
             }
             if (DayMask - 4 > -1) {
-                Wednesday!!.isChecked = true
+                wednesday!!.isChecked = true
                 DayMask -= 4
             }
             if (DayMask - 2 > -1) {
-                Tuesday!!.isChecked = true
+                tuesday!!.isChecked = true
                 DayMask -= 2
             }
             if (DayMask - 1 > -1) {
-                Monday!!.isChecked = true
+                monday!!.isChecked = true
                 DayMask -= 1
             }
         }
-        Enabled!!.isChecked = ATR.AP.IsEnabled
-        AddBtn!!.isVisible = false
-        ConfirmBtn!!.isVisible = true
-        CurrentProvider = ATR.AP
-        DeleteBtn!!.visibility = View.VISIBLE
+        enabled!!.isChecked = ATR.AP.IsEnabled
+        addBtn!!.isVisible = false
+        confirmBtn!!.isVisible = true
+        currentProvider = ATR.AP
+        deleteBtn!!.visibility = View.VISIBLE
     }
-    private fun InitView() {
-        DeleteBtn = findViewById(R.id.DeleteBtn)
-        StartHours = findViewById(R.id.startHour)
-        Hours = findViewById(R.id.TargetHour)
-        StartMinutes = findViewById(R.id.startMinute)
-        Minutes = findViewById(R.id.TargetMinute)
-        Monday = findViewById(R.id.MondayBox)
-        Tuesday = findViewById(R.id.TuesdayBox)
-        Wednesday = findViewById(R.id.WednesdayBox)
-        Syncable = findViewById(R.id.IsSyncable)
-        Thursday = findViewById(R.id.ThursdayBox)
-        Friday = findViewById(R.id.FridayBox)
-        Saturday = findViewById(R.id.SaturdayBox)
-        Sunday = findViewById(R.id.SundayBox)
-        Enabled = findViewById(R.id.IsEnabledSwitch)
-        Table = findViewById(R.id.AlarmsTable)
-        AddAlarmContainer = findViewById(R.id.AddAlarmContainer)
+
+    private var alarmsCount = 0
+
+
+    fun deleteBtnClick(v: View) {
+        currentProvider!!.commitSuicide(DatabaseController.getDCObject(this).currentDataBase!!)
     }
-    private fun CreateAndAddView(AP: AlarmProvider) {
+
+    private fun initView() {
+        deleteBtn = findViewById(R.id.DeleteBtn)
+        startHours = findViewById(R.id.startHour)
+        hours = findViewById(R.id.TargetHour)
+        startMinutes = findViewById(R.id.startMinute)
+        minutes = findViewById(R.id.TargetMinute)
+        monday = findViewById(R.id.MondayBox)
+        tuesday = findViewById(R.id.TuesdayBox)
+        wednesday = findViewById(R.id.WednesdayBox)
+        syncable = findViewById(R.id.IsSyncable)
+        thursday = findViewById(R.id.ThursdayBox)
+        friday = findViewById(R.id.FridayBox)
+        saturday = findViewById(R.id.SaturdayBox)
+        sunday = findViewById(R.id.SundayBox)
+        enabled = findViewById(R.id.IsEnabledSwitch)
+        table = findViewById(R.id.AlarmsTable)
+        addAlarmContainer = findViewById(R.id.AddAlarmContainer)
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun createAndAddView(AP: AlarmProvider) {
         val TR = AdvancedTableRow(this, AP)
         TR.layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.MATCH_PARENT, TableRow.LayoutParams.MATCH_PARENT)
-        TR.setPadding(5, 5, 5, 5)
-        val Txt = TextView(this)
-        Txt.layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.WRAP_CONTENT)
+
+        val defaultParams = TableRow.LayoutParams(TableRow.LayoutParams.MATCH_PARENT, TableRow.LayoutParams.MATCH_PARENT)
+        defaultParams.gravity = Gravity.CENTER
+
+        val txt = TextView(this)
+        txt.layoutParams = defaultParams
+        txt.gravity = Gravity.CENTER
         /*
         val Text = CommandInterpreter.SubIntegerConversionCheck(Integer.toString(AP.HourStart)) +
                 " : " + CommandInterpreter.SubIntegerConversionCheck(Integer.toString(AP.MinuteStart)) +
                 " -> " + CommandInterpreter.SubIntegerConversionCheck(Integer.toString(AP.Hour)) +
                 " : " + CommandInterpreter.SubIntegerConversionCheck(Integer.toString(AP.Minute))
         */
-        val Text = CommandInterpreter.SubIntegerConversionCheck(Integer.toString(AP.Hour)) +
-                " : " + CommandInterpreter.SubIntegerConversionCheck(Integer.toString(AP.Minute))
+        txt.text = CommandInterpreter.SubIntegerConversionCheck(AP.Hour.toString()) +
+                " : " + CommandInterpreter.SubIntegerConversionCheck(AP.Minute.toString())
+        TR.addView(txt)
 
-        Txt.text = Text
-        TR.addView(Txt)
-        var Sw = Switch(this)
-        Sw.isChecked = AP.IsSyncable
-        Sw.gravity = Gravity.CENTER
-        Sw.setOnClickListener { AP.IsSyncable = Sw.isChecked }
-        TR.addView(Sw)
-        Sw = Switch(this)
-        Sw.isChecked = AP.IsEnabled
-        Sw.gravity = Gravity.CENTER
-        Sw.setOnClickListener { AP.IsEnabled = Sw.isChecked }
-        TR.addView(Sw)
-        TR.setOnClickListener(AlarmClick)
-        Table!!.addView(TR)
+
+        var sw = Switch(this)
+        sw.isChecked = AP.IsSyncable
+        sw.gravity = Gravity.CENTER
+        sw.setOnClickListener { AP.IsSyncable = sw.isChecked }
+        sw.layoutParams = defaultParams
+        TR.addView(sw)
+
+        sw = Switch(this)
+        sw.isChecked = AP.IsEnabled
+        sw.gravity = Gravity.CENTER
+        sw.layoutParams = defaultParams
+        sw.setOnClickListener { AP.IsEnabled = sw.isChecked }
+        TR.addView(sw)
+        TR.setOnClickListener(alarmClick)
+        table!!.addView(TR)
     }
-    private fun LoadAlarms() {
-        val AllAlarms = AlarmsTable.ExtractRecords(DatabaseController.getDCObject(this).currentDataBase!!)
-        CreateHeader()
-        if (AllAlarms.count > 0) {
+
+    private fun loadAlarms() {
+        val allAlarms = AlarmsTable.ExtractRecords(DatabaseController.getDCObject(this).currentDataBase!!)
+        createHeader()
+        alarmsCount = allAlarms.count
+        if (allAlarms.count > 0) {
             do {
-                val AP = AlarmProvider.LoadFromCursor(AllAlarms)
-                CreateAndAddView(AP)
-            } while (AllAlarms.moveToNext())
+                val AP = AlarmProvider.loadFromCursor(allAlarms)
+                createAndAddView(AP)
+            } while (allAlarms.moveToNext())
         }
+        allAlarms.close()
     }
+
+    private fun createHeader() {
+        val TR = TableRow(this)
+        TR.setBackgroundColor(Color.GRAY)
+        TR.layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.MATCH_PARENT, TableRow.LayoutParams.MATCH_PARENT)
+
+        val defaultParams = TableRow.LayoutParams(TableRow.LayoutParams.MATCH_PARENT, TableRow.LayoutParams.MATCH_PARENT)
+        defaultParams.gravity = Gravity.CENTER
+        var TV = TextView(this)
+
+        TV.setBackgroundColor(Color.GRAY)
+        TV.text = getString(R.string.data_str)
+        TV.gravity = Gravity.CENTER
+        TR.addView(TV)
+
+
+        TV = TextView(this)
+        TV.text = getString(R.string.syncable_str)
+        TV.gravity = Gravity.CENTER
+        TV.setBackgroundColor(Color.GRAY)
+        TR.addView(TV)
+
+        TV = TextView(this)
+        TV.gravity = Gravity.CENTER
+        TV.text = getString(R.string.enabled_str)
+        TV.setBackgroundColor(Color.GRAY)
+        TR.addView(TV)
+
+        table!!.addView(TR)
+    }
+
+//region Default Android
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_alarm)
-        InitView()
-        LoadAlarms()
+        initView()
+        loadAlarms()
     }
+
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        ConfirmBtn = menu.findItem(R.id.ConfirmMenuBtn)
-        AddBtn = menu.findItem(R.id.AddBtn)
+        confirmBtn = menu.findItem(R.id.ConfirmMenuBtn)
+        addBtn = menu.findItem(R.id.AddBtn)
         return super.onPrepareOptionsMenu(menu)
-    }
-    private fun CreateHeader() {
-        val TR = TableRow(this)
-        var TV = TextView(this)
-        TV.setBackgroundColor(Color.GRAY)
-        TV.text = "Data"
-        TV.gravity = Gravity.CENTER
-        TR.addView(TV)
-
-
-        TV = TextView(this)
-        TV.text = "Is Syncable"
-        TV.gravity = Gravity.CENTER
-        TV.setBackgroundColor(Color.GRAY)
-        TR.addView(TV)
-
-        TV = TextView(this)
-        TV.gravity = Gravity.CENTER
-        TV.text = "Is Enabled"
-        TV.setBackgroundColor(Color.GRAY)
-        TR.addView(TV)
-
-        Table!!.addView(TR)
     }
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.alarms_menu, menu)
         return super.onCreateOptionsMenu(menu)
     }
     override fun onBackPressed() {
-        if (ConfirmBtn!!.isVisible) {
-            ConfirmBtn!!.isVisible = false
-            AddBtn!!.isVisible = true
+        if (confirmBtn!!.isVisible) {
+            confirmBtn!!.isVisible = false
+            addBtn!!.isVisible = true
             setContentView(R.layout.activity_alarm)
-            InitView()
-            LoadAlarms()
+            initView()
+            loadAlarms()
         } else {
-            for (i in 0 until Table!!.childCount) {
+            for (i in 0 until table!!.childCount) {
                 try {
-                    val ATR = Table!!.getChildAt(i) as AdvancedTableRow
-                        ATR.AP.SaveAlarmRecord(DatabaseController.getDCObject(this).currentDataBase!!)
+                    val ATR = table!!.getChildAt(i) as AdvancedTableRow
+                    ATR.AP.saveAlarmRecord(DatabaseController.getDCObject(this).currentDataBase!!)
                 } catch (Ex: Exception) {
                     // ignore
                 }
@@ -216,47 +234,49 @@ class AlarmActivity : Activity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.ConfirmMenuBtn -> {
-                AddBtn!!.isVisible = true
-                ConfirmBtn!!.isVisible = false
-                if (CurrentProvider == null) {
+                addBtn!!.isVisible = true
+                confirmBtn!!.isVisible = false
+                if (currentProvider == null) {
                     // stay away
-                    CurrentProvider = AlarmProvider(Integer.parseInt(Hours!!.text.toString()),
-                            Integer.parseInt(Minutes!!.text.toString()),
-                            AlarmProvider.SetDayMask(Monday!!.isChecked, Tuesday!!.isChecked,
-                                    Wednesday!!.isChecked, Thursday!!.isChecked,
-                                    Friday!!.isChecked, Saturday!!.isChecked, Sunday!!.isChecked),
-                            -1, Enabled!!.isEnabled,
-                            Integer.parseInt(StartHours!!.text.toString()),
-                            Integer.parseInt(StartMinutes!!.text.toString()),
-                            Syncable!!.isChecked)
+                    currentProvider = AlarmProvider(Integer.parseInt(hours!!.text.toString()),
+                            Integer.parseInt(minutes!!.text.toString()),
+                            AlarmProvider.setDayMask(monday!!.isChecked, tuesday!!.isChecked,
+                                    wednesday!!.isChecked, thursday!!.isChecked,
+                                    friday!!.isChecked, saturday!!.isChecked, sunday!!.isChecked),
+                            -1, enabled!!.isEnabled,
+                            Integer.parseInt(startHours!!.text.toString()),
+                            Integer.parseInt(startMinutes!!.text.toString()),
+                            syncable!!.isChecked)
                     // stay away
                 } else {
-                    CurrentProvider!!.Hour = Integer.parseInt(Hours!!.text.toString())
-                    CurrentProvider!!.Minute = Integer.parseInt(Minutes!!.text.toString())
-                    CurrentProvider!!.HourStart = Integer.parseInt(StartHours!!.text.toString())
-                    CurrentProvider!!.MinuteStart = Integer.parseInt(StartMinutes!!.text.toString())
-                    CurrentProvider!!.DayMask = AlarmProvider.SetDayMask(Monday!!.isChecked,
-                            Tuesday!!.isChecked, Wednesday!!.isChecked, Thursday!!.isChecked,
-                            Friday!!.isChecked, Saturday!!.isChecked, Sunday!!.isChecked)
+                    currentProvider!!.Hour = Integer.parseInt(hours!!.text.toString())
+                    currentProvider!!.Minute = Integer.parseInt(minutes!!.text.toString())
+                    currentProvider!!.HourStart = Integer.parseInt(startHours!!.text.toString())
+                    currentProvider!!.MinuteStart = Integer.parseInt(startMinutes!!.text.toString())
+                    currentProvider!!.DayMask = AlarmProvider.setDayMask(monday!!.isChecked,
+                            tuesday!!.isChecked, wednesday!!.isChecked, thursday!!.isChecked,
+                            friday!!.isChecked, saturday!!.isChecked, sunday!!.isChecked)
                 }
-                CurrentProvider!!.SaveAlarmRecord(DatabaseController.getDCObject(this).currentDataBase!!)
+                currentProvider!!.saveAlarmRecord(DatabaseController.getDCObject(this).currentDataBase!!)
                 setContentView(R.layout.activity_alarm)
-                InitView()
-                LoadAlarms()
+                initView()
+                loadAlarms()
             }
             R.id.AddBtn -> {
-                AddBtn!!.isVisible = false
-                ConfirmBtn!!.isVisible = true
-                setContentView(R.layout.activity_alarm_add)
-                InitView()
+                if (alarmsCount >= 5) {
+                    Toast.makeText(this, getString(R.string.device_supports_five), Toast.LENGTH_LONG).show()
+                } else {
+                    addBtn!!.isVisible = false
+                    confirmBtn!!.isVisible = true
+                    setContentView(R.layout.activity_alarm_add)
+                    initView()
+                }
             }
         }
         return super.onOptionsItemSelected(item)
     }
 
-    fun deleteBtnClick() {
-        CurrentProvider!!.CommitSuicide(DatabaseController.getDCObject(this).currentDataBase!!)
-    }
+//endregion
 
     private inner class AdvancedTableRow(context: Context, var AP: AlarmProvider) : TableRow(context)
 }

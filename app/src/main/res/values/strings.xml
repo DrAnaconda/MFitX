@@ -4,8 +4,8 @@
     <string name="ble_not_supported">BLE not supported on this device</string>
     <string name="bt_unavailable">Bluetooth unavailable</string>
     <string name="bt_disabled">Bluetooth disabled, turn on and restart</string>
-    <string name="action_scan">SCAN</string>
-    <string name="action_stop">STOP</string>
+    <string name="action_scan">Scan</string>
+    <string name="action_stop">Stop</string>
     <string name="confirm_str">CONFIRM</string>
     <string name="choose_period">CHOOSE PERIOD</string>
     <string name="title_activity_alarms">Alarms</string>
@@ -73,13 +73,15 @@
     <string name="step_size_n_centimeters">Step size \n(centimeters)</string>
     <string name="no_activity_data">No activity data</string>
     <string name="no_hearth_rate_data">No Hearth Rate data</string>
+    <string name="test_banner_id" translatable="false">ca-app-pub-3940256099942544/6300978111</string>
     <string name="status_engaging">Status : Bluetooth enabled. Engaging...</string>
     <string name="offline_mode">Status: Bluetooth enable request is rejected. Offline mode</string>
     <string name="discovering">Status : Trying to Discover...</string>
     <string name="info_about_app_and_other">Info about app and other</string>
     <string name="sleep_data_button">Sleep Data Button</string>
+    <string name="DateTime">Date/Time</string>
     <string name="report_activity_button">Report Activity Button</string>
-    <string name="info_text">MGCOOL EX App v1.0 Supported devices: MGCOOL Band 4 Created by DrAnaconda Labs</string>
+    <string name="info_text">MGCOOL EX App v1.0\nSupported devices: MGCOOL Band 4\nCreated by DrAnaconda Labs</string>
     <string name="developer_mail" translatable="false"><u>anonymouls777@gmail.com</u></string>
     <string name="ok" translatable="false">OK</string>
     <string name="connected_syncing">Status : Connected. Syncing...</string>
@@ -115,4 +117,18 @@
     <string name="last_month_stats">Last Month Stats (</string>
     <string name="enable_location_services">Please, enable location services</string>
     <string name="current_connection">Current connection:&#160;</string>
+    <string name="demo_mode">Running in demo mode</string>
+    <string name="date_str">Date</string>
+    <string name="min_str">Minimum</string>
+    <string name="avg_str">Average</string>
+    <string name="max_str">Maximum</string>
+    <string name="value_str">Value</string>
+    <string name="steps_str">Steps</string>
+    <string name="calories_str">Calories</string>
+    <string name="data_str">Data</string>
+    <string name="syncable_str">Syncable</string>
+    <string name="enabled_str">Enabled</string>
+    <string name="target_time_to_wake_up">Target time to wake up</string>
+    <string name="tuesday">Tuesday</string>
+    <string name="device_supports_five">Device supports only 5 alarms</string>
 </resources>

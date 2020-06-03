@@ -16,7 +16,7 @@ class Analytics(context: Context) {
 
     private fun checkEnabled(): Boolean{
         fireInstance.setUserId(userID)
-        fireCrash.setUserId(userID!!)
+        if (userID != null && userID.isNotEmpty()) fireCrash.setUserId(userID)
         return if (isAllowed != null) {
             fireCrash.setCrashlyticsCollectionEnabled(isAllowed)
             fireInstance.setAnalyticsCollectionEnabled(isAllowed)
@@ -41,11 +41,6 @@ class Analytics(context: Context) {
             fireInstance.logEvent(newEvent, bundle)
         } else
             fireInstance.logEvent(newEvent, null)
-    }
-    fun recordCrash(ex: Throwable){
-        if (!checkEnabled()) return
-        fireCrash.sendUnsentReports()
-        fireCrash.recordException(ex)
     }
 
 

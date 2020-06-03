@@ -3,8 +3,8 @@
     <string name="ble_not_supported">BLE не поддерживается данным устройством</string>
     <string name="bt_unavailable">Bluetooth недоступен</string>
     <string name="bt_disabled">Bluetooth отключен, включите его</string>
-    <string name="action_scan">ПОИСК</string>
-    <string name="action_stop">ВЫКЛ</string>
+    <string name="action_scan">Поиск</string>
+    <string name="action_stop">Стоп</string>
     <string name="confirm_str">ОК</string>
     <string name="choose_period">ВЫБЕРИТЕ ПЕРИОД</string>
     <string name="title_activity_alarms">Будильники</string>
@@ -102,4 +102,19 @@
     <string name="last_month_stats">Статистика за прошлый месяц (</string>
     <string name="enable_location_services">Пожалуйста, включите сервисы геолокации</string>
     <string name="current_connection">Текущее соединение:&#160;</string>
+    <string name="demo_mode">Демо режим</string>
+    <string name="DateTime">Дата/время</string>
+    <string name="date_str">Дата</string>
+    <string name="min_str">Минимум</string>
+    <string name="avg_str">Среднее</string>
+    <string name="max_str">Максимум</string>
+    <string name="value_str">Значение</string>
+    <string name="steps_str">Шагов</string>
+    <string name="calories_str">Калорий</string>
+    <string name="data_str">Данные</string>
+    <string name="syncable_str">Синхронизировать</string>
+    <string name="enabled_str">Включить</string>
+    <string name="target_time_to_wake_up">Целевое время</string>
+    <string name="tuesday">Вторник</string>
+    <string name="device_supports_five">Браслет поддерживает 5 напоминаний</string>
 </resources>

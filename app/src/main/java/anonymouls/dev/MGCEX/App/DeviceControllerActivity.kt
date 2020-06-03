@@ -18,7 +18,6 @@ import android.widget.*
 import anonymouls.dev.MGCEX.DatabaseProvider.DatabaseController
 import anonymouls.dev.MGCEX.util.AdsController
 import anonymouls.dev.MGCEX.util.Analytics
-import anonymouls.dev.MGCEX.util.TopExceptionHandler
 import anonymouls.dev.MGCEX.util.Utils
 import com.google.android.gms.ads.AdView
 import com.google.firebase.analytics.FirebaseAnalytics
@@ -29,14 +28,15 @@ import kotlin.system.exitProcess
 
 class DeviceControllerActivity : Activity() {
 
+    private var demoMode = false
+
     lateinit var stepsText: TextView
     lateinit var caloriesText: TextView
     lateinit var batteryStatusText: TextView
     lateinit var HRValue: TextView
     lateinit var statusText: TextView
     lateinit var realTimeSwitch: Switch
-    lateinit var syncerObj : UIDataSyncer
-    lateinit var exceptionHandler: TopExceptionHandler
+    private var syncerObj: UIDataSyncer? = null
     lateinit var adContainer: LinearLayout
     lateinit var ad: AdView
 
@@ -59,14 +59,21 @@ class DeviceControllerActivity : Activity() {
         startService(Intent(this, Algorithm::class.java))
     }
 
-    fun reInit(){
+    private fun reInit() {
+        if (demoMode) return
         try {
             if (!IsActive)
                 syncerObj = UIDataSyncer(this)
-            syncerObj.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
+            syncerObj?.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
         } catch (Ex : IllegalStateException){
             // Ignore
         }
+
+        if (Algorithm.BatteryHolder > -1) this.batteryStatusText.text = Algorithm.BatteryHolder.toString()
+        if (Algorithm.LastHearthRateIncomed > -1) this.HRValue.text = Algorithm.LastHearthRateIncomed.toString()
+        if (Algorithm.LastStepsIncomed > -1) this.stepsText.text = Algorithm.LastStepsIncomed.toString()
+        if (Algorithm.LastCcalsIncomed > -1) this.caloriesText.text = Algorithm.LastCcalsIncomed.toString()
+        if (StatusCode >= 3) realTimeSwitch.visibility = View.VISIBLE else realTimeSwitch.visibility = View.GONE
 
         if (Algorithm.IsAlarmingTriggered) {
             Algorithm.IsAlarmKilled = true
@@ -109,7 +116,7 @@ class DeviceControllerActivity : Activity() {
         super.onStop()
         IsActive = false
         isFirstLaunch = true
-        syncerObj.cancel(true)
+        syncerObj?.cancel(true)
     }
     public override fun onResume() {
         super.onResume()
@@ -130,12 +137,17 @@ class DeviceControllerActivity : Activity() {
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        this.exceptionHandler = TopExceptionHandler(this.applicationContext)
         Utils.requestPermissionsDefault(this, Utils.UsedPerms)
         setContentView(R.layout.activity_device_controller)
         initViews()
         Analytics.getInstance(this)?.sendCustomEvent(FirebaseAnalytics.Event.APP_OPEN, null)
         AdsController.initAdBanned(ad, this)
+        if (!Utils.getSharedPrefs(this).contains("BandAddress")) {
+            statusText.text = getString(R.string.demo_mode)
+            findViewById<ProgressBar>(R.id.syncInProgress).visibility = View.GONE
+            demoMode = true
+            return
+        }
         CommandCallbacks.SelfPointer = CommandCallbacks(this)
         CommandController = CommandInterpreter()
         CommandInterpreter.Callback = CommandCallbacks.SelfPointer
@@ -145,7 +157,7 @@ class DeviceControllerActivity : Activity() {
         instance = this
     }
     public override fun onDestroy() {
-        syncerObj.cancel(true)
+        syncerObj?.cancel(true)
         IsActive = false
         instance = null
         isFirstLaunch = true
@@ -163,14 +175,15 @@ class DeviceControllerActivity : Activity() {
 
     // endregion
 
-    private fun LaunchDataGraph(Data: String) {
+    private fun launchDataGraph(Data: String) {
         val newIntent = Intent(baseContext, DataView::class.java)
         newIntent.putExtra(DataView.ExtraViewMode, 1)
         newIntent.putExtra(DataView.ExtraDataToLoad, Data)
         newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         startActivity(newIntent)
     }
-    fun OnClickHandler(view: View) {
+
+    fun onClickHandler(view: View) {
         val ID = view.id
         when (ID) {
             R.id.realtimeHRSync -> Algorithm.postCommand(CommandInterpreter.HRRealTimeControl(realTimeSwitch.isChecked), false)
@@ -197,9 +210,9 @@ class DeviceControllerActivity : Activity() {
                     }
                 }, 1500)
             }
-            R.id.HRContainer -> LaunchDataGraph("HR")
-            R.id.StepsContainer -> LaunchDataGraph("STEPS")
-            R.id.CaloriesContainer -> LaunchDataGraph("CALORIES")
+            R.id.HRContainer -> launchDataGraph("HR")
+            R.id.StepsContainer -> launchDataGraph("STEPS")
+            R.id.CaloriesContainer -> launchDataGraph("CALORIES")
             R.id.SettingContainer -> {
                 val Sets = Intent(baseContext, SettingsActivity::class.java)
                 Sets.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -230,11 +243,6 @@ class DeviceControllerActivity : Activity() {
                 startActivity(reportIntent)
             }
             R.id.BatteryContainer -> Toast.makeText(this, getString(R.string.battery_health_not_ready), Toast.LENGTH_LONG).show()
-            else -> Toast.makeText(this, "?????????????", Toast.LENGTH_SHORT).show()
-        }
-        if (realTimeSwitch.isChecked){
-            realTimeSwitch.isChecked = false
-            Algorithm.postCommand(CommandInterpreter.HRRealTimeControl(realTimeSwitch.isChecked), false)
         }
     }
 

@@ -1,10 +1,7 @@
 package anonymouls.dev.MGCEX.DatabaseProvider
 
-import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import android.widget.HorizontalScrollView
-
-import java.util.Calendar
+import java.util.*
 
 object CustomDatabaseUtils {
 
