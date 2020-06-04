@@ -2,6 +2,8 @@ package anonymouls.dev.MGCEX.App
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.TimePickerDialog
+import android.app.TimePickerDialog.OnTimeSetListener
 import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
@@ -13,6 +15,8 @@ import android.widget.*
 import androidx.constraintlayout.widget.ConstraintLayout
 import anonymouls.dev.MGCEX.DatabaseProvider.AlarmsTable
 import anonymouls.dev.MGCEX.DatabaseProvider.DatabaseController
+import java.util.*
+
 
 class AlarmActivity : Activity() {
 
@@ -83,12 +87,29 @@ class AlarmActivity : Activity() {
         currentProvider = ATR.AP
         deleteBtn!!.visibility = View.VISIBLE
     }
-
     private var alarmsCount = 0
 
 
-    fun deleteBtnClick(v: View) {
-        currentProvider!!.commitSuicide(DatabaseController.getDCObject(this).currentDataBase!!)
+    private fun createTargetTimePicker() {
+        val targetTimeSet = OnTimeSetListener { view, hourOfDay, minute ->
+            hours?.setText(CommandInterpreter.SubIntegerConversionCheck(hourOfDay.toString()))
+            minutes?.setText(CommandInterpreter.SubIntegerConversionCheck(minute.toString()))
+        }
+
+        val timeHour = if (currentProvider != null) currentProvider?.Hour else Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        val timeMinute = if (currentProvider != null) currentProvider?.Minute else Calendar.getInstance().get(Calendar.MINUTE)
+        val tp = TimePickerDialog(this, targetTimeSet, timeHour!!, timeMinute!!, true)
+        tp.show()
+    }
+
+    fun onClickUniversal(v: View) {
+        when (v.id) {
+            R.id.DeleteBtn -> {
+                currentProvider!!.commitSuicide(DatabaseController.getDCObject(this).currentDataBase!!); onBackPressed();
+            }
+            R.id.TargetHour -> createTargetTimePicker()
+            R.id.TargetMinute -> createTargetTimePicker()
+        }
     }
 
     private fun initView() {
@@ -114,6 +135,7 @@ class AlarmActivity : Activity() {
     private fun createAndAddView(AP: AlarmProvider) {
         val TR = AdvancedTableRow(this, AP)
         TR.layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.MATCH_PARENT, TableRow.LayoutParams.MATCH_PARENT)
+        TR.setPadding(1, 8, 1, 8)
 
         val defaultParams = TableRow.LayoutParams(TableRow.LayoutParams.MATCH_PARENT, TableRow.LayoutParams.MATCH_PARENT)
         defaultParams.gravity = Gravity.CENTER
@@ -148,9 +170,8 @@ class AlarmActivity : Activity() {
         TR.setOnClickListener(alarmClick)
         table!!.addView(TR)
     }
-
     private fun loadAlarms() {
-        val allAlarms = AlarmsTable.ExtractRecords(DatabaseController.getDCObject(this).currentDataBase!!)
+        val allAlarms = AlarmsTable.extractRecords(DatabaseController.getDCObject(this).currentDataBase!!)
         createHeader()
         alarmsCount = allAlarms.count
         if (allAlarms.count > 0) {
@@ -161,7 +182,6 @@ class AlarmActivity : Activity() {
         }
         allAlarms.close()
     }
-
     private fun createHeader() {
         val TR = TableRow(this)
         TR.setBackgroundColor(Color.GRAY)
@@ -243,16 +263,16 @@ class AlarmActivity : Activity() {
                             AlarmProvider.setDayMask(monday!!.isChecked, tuesday!!.isChecked,
                                     wednesday!!.isChecked, thursday!!.isChecked,
                                     friday!!.isChecked, saturday!!.isChecked, sunday!!.isChecked),
-                            -1, enabled!!.isEnabled,
-                            Integer.parseInt(startHours!!.text.toString()),
-                            Integer.parseInt(startMinutes!!.text.toString()),
+                            -1, enabled!!.isEnabled, -1, -1,
+                            //Integer.parseInt(startHours!!.text.toString()),
+                            //Integer.parseInt(startMinutes!!.text.toString()),
                             syncable!!.isChecked)
                     // stay away
                 } else {
                     currentProvider!!.Hour = Integer.parseInt(hours!!.text.toString())
                     currentProvider!!.Minute = Integer.parseInt(minutes!!.text.toString())
-                    currentProvider!!.HourStart = Integer.parseInt(startHours!!.text.toString())
-                    currentProvider!!.MinuteStart = Integer.parseInt(startMinutes!!.text.toString())
+                    currentProvider!!.HourStart = -1//Integer.parseInt(startHours!!.text.toString())
+                    currentProvider!!.MinuteStart = -1//Integer.parseInt(startMinutes!!.text.toString())
                     currentProvider!!.DayMask = AlarmProvider.setDayMask(monday!!.isChecked,
                             tuesday!!.isChecked, wednesday!!.isChecked, thursday!!.isChecked,
                             friday!!.isChecked, saturday!!.isChecked, sunday!!.isChecked)
@@ -272,6 +292,10 @@ class AlarmActivity : Activity() {
                     initView()
                 }
             }
+            R.id.infoBtn -> {
+                DeviceControllerActivity.ViewDialog(getString(R.string.alarms_info_message), DeviceControllerActivity.ViewDialog.DialogTask.Intent).showDialog(this)
+            }
+
         }
         return super.onOptionsItemSelected(item)
     }

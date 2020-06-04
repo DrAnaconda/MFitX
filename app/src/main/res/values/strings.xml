@@ -100,7 +100,9 @@
         \nSleep data are suspicious: In original app deep sleep always less than 20 mins.
         It is wrong. Only "fast phase" may be with this duration. Also hearth rate and sleep phases does have weak correlation.\n
         Also device starts recording sleep stats after setting up "sleep start" param, it is wrong, device should do it automatically.\n\nSleeping data is critical for hearth rate anomalies detection, so we are working about it. We will inform you about status
-        of developing this function here.\nCurrent status: Analyzing correlation. Differential analysis heath rate and sleep stats.\n\n
+        of developing this function here.\nCurrent status: Analyzing correlation. Differential analysis heath rate and sleep stats.
+        Progress: Data seems some useless, but there is some part information, that can be used\n
+        \n\n
         Keep calm and wait for updates.
     </string>
     <string name="battery_health_not_ready">Battery Health Analyzer is not ready yet</string>
@@ -131,4 +133,12 @@
     <string name="target_time_to_wake_up">Target time to wake up</string>
     <string name="tuesday">Tuesday</string>
     <string name="device_supports_five">Device supports only 5 alarms</string>
+    <string name="day_scale">Day Scale</string>
+    <string name="week_scale">Week Scale</string>
+    <string name="month_scale">Month Scale</string>
+    <string name="select_data_scaling_grouping_technique">Select data scaling/grouping technique</string>
+    <string name="cancel">CANCEL</string>
+    <string name="add_new">Add New</string>
+    <string name="info">Info</string>
+    <string name="alarms_info_message">MGCOOL BAND 4 supports limited number of reminders. In future we will planning integrate \'smart\' alarms based on your hearth rate</string>
 </resources>

@@ -19,12 +19,12 @@ class AlarmProvider(var Hour: Int, var Minute: Int, var DayMask: Int, ID: Long, 
     }
 
     private fun performInsertOperation(Operator: SQLiteDatabase): Long {
-        AlarmsTable.InsertRecord(this, Operator)
+        AlarmsTable.insertRecord(this, Operator)
         return ID
     }
 
     private fun performUpdateInformation(Operator: SQLiteDatabase) {
-        AlarmsTable.UpdateRecord(this, Operator)
+        AlarmsTable.updateRecord(this, Operator)
     }
 
     fun saveAlarmRecord(Operator: SQLiteDatabase): Long {
@@ -39,7 +39,7 @@ class AlarmProvider(var Hour: Int, var Minute: Int, var DayMask: Int, ID: Long, 
     }
 
     fun commitSuicide(Operator: SQLiteDatabase) {
-        AlarmsTable.DeleteRecord(this, Operator)
+        AlarmsTable.deleteRecord(this, Operator)
     }
 
     object DaysMasks {

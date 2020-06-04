@@ -15,6 +15,7 @@
         android:text="@string/info_text"
         android:textSize="8pt" />
 
+
     <TextView
         android:id="@+id/contactMail"
         android:layout_width="wrap_content"

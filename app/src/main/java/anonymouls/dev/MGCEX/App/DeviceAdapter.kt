@@ -11,11 +11,7 @@ import android.widget.TextView
 
 class DeviceAdapter(context: Context, private val mResId: Int, var mList: MutableList<BluetoothDevice>)
     : ArrayAdapter<BluetoothDevice>(context, mResId, mList) {
-    private val mInflater: LayoutInflater
-
-    init {
-        mInflater = context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
-    }
+    private val mInflater: LayoutInflater = context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
 
     override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
         var newConvertView = convertView
@@ -31,12 +27,10 @@ class DeviceAdapter(context: Context, private val mResId: Int, var mList: Mutabl
 
         return newConvertView
     }
-
     fun update(newDevice: BluetoothDevice?) {
         if (newDevice == null || newDevice.address == null) {
             return
         }
-
         var contains = false
         for (device in mList) {
             if (mList.contains(newDevice)) {

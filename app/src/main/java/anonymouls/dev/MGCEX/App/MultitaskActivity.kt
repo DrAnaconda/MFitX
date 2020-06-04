@@ -163,6 +163,7 @@ class MultitaskActivity : Activity() {
         text.isVerticalScrollBarEnabled = true
         text.movementMethod = ScrollingMovementMethod()
     text.textSize = 24.0f
+    text.setPadding(1, 4, 1, 16)
         container?.addView(text)
     }
 //endregion

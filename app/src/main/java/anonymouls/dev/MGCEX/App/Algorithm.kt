@@ -261,7 +261,7 @@ class Algorithm : IntentService("Syncer") {
                 when (DeviceControllerActivity.StatusCode) {
                     -2 -> {
                         if(DeviceControllerActivity.IsActive) {
-                            Utils.RequestEnableBluetooth(DeviceControllerActivity.instance!!)
+                            Utils.requestEnableBluetooth(DeviceControllerActivity.instance!!)
                             if (Utils.bluetoothEngaging(DeviceControllerActivity.instance!!)) {
                                 DeviceControllerActivity.StatusCode = 0
                                 changeStatus(getString(R.string.status_engaging))

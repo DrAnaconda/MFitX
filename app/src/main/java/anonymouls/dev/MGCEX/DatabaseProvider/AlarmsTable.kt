@@ -3,14 +3,8 @@ package anonymouls.dev.MGCEX.DatabaseProvider
 import android.content.ContentValues
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import android.media.midi.MidiManager
-
-import java.util.Calendar
-
 import anonymouls.dev.MGCEX.App.AlarmProvider
-import anonymouls.dev.MGCEX.App.Algorithm
-import anonymouls.dev.MGCEX.App.DeviceControllerActivity
-import anonymouls.dev.MGCEX.DatabaseProvider.AlarmsTable.ColumnsNames
+import java.util.*
 
 object AlarmsTable {
     //                                                  0    1       2          3       4
@@ -29,7 +23,7 @@ object AlarmsTable {
                 + ");")
     }
 
-    private fun GetLastID(Operator: SQLiteDatabase): Long {
+    private fun getLastID(Operator: SQLiteDatabase): Long {
         val Request = Operator.query(DatabaseController.AlarmsTableName, arrayOf(ColumnsNames[0]), null, null, null, null, ColumnsNames[0] + " DESC", null)
         Request.moveToFirst()
         return if (Request.count < 1)
@@ -38,10 +32,10 @@ object AlarmsTable {
             Request.getLong(0) + 1
     }
 
-    fun InsertRecord(AP: AlarmProvider, Operator: SQLiteDatabase): Long {
+    fun insertRecord(AP: AlarmProvider, Operator: SQLiteDatabase): Long {
         val Values = ContentValues()
         val DefID : Long = -1
-        if (AP.ID == DefID) AP.ID = GetLastID(Operator)
+        if (AP.ID == DefID) AP.ID = getLastID(Operator)
         Values.put(ColumnsNames[0], AP.ID)
         Values.put(ColumnsNames[1], AP.Hour)
         Values.put(ColumnsNames[2], AP.Minute)
@@ -52,13 +46,13 @@ object AlarmsTable {
         return Operator.insert(DatabaseController.AlarmsTableName, null, Values)
     }
 
-    fun ExtractRecords(Operator: SQLiteDatabase): Cursor {
+    fun extractRecords(Operator: SQLiteDatabase): Cursor {
         val Record = Operator.query(DatabaseController.AlarmsTableName, ColumnsNames, null, null, null, null, ColumnsNames[0])
         Record.moveToFirst()
         return Record
     }
 
-    fun UpdateRecord(AP: AlarmProvider, Operator: SQLiteDatabase) {
+    fun updateRecord(AP: AlarmProvider, Operator: SQLiteDatabase) {
         val Values = ContentValues()
         Values.put(ColumnsNames[1], AP.Hour)
         Values.put(ColumnsNames[2], AP.Minute)
@@ -69,11 +63,11 @@ object AlarmsTable {
         Operator.update(DatabaseController.AlarmsTableName, Values, "ID=" + java.lang.Long.toString(AP.ID), null)
     }
 
-    fun DeleteRecord(AP: AlarmProvider, Operator: SQLiteDatabase) {
-        Operator.delete(DatabaseController.AlarmsTableName, "ID" + java.lang.Long.toString(AP.ID), null)
+    fun deleteRecord(AP: AlarmProvider, Operator: SQLiteDatabase) {
+        Operator.delete(DatabaseController.AlarmsTableName, "ID=" + java.lang.Long.toString(AP.ID), null)
     }
 
-    fun GetApproachingAlarm(): Cursor {
+    fun getApproachingAlarm(): Cursor {
         val Operator = SQLiteDatabase.openDatabase(DatabaseController.DatabaseName, null, 0)
         val Now = Calendar.getInstance()
         val Days = AlarmProvider.DaysMasks.GetMask(Now.get(Calendar.DAY_OF_WEEK))

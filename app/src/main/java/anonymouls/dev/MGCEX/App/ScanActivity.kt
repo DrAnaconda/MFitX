@@ -37,15 +37,16 @@ class ScanActivity : Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
         super.onActivityResult(requestCode, resultCode, data)
         when (requestCode) {
-            Utils.BluetoothEnableRequestCode -> if (resultCode == RESULT_OK)
-                startScan()
-            else
-                Toast.makeText(this, R.string.BluetoothRequiredMsg, Toast.LENGTH_SHORT).show()
+            Utils.BluetoothEnableRequestCode -> {
+                if (resultCode == RESULT_OK)
+                    startScan()
+                else
+                    Toast.makeText(this, R.string.BluetoothRequiredMsg, Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == Utils.PermsRequest) {
             for (i in permissions.indices) {
                 when (permissions[i]) {
@@ -61,6 +62,7 @@ class ScanActivity : Activity() {
                 Analytics.getInstance(this)?.sendCustomEvent(permissions[0], "rejected")
             }
         }
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -176,7 +178,7 @@ class ScanActivity : Activity() {
             mIsScanning = true
             invalidateOptionsMenu()
         } else {
-            Utils.RequestEnableBluetooth(this)
+            Utils.requestEnableBluetooth(this)
         }
     }
     private fun stopScan() {

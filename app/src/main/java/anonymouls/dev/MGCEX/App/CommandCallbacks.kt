@@ -24,7 +24,8 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
 
     override fun BatteryInfo(Charge: Int) {
         try {
-            Algorithm.BatteryHolder = Charge
+            if (Charge > 0)
+                Algorithm.BatteryHolder = Charge
             // TODO Power consumption and battery health
         } catch (Ex: Exception) {
 

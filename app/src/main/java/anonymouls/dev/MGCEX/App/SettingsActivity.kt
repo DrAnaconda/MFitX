@@ -210,7 +210,7 @@ class SettingsActivity : Activity() {
                 if (NotificationService.IsActive) {
                     Algorithm.tryForceStartListener(this)
                 } else {
-                    Utils.RequestToBindNotifyService(this)
+                    Utils.requestToBindNotifyService(this)
                 }
                 SharedPrefs!!.edit().putBoolean("NotificationGranted", true).apply()
             }

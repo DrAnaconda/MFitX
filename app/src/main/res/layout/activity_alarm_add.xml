@@ -61,13 +61,13 @@
 
         <TextView
             android:id="@+id/TargetText"
-            app:layout_constraintStart_toEndOf="@+id/TargetMinute"
-            app:layout_constraintTop_toBottomOf="@+id/StartText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
-            android:layout_marginTop="32dp"
-            android:text="@string/target_time_to_wake_up" />
+            android:text="@string/target_time_to_wake_up"
+            app:layout_constraintBottom_toBottomOf="@+id/TargetMinute"
+            app:layout_constraintStart_toEndOf="@+id/TargetMinute"
+            app:layout_constraintTop_toTopOf="@+id/TargetMinute" />
 
         <CheckBox
             android:id="@+id/TuesdayBox"
@@ -121,12 +121,15 @@
             app:layout_constraintTop_toBottomOf="@+id/startHour"
             android:layout_width="55dp"
             android:layout_height="40dp"
+            android:editable="false"
+            android:focusable="false"
+            android:inputType="none"
             android:layout_marginStart="16dp"
             android:layout_marginTop="16dp"
             android:ems="10"
             android:gravity="center"
             android:hint="@string/hh"
-            android:inputType="number" />
+            android:onClick="onClickUniversal" />
 
         <Switch
             android:id="@+id/IsEnabledSwitch"
@@ -154,14 +157,17 @@
             android:id="@+id/TargetMinute"
             app:layout_constraintStart_toEndOf="@+id/TargetHour"
             app:layout_constraintTop_toBottomOf="@+id/startMinute"
+            android:editable="false"
             android:layout_width="55dp"
+            android:focusable="false"
+            android:inputType="none"
             android:layout_height="40dp"
             android:layout_marginStart="16dp"
             android:layout_marginTop="16dp"
             android:ems="10"
             android:gravity="center"
             android:hint="@string/mm"
-            android:inputType="number" />
+            android:onClick="onClickUniversal" />
 
         <EditText
             android:visibility="gone"
@@ -190,9 +196,10 @@
             android:layout_marginEnd="16dp"
             android:layout_marginStart="16dp"
             android:layout_marginTop="16dp"
-            android:onClick="deleteBtnClick"
+            android:onClick="onClickUniversal"
             android:text="@string/delete"
             android:visibility="invisible" />
+
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

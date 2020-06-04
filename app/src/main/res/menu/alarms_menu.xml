@@ -1,19 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
         android:title="@string/confirm_str"
         android:id="@+id/ConfirmMenuBtn"
         android:orderInCategory="200"
-        android:showAsAction="always"
         android:visible="false"
-        />
+        app:showAsAction="always" />
     <item
         android:id="@+id/AddBtn"
-        android:title="Add New"
-        android:showAsAction="always"
+        android:title="@string/add_new"
         android:visible="true"
-        />
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/infoBtn"
+        android:title="@string/info"
+        android:visible="true"
+        app:showAsAction="ifRoom" />
 
 
 

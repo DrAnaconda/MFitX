@@ -41,9 +41,14 @@ object Utils {
             SharedPrefs!!.edit().putString(Analytics.UserID, UUID.randomUUID().toString()).apply()
         return SharedPrefs!!
     }
-    fun RequestEnableBluetooth(ContextActivity: Activity) {
-        val RequestIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-        ContextActivity.startActivityForResult(RequestIntent, BluetoothEnableRequestCode)
+
+    fun requestEnableBluetooth(ContextActivity: Activity) {
+        if (!ContextActivity.packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)
+                || !ContextActivity.packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH))
+            return
+
+        val requestIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+        ContextActivity.startActivityForResult(requestIntent, BluetoothEnableRequestCode)
     }
     fun isBLESupported(context: Activity) {
         if (!context.packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
@@ -60,7 +65,7 @@ object Utils {
         } else {
             if (bManager.adapter == null) {
                 Toast.makeText(AContext, R.string.bt_unavailable, Toast.LENGTH_SHORT).show()
-                RequestEnableBluetooth(AContext)
+                requestEnableBluetooth(AContext)
                 return false
             } else
                 return true
@@ -112,10 +117,9 @@ object Utils {
         }
     }
 
-
-    fun RequestToBindNotifyService(ContextActivity: Activity){
-        val ReqIntent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
-        ContextActivity.startActivity(ReqIntent)
+    fun requestToBindNotifyService(ContextActivity: Activity) {
+        val reqIntent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
+        ContextActivity.startActivity(reqIntent)
     }
     fun bigNumberToString(number: Int, divider: Int): String{
         val newNumber: Float = number.toFloat() / divider

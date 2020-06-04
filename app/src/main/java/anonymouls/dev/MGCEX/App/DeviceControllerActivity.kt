@@ -250,8 +250,13 @@ class DeviceControllerActivity : Activity() {
 
         enum class DialogTask { About, Permission, Intent }
 
-        fun showDialog(activity: Activity?) {
-            val dialog = Dialog(activity!!)
+        companion object {
+            var LastSelectedScaling = DataView.Scalings.Day
+            var LastDialogLink: Dialog? = null
+        }
+
+        fun showDialog(activity: Activity) {
+            val dialog = Dialog(activity)
             dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
             dialog.setCancelable(false)
             dialog.setContentView(R.layout.about_dialog)
@@ -285,7 +290,8 @@ class DeviceControllerActivity : Activity() {
                         }
                     }
                     DialogTask.Intent -> {
-                        activity.startActivity(Intent(param))
+                        if (param != null && param.isNotEmpty())
+                            activity.startActivity(Intent(param))
                     }
                     else -> {
                     }
@@ -293,6 +299,26 @@ class DeviceControllerActivity : Activity() {
 
             }
             dialog.show()
+            LastDialogLink = dialog
+        }
+
+        fun showSelectorDialog(activity: Activity, confirmAction: View.OnClickListener) {
+            LastSelectedScaling = DataView.Scalings.Day
+            val dialog = Dialog(activity)
+            dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+            dialog.setCancelable(false)
+            dialog.setContentView(R.layout.selector_dialog)
+
+            val dismissBtn = dialog.findViewById<View>(R.id.dialogDismiss)
+            dismissBtn.setOnClickListener { dialog.dismiss() }
+
+            val confirmBtn = dialog.findViewById<View>(R.id.dialogConfirm)
+            confirmBtn.setOnClickListener {
+                dialog.dismiss()
+                confirmAction.onClick(null)
+            }
+            dialog.show()
+            LastDialogLink = dialog
         }
     }
 
@@ -372,7 +398,7 @@ class DeviceControllerActivity : Activity() {
 
             override fun onProgressUpdate(vararg values: Void?) {
                 val progress: ProgressBar = deviceControllerActivity.findViewById(R.id.syncInProgress)
-                if (Algorithm.SelfPointer!!.workInProgress) {
+                if (Algorithm.SelfPointer != null && Algorithm.SelfPointer!!.workInProgress) {
                     progress.visibility = View.VISIBLE
                 } else {
                     progress.visibility = View.GONE

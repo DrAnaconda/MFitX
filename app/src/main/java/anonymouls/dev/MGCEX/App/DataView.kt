@@ -1,6 +1,7 @@
 package anonymouls.dev.MGCEX.App
 
 import android.app.Activity
+import android.app.DatePickerDialog
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.graphics.Color
@@ -18,7 +19,6 @@ import anonymouls.dev.MGCEX.DatabaseProvider.MainRecordsTable
 import anonymouls.dev.MGCEX.util.AdsController
 import anonymouls.dev.MGCEX.util.HRAnalyzer
 import com.google.android.gms.ads.AdView
-import com.squareup.timessquare.CalendarPickerView
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -38,7 +38,6 @@ class DataView : Activity() {
 
     private var lastValue = -1
 
-    private var calendarTool: CalendarPickerView? = null
     private var confirmBtn: MenuItem? = null
     private var requestBtn: MenuItem? = null
     private var data: String? = null
@@ -63,16 +62,7 @@ class DataView : Activity() {
         ad = findViewById(R.id.dataAD)
         AdsController.initAdBanned(ad!!, this)
 
-        calendarTool = findViewById(R.id.CalendarTool)
-        val To = Calendar.getInstance()
-        To.add(Calendar.DAY_OF_MONTH, 1)
-        val From = Calendar.getInstance()
-        From.add(Calendar.YEAR, -1)
-        calendarTool!!.init(From.time, To.time, Locale.ENGLISH)
-                .inMode(CalendarPickerView.SelectionMode.RANGE)
-        calendarTool!!.scrollToDate(To.time)
-        calendarTool!!.selectedDates
-        database = DatabaseController.getDCObject(this).readableDatabase
+        database = DatabaseController.getDCObject(this).currentDataBase!!
 
         scaleGroup = findViewById(R.id.ScaleGroup)
         mainTable = findViewById(R.id.MainTable)
@@ -148,25 +138,25 @@ class DataView : Activity() {
         val Row = TableRow(this)
         Row.layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.MATCH_PARENT, TableRow.LayoutParams.WRAP_CONTENT)
         lateinit var SDF: SimpleDateFormat
-        if (dayScale!!.isChecked)
+        if (scale == Scalings.Day)
             SDF = SimpleDateFormat("LLLL d H:mm", Locale.ENGLISH)
-        else if (weekScale!!.isChecked)
+        else if (scale == Scalings.Week)
             SDF = SimpleDateFormat("LLLL W yyyy", Locale.ENGLISH)
-        else if (monthScale!!.isChecked)
+        else if (scale == Scalings.Month)
             SDF = SimpleDateFormat("LLLL yyyy", Locale.ENGLISH)
         if (scale == Scalings.Day) {
             Row.addView(textViewCreator(SDF.format(Rec.whenCalendar.time),
                     18, false, -1))
-            Row.addView(textViewCreator(Integer.toString(Rec.MainValue), 18,
+            Row.addView(textViewCreator(Rec.MainValue.toString(), 18,
                     false, -1))
         } else {
             Row.addView(textViewCreator(SDF.format(Rec.whenCalendar.time), 18,
                     false, -1))
-            Row.addView(textViewCreator(Integer.toString(Rec.MinValue), 18,
+            Row.addView(textViewCreator(Rec.MinValue.toString(), 18,
                     false, -1))
-            Row.addView(textViewCreator(Integer.toString(Rec.MainValue), 18,
+            Row.addView(textViewCreator(Rec.MainValue.toString(), 18,
                     false, -1))
-            Row.addView(textViewCreator(Integer.toString(Rec.MaxValue), 18,
+            Row.addView(textViewCreator(Rec.MaxValue.toString(), 18,
                     false, -1))
         }
         mainTable!!.addView(Row,
@@ -177,7 +167,7 @@ class DataView : Activity() {
 
     private fun executeTableCreation(From: Calendar, To: Calendar, DataType: DataTypes) {
         headerChooser()
-        dataComplexer = DataComplexer(database, From, To, scale, DataType, 1, this)
+        dataComplexer = DataComplexer(database, From, To, scale, DataType, this)
         dataComplexer?.compute()
         findViewById<ProgressBar>(R.id.loadingInProgress).visibility = View.VISIBLE
     }
@@ -185,51 +175,61 @@ class DataView : Activity() {
 
     private fun loadData(From: Calendar, To: Calendar) {
         when (data) {
-            "HR" -> if (ViewMode != 0)
-                executeTableCreation(From, To, DataTypes.HR)
-            "STEPS" -> if (ViewMode != 0)
-                executeTableCreation(From, To, DataTypes.Steps)
-            "CALORIES" -> if (ViewMode != 0)
-                executeTableCreation(From, To, DataTypes.Calories)
+            "HR" -> executeTableCreation(From, To, DataTypes.HR)
+            "STEPS" -> executeTableCreation(From, To, DataTypes.Steps)
+            "CALORIES" -> executeTableCreation(From, To, DataTypes.Calories)
         }
     }
 
-    private fun getLastOrFirstDate(IsFromNeeded: Boolean): Calendar {
-        val Dates = calendarTool!!.selectedDates
-        val Result = Calendar.getInstance()
-        val Output: Date
-        if (IsFromNeeded)
-            Output = Dates[0]
-        else
-            Output = Dates[Dates.size - 1]
-        Result.time = Output
-        if (IsFromNeeded) {
-            Result.set(Calendar.HOUR_OF_DAY, 0)
-            Result.set(Calendar.MINUTE, 0)
-            Result.set(Calendar.SECOND, 0)
+    private fun stageD(dateA: Calendar, dateB: Calendar, scaling: Scalings) {
+        this.scale = scaling
+        var startDate: Calendar? = null
+        var endDate: Calendar? = null
+        if (dateA.time < dateB.time) {
+            startDate = dateA
+            endDate = dateB
         } else {
-            Result.set(Calendar.HOUR_OF_DAY, 23)
-            Result.set(Calendar.MINUTE, 59)
-            Result.set(Calendar.SECOND, 59)
+            startDate = dateB
+            endDate = dateA
         }
-        return Result
+        endDate.set(Calendar.HOUR_OF_DAY, 23); endDate.set(Calendar.MINUTE, 59); endDate.set(Calendar.SECOND, 59)
+        loadData(startDate, endDate)
     }
 
-    private fun hideCalendar() {
-        requestBtn!!.isVisible = true
-        scaleGroup!!.visibility = View.INVISIBLE
-        calendarTool!!.visibility = View.INVISIBLE
-        mainTable!!.visibility = View.VISIBLE
-        ad!!.visibility = View.VISIBLE
+    private fun stageC(lastResult: Calendar, scaling: Scalings) {
+        val targetTimeSet = DatePickerDialog.OnDateSetListener { DatePicker, year, month, day ->
+            val buffer = Calendar.getInstance()
+            buffer.set(year, month, day, 0, 0)
+            stageD(lastResult, buffer, scaling)
+        }
+        DatePickerDialog(this, targetTimeSet, Calendar.getInstance().get(Calendar.YEAR),
+                Calendar.getInstance().get(Calendar.MONTH), Calendar.getInstance().get(Calendar.DAY_OF_MONTH)).show()
     }
 
-    private fun showCalendar() {
-        confirmBtn!!.isVisible = true
-        scaleGroup!!.visibility = View.VISIBLE
-        calendarTool!!.visibility = View.VISIBLE
-        calendarTool!!.clearHighlightedDates()
-        mainTable!!.visibility = View.INVISIBLE
-        ad!!.visibility = View.INVISIBLE
+    private fun stageB() {
+        val scaling = when (DeviceControllerActivity.ViewDialog.LastDialogLink!!.findViewById<RadioGroup>(R.id.ScaleGroup).checkedRadioButtonId) {
+            R.id.DayScale -> Scalings.Day
+            R.id.WeekScale -> Scalings.Week
+            R.id.MonthScale -> Scalings.Month
+            else -> Scalings.Day
+        }
+        val targetTimeSet = DatePickerDialog.OnDateSetListener { DatePicker, year, month, day ->
+            val buffer = Calendar.getInstance()
+            buffer.set(year, month, day, 0, 0)
+            if (scaling != Scalings.Day)
+                stageC(buffer, scaling)
+            else
+                stageD(buffer, buffer, scaling)
+        }
+        DatePickerDialog(this, targetTimeSet, Calendar.getInstance().get(Calendar.YEAR),
+                Calendar.getInstance().get(Calendar.MONTH), Calendar.getInstance().get(Calendar.DAY_OF_MONTH)).show()
+    }
+
+    private fun stageA() {
+        val reaction: View.OnClickListener = View.OnClickListener {
+            stageB()
+        }
+        DeviceControllerActivity.ViewDialog("", DeviceControllerActivity.ViewDialog.DialogTask.About).showSelectorDialog(this, reaction)
     }
 
 
@@ -271,27 +271,12 @@ class DataView : Activity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.ConfirmMenuBtn -> {
-                mainTable!!.removeAllViews()
-                if (dayScale!!.isChecked)
-                    scale = Scalings.Day
-                else if (weekScale!!.isChecked)
-                    scale = Scalings.Week
-                else
-                    scale = Scalings.Month
-                item.isVisible = false
-                hideCalendar()
-                loadData(getLastOrFirstDate(true), getLastOrFirstDate(false))
-            }
-            R.id.RequestHistory -> {
-                item.isVisible = false; showCalendar(); }
+            R.id.RequestHistory -> stageA()
         }
         return super.onOptionsItemSelected(item)
     }
     override fun onBackPressed() {
-        if (confirmBtn!!.isVisible) {
-            hideCalendar()
-        } else finish()
+        finish()
         super.onBackPressed()
     }
 
@@ -307,7 +292,7 @@ class DataView : Activity() {
 
 
     inner class DataComplexer(private val database: SQLiteDatabase, From: Calendar, To: Calendar,
-                              private val scale: Scalings, private val DataType: DataTypes, private val ViewStyle: Int, private val DV: DataView) {
+                              private val scale: Scalings, private val DataType: DataTypes, private val DV: DataView) {
 
         private val fromLong = CustomDatabaseUtils.CalendarToLong(From, true)
         private val toLong = CustomDatabaseUtils.CalendarToLong(To, true)

@@ -62,13 +62,18 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
 
         init {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-
                 if (context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                     DatabaseDir = context.applicationInfo.dataDir
                     DatabaseName = DatabaseDir + File.separator + "MGCEX.db"
+                } else {
+                    DatabaseDir = context.getExternalFilesDir(null)?.absolutePath + File.separator
+                    DatabaseName = context.getExternalFilesDir(null)?.absolutePath + File.separator + "MGCEX.db"
                 }
             }
+
             if (!File(DatabaseName).exists()) {
+                File(DatabaseDir).mkdirs()
+                File(DatabaseName).mkdirs()
                 val newDatabase = SQLiteDatabase.openOrCreateDatabase(DatabaseName, null)
                 onCreate(newDatabase)
                 CurrentDataBase = newDatabase
@@ -81,6 +86,7 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
             val newDatabaseName = Environment.getExternalStorageDirectory().toString() + File.separator + "Android" + File.separator + "Data" + File.separator + "dev.anonymouls.MGCEX" + File.separator + "MGCEX.db"
             if (!File(newDatabaseName).exists()) {
                 File(newDatabaseDir).mkdirs()
+                File(newDatabaseDir).mkdir()
                 File(DatabaseName).renameTo(File(newDatabaseName))
             }
         }
@@ -99,6 +105,7 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
         var DCObject: DatabaseController? = null
 
         fun getDCObject(context: Context): DatabaseController {
+
             if (!File(DatabaseDir).exists()) File(DatabaseDir).mkdirs()
             if (DCObject == null) {
                 DCObject = DatabaseController(context, DatabaseName, null, 0)
