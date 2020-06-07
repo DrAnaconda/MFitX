@@ -1,14 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="ble_not_supported">BLE не поддерживается данным устройством</string>
     <string name="bt_unavailable">Bluetooth недоступен</string>
-    <string name="bt_disabled">Bluetooth отключен, включите его</string>
     <string name="action_scan">Поиск</string>
     <string name="action_stop">Стоп</string>
     <string name="confirm_str">ОК</string>
-    <string name="choose_period">ВЫБЕРИТЕ ПЕРИОД</string>
-    <string name="title_activity_alarms">Будильники</string>
-    <string name="GattInitFailedStr">Статус: Ошибка соединения. Проверьте настройки</string>
     <string name="title_activity_settings">Настройки</string>
     <string name="receive_notifications">Принимать уведомления?</string>
     <string name="BluetoothRequiredMsg">Необходимо включить Bluetooth</string>
@@ -46,12 +41,8 @@
     <string name="step_size_centimeters">Размер шага (сантиметры)</string>
     <string name="connection_not_established">Соединение не установлено</string>
     <string name="title_activity_report_activity">Статистика</string>
-    <string name="next">След</string>
-    <string name="previous">Пред</string>
     <string name="overall_stats">Общее</string>
     <string name="today_report">Отчет за сегодня</string>
-    <string name="week_report">Отчет за неделю</string>
-    <string name="month_report">Отчет за месяц</string>
     <string name="passed">Пройдено&#160;</string>
     <string name="kilos_with">&#160;километров с&#160;</string>
     <string name="steps">&#160;шагами</string>
@@ -105,9 +96,9 @@
     <string name="demo_mode">Демо режим</string>
     <string name="DateTime">Дата/время</string>
     <string name="date_str">Дата</string>
-    <string name="min_str">Минимум</string>
-    <string name="avg_str">Среднее</string>
-    <string name="max_str">Максимум</string>
+    <string name="min_str">Мин</string>
+    <string name="avg_str">Сред</string>
+    <string name="max_str">Макс</string>
     <string name="value_str">Значение</string>
     <string name="steps_str">Шагов</string>
     <string name="calories_str">Калорий</string>
@@ -125,4 +116,5 @@
     <string name="add_new">Добавить</string>
     <string name="info">Информация</string>
     <string name="alarms_info_message">MGCOOL BAND 4 поддерживает ограниченное количество напоминаний. В будующем мы планируем разработать будульники, которые будут учитывать ваше ЧСС.</string>
+    <string name="choose_period">Выбрать период</string>
 </resources>

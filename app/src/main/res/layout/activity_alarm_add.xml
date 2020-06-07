@@ -60,7 +60,6 @@
             android:text="@string/saturday" />
 
         <TextView
-            android:id="@+id/TargetText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
@@ -91,7 +90,6 @@
 
         <TextView
             android:visibility="gone"
-            android:id="@+id/StartText"
             app:layout_constraintStart_toEndOf="@+id/startMinute"
             app:layout_constraintTop_toTopOf="parent"
             android:layout_width="wrap_content"
