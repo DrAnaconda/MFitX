@@ -12,85 +12,47 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3c186351-a249-4717-90eb-6363f6accc15" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/dictionaries/dranaconda.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_annotation_annotation_1_2_0_alpha01_jar.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_appcompat_appcompat_1_3_0_alpha01_aar.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_appcompat_appcompat_resources_1_3_0_alpha01_aar.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_core_core_1_4_0_alpha01_aar.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_databinding_databinding_adapters_3_6_3_aar.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_databinding_databinding_common_3_6_3_jar.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_databinding_databinding_runtime_3_6_3_aar.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_databinding_viewbinding_3_6_3_aar.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_lifecycle_lifecycle_common_2_3_0_alpha03_jar.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_lifecycle_lifecycle_extensions_2_0_0_aar.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_lifecycle_lifecycle_process_2_0_0_aar.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_lifecycle_lifecycle_service_2_0_0_aar.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_multidex_multidex_2_0_0_aar.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_savedstate_savedstate_1_1_0_alpha01_aar.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/res/layout/table_item.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Gradle__com_evrencoskun_library_tableview_0_8_9_2_aar.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/AlarmsTable.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/CustomDatabaseUtils.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/DatabaseController.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/HRRecordsTable.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/MainRecordsTable.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/NotifyFilterTable.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/SleepRecordsTable.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/SleepSessionsTable.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/AlarmActivity.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/AlarmProvider.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/Backend/Algorithm.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/Backend/CommandCallbacks.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/Backend/CommandInterpreter.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/DeviceControllerActivity.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/NotificationService.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/PhoneStateListenerBroadcast.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/Scanner/DeviceAdapter.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/Scanner/ScanActivity.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/Scanner/ScannerCallback.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/SettingsActivity.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/UartService.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/UartServiceBroadcastInterpreter.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/data/DataView.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/data/DataViewModel.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/data/MultitaskActivity.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/data/MyTableAdapter.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/util/AdsController.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/util/Analytics.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/util/HRAnalyzer.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/util/Utils.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/res/layout/table_view_cell_layout.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/res/layout/table_view_column_header.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/res/layout/table_view_corner_layout.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/res/layout/table_view_row_header_layout.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/caches/build_file_checksums.ser" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/build_file_checksums.ser" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_annotation_annotation_1_1_0_jar.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_appcompat_appcompat_1_1_0_aar.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_appcompat_appcompat_resources_1_1_0_aar.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_core_core_1_3_0_rc01_aar.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_lifecycle_lifecycle_common_2_2_0_jar.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_lifecycle_lifecycle_runtime_2_2_0_aar.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_lifecycle_lifecycle_runtime_2_3_0_alpha03_aar.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_lifecycle_lifecycle_viewmodel_2_2_0_aar.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_lifecycle_lifecycle_viewmodel_2_3_0_alpha03_aar.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Gradle__androidx_savedstate_savedstate_1_0_0_aar.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gradle.properties" beforeDir="false" afterPath="$PROJECT_DIR$/gradle.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/release/output.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/AndroidManifest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/App/AlarmActivity.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/App/AlarmProvider.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/App/Algorithm.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/App/CommandCallbacks.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/App/CommandInterpreter.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/App/DataView.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/App/DeviceAdapter.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/App/DeviceControllerActivity.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/App/MultitaskActivity.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/App/NotificationService.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/App/PhoneStateListenerBroadcast.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/App/ScanActivity.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/App/ScannerCallback.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/App/SettingsActivity.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/App/UartService.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/App/UartServiceBroadcastInterpreter.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/DatabaseProvider/AlarmsTable.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/DatabaseProvider/CustomDatabaseUtils.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/DatabaseProvider/DatabaseController.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/DatabaseProvider/HRRecordsTable.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/DatabaseProvider/MainRecordsTable.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/DatabaseProvider/NotifyFilterTable.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/DatabaseProvider/SleepRecordsTable.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/DatabaseProvider/SleepSessionsTable.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/util/AdsController.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/util/Analytics.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/util/HRAnalyzer.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/util/Utils.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/drawable/ic_info_black_24dp.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/drawable/ic_notifications_black_24dp.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/drawable/ic_sync_black_24dp.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/layout/activity_alarm.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/res/layout/activity_alarm.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/layout/activity_alarm_add.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/res/layout/activity_alarm_add.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/res/layout/activity_data_view.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/res/layout/activity_data_view.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/layout/activity_device_controller.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/res/layout/activity_device_controller.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/layout/activity_report_activity.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/res/layout/activity_report_activity.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/layout/activity_scan.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/res/layout/activity_scan.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/layout/activity_settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/res/layout/activity_settings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/mipmap-hdpi/ic_launcher_round.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/mipmap-mdpi/ic_launcher_round.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/mipmap-xhdpi/ic_launcher_round.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/mipmap-xxhdpi/ic_launcher_round.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/values-ru/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/res/values-ru/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/values/dimens.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/res/values/dimens.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/res/layout/table_item.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/res/values/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/res/values/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/values/styles.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/res/values/styles.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/xml/listitem_device.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/res/xml/listitem_device.xml" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -115,9 +77,10 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="layoutResourceFile_vertical" />
-        <option value="resourceFile" />
         <option value="layoutResourceFile" />
         <option value="Kotlin File" />
+        <option value="Class" />
+        <option value="resourceFile" />
       </list>
     </option>
   </component>
@@ -131,6 +94,7 @@
     <option name="PREVIOUS_COMMIT_AUTHORS">
       <list>
         <option value="Dr.Anaconda &lt;anonymouls777@gmail.com&gt;" />
+        <option value="DrAnaconda &lt;anonymouls777@gmail.com&gt;" />
       </list>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
@@ -164,6 +128,7 @@
       <recent name="anonymouls.dev.MGCEX.App.Data" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/src/main/res/layout" />
       <recent name="$PROJECT_DIR$/src/main/java/anonymouls/dev/MGCEX/App/Data" />
       <recent name="$PROJECT_DIR$/src/main/res/xml" />
     </key>
@@ -327,7 +292,14 @@
       <option name="project" value="LOCAL" />
       <updated>1591310348530</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Research Data View Reactive&#10;Almost Zero Progress&#10;Upgrading to view model">
+      <created>1591507361400</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1591507361400</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -350,7 +322,9 @@
     <MESSAGE value="Intensive Develop&#10;Fixes Priority (alarms and display)" />
     <MESSAGE value="Develop final stages&#10;Fixes Priority (alarms and display)" />
     <MESSAGE value="Develop final stages&#10;API 29 support + optimizations + pickers" />
-    <option name="LAST_COMMIT_MESSAGE" value="Develop final stages&#10;API 29 support + optimizations + pickers" />
+    <MESSAGE value="Research Data View Reactive&#10;Almost Zero Progress&#10;Upgrading to view model" />
+    <MESSAGE value="Research Data Complete (Kotlin Coroutines + ViewModel + External table layout)&#10;Data table upgraded to V2.0" />
+    <option name="LAST_COMMIT_MESSAGE" value="Research Data Complete (Kotlin Coroutines + ViewModel + External table layout)&#10;Data table upgraded to V2.0" />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REFORMAT_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />
@@ -379,6 +353,17 @@
           <option name="timeStamp" value="35" />
         </line-breakpoint>
       </breakpoints>
+      <breakpoints-defaults>
+        <breakpoint suspend="ALL" type="kotlin-line" />
+      </breakpoints-defaults>
     </breakpoint-manager>
+    <watches-manager>
+      <configuration name="appLinux">
+        <watch expression="this.dateString" language="kotlin" />
+        <watch expression="(high/low/100).toInt().toString()" />
+        <watch expression="(b/c.toDouble()*a).toInt().toString()" />
+        <watch expression="b/c.toDouble()*a" />
+      </configuration>
+    </watches-manager>
   </component>
 </project>

@@ -132,4 +132,5 @@
     <string name="alarms_info_message">MGCOOL BAND 4 supports limited number of reminders. In future we will planning integrate \'smart\' alarms based on your hearth rate</string>
     <string name="choose_period">Choose period</string>
     <string name="min_str">Low</string>
+    <string name="current_progress_date">Current progress:</string>
 </resources>
