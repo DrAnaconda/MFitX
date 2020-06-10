@@ -6,12 +6,10 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.os.AsyncTask
-import anonymouls.dev.mgcex.DatabaseProvider.CustomDatabaseUtils
-import anonymouls.dev.mgcex.DatabaseProvider.DatabaseController
-import anonymouls.dev.mgcex.DatabaseProvider.HRRecordsTable
-import anonymouls.dev.mgcex.DatabaseProvider.MainRecordsTable
-import anonymouls.dev.mgcex.app.Backend.Algorithm
+import anonymouls.dev.mgcex.app.backend.Algorithm
+import anonymouls.dev.mgcex.databaseProvider.*
 import java.util.*
+import kotlin.math.abs
 
 object HRAnalyzer {
 
@@ -58,19 +56,33 @@ object HRAnalyzer {
 
     fun analyzeShadowMainData(Operator: SQLiteDatabase) {
         val taskforce = AnalyzeSMD()
-        taskforce.Operator = Operator
+        taskforce.operator = Operator
         taskforce.execute()
         isShadowAnalyzerRunning = true
     }
 
 
     class AnalyzeSMD : AsyncTask<Void, Void, Void>() {
-        lateinit var Operator: SQLiteDatabase
+        lateinit var operator: SQLiteDatabase
         private var ready = true
 
+        private fun analyzeActivity(deltaSteps: Int, deltaTime: Int, prevTime: Long, currentTime: Long) {
+            val phStress = physicalStressDetermining(deltaSteps, deltaTime)
+            val values = ContentValues()
+            values.put(HRRecordsTable.ColumnsNames[3], HRRecordsTable.AnalyticTypes.valueOf(phStress.name).type)
+            operator.update(DatabaseController.HRRecordsTableName, values,
+                    " " + HRRecordsTable.ColumnsNames[1] + " BETWEEN ? AND ? ",
+                    arrayOf(prevTime.toString(), currentTime.toString()))
+        }
+
+        private fun recordAnalyzeIntermediate(recordStart: Long, deltaMinutes: Int, deltaSteps: Int) {
+            val speed: Double = abs(deltaSteps.toDouble()) / deltaMinutes
+            AdvancedActivityTracker.insertRecord(recordStart, deltaMinutes, speed, operator)
+        }
+
         override fun doInBackground(vararg params: Void?): Void? {
-            if (Operator == null) return null
-            val curs = Operator.query(DatabaseController.MainRecordsTableName + "COPY",
+            if (operator == null) return null
+            val curs = operator.query(DatabaseController.MainRecordsTableName + "COPY",
                     arrayOf(MainRecordsTable.ColumnNames[0], MainRecordsTable.ColumnNames[2], MainRecordsTable.ColumnNames[1]), null, null, null, null, "Date")
             if (curs?.count == 0) return null
             ready = false
@@ -88,15 +100,13 @@ object HRAnalyzer {
                         prevSteps = currentSteps; prevTime = currentTime; prevID = currentID; continue; }
                     val deltaSteps = currentSteps - prevSteps
                     val deltaTime = getDeltaMinutes(CustomDatabaseUtils.LongToCalendar(prevTime, true), CustomDatabaseUtils.LongToCalendar(currentTime, true))
-                    val phStress = physicalStressDetermining(deltaSteps, deltaTime)
-                    val values = ContentValues()
-                    values.put(HRRecordsTable.ColumnsNames[3], HRRecordsTable.AnalyticTypes.valueOf(phStress.name).type)
-                    Operator.update(DatabaseController.HRRecordsTableName, values,
-                            " " + HRRecordsTable.ColumnsNames[1] + " BETWEEN ? AND ? ",
-                            arrayOf(prevTime.toString(), currentTime.toString()))
+
+                    analyzeActivity(deltaSteps, deltaTime, prevTime, currentTime)
+                    recordAnalyzeIntermediate(currentTime, deltaTime, deltaSteps)
+
                     prevSteps = currentSteps
                     prevTime = currentTime
-                    Operator.delete(DatabaseController.MainRecordsTableName + "COPY", " DATE = ?", arrayOf(prevID.toString()))
+                    operator.delete(DatabaseController.MainRecordsTableName + "COPY", " DATE = ?", arrayOf(prevID.toString()))
                     prevID = currentID
                 } catch (ex: Exception) {
                     Thread.sleep(15000)
@@ -104,7 +114,7 @@ object HRAnalyzer {
                 }
             } while (curs.moveToNext())
             curs.close()
-            Operator.delete(DatabaseController.MainRecordsTableName + "COPY", " DATE = ?", arrayOf(prevID.toString()))
+            operator.delete(DatabaseController.MainRecordsTableName + "COPY", " DATE = ?", arrayOf(prevID.toString()))
             return null
         }
 

@@ -11,14 +11,11 @@ import android.os.IBinder
 import android.view.View
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.MutableLiveData
-import anonymouls.dev.mgcex.DatabaseProvider.CustomDatabaseUtils
-import anonymouls.dev.mgcex.DatabaseProvider.DatabaseController
-import anonymouls.dev.mgcex.DatabaseProvider.HRRecordsTable
-import anonymouls.dev.mgcex.DatabaseProvider.MainRecordsTable
 import anonymouls.dev.mgcex.app.AlarmProvider
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
 import anonymouls.dev.mgcex.app.main.DeviceControllerViewModel
+import anonymouls.dev.mgcex.databaseProvider.*
 import anonymouls.dev.mgcex.util.HRAnalyzer
 import anonymouls.dev.mgcex.util.Utils
 import java.text.SimpleDateFormat
@@ -42,26 +39,24 @@ class Algorithm : IntentService("Syncer") {
 
 //endregion
 
-//region view model kostil`
 
     enum class StatusCodes(val code: Int) { BluetoothDisabled(-2), DeviceLost(-1), Disconnected(0), Connected(1), GattReady(2) }
 
-//endregion
 
     var synchronizer = 0
     private var isSchleduled = false
     private var syncTimer = Timer()
     private var lastStatus = ""
 
-    private var ServiceObject: IBinder? = null
-    private var ServiceName: ComponentName? = null
+    private var serviceObject: IBinder? = null
+    private var serviceName: ComponentName? = null
     private var hardTask: AsyncTask<Void, Void, Void>? = null
 
-    private val Connection = object : ServiceConnection {
+    private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
-            ServiceObject = service
+            serviceObject = service
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                ServiceName = name
+                serviceName = name
                 tryForceStartListener(applicationContext)
             }
         }
@@ -87,7 +82,7 @@ class Algorithm : IntentService("Syncer") {
         startService(service)
         service = Intent(this, NotificationService::class.java)
         if (!NotificationService.IsActive) {
-            bindService(service, Connection, Context.BIND_AUTO_CREATE)
+            bindService(service, connection, Context.BIND_AUTO_CREATE)
             startService(service)
         }
         if (!isNotifyServiceAlive(this))
@@ -156,13 +151,13 @@ class Algorithm : IntentService("Syncer") {
     private fun getLastHRSync() {
         if (database != null)
             lastHRSync = CustomDatabaseUtils.GetLastSyncFromTable(DatabaseController.HRRecordsTableName,
-                    HRRecordsTable.ColumnsNames, true, database!!.currentDataBase!!)
+                    HRRecordsTable.ColumnsNames, true, database!!.readableDatabase)
     }
 
     private fun getLastMainSync() {
         if (database != null)
             lastMainSync = CustomDatabaseUtils.GetLastSyncFromTable(DatabaseController.MainRecordsTableName,
-                    MainRecordsTable.ColumnNames, true, database!!.currentDataBase!!)
+                    MainRecordsTable.ColumnNames, true, database!!.readableDatabase)
     }
 
     /*
@@ -268,7 +263,9 @@ class Algorithm : IntentService("Syncer") {
         if (!text.isNotEmpty() && this.lastStatus.isNotEmpty())
             text = this.lastStatus
         if (HRAnalyzer.isShadowAnalyzerRunning)
-            text += "\nData analyzer is running..."
+            text += "\n" + getString(R.string.activity_data_analyzer)
+        if (SleepRecordsTable.GlobalSettings.isLaunched)
+            text += "\n" + getString(R.string.sleep_data_analyzer)
         if (additionalStatus != null) {
             if (additionalStatus != null && !text.contains(additionalStatus!!))
                 text += "\n" + additionalStatus
@@ -306,7 +303,7 @@ class Algorithm : IntentService("Syncer") {
         NextSync!!.add(Calendar.MILLISECOND, MainSyncPeriodSeconds)
         this.lastStatus = getString(R.string.next_sync_status) + SimpleDateFormat("HH:mm", Locale.getDefault()).format(NextSync!!.time)
         changeStatus(lastStatus)
-        if (!DatabaseController.getDCObject(this).currentDataBase!!.inTransaction() && hardTask == null) {
+        if (!DatabaseController.getDCObject(this).writableDatabase.inTransaction() && hardTask == null) {
             hardTask = AsyncCollapser(this)
             hardTask!!.execute()
         }
@@ -425,7 +422,7 @@ class Algorithm : IntentService("Syncer") {
 
         class AsyncCollapser(private val algorithm: Algorithm) : AsyncTask<Void, Void, Void>() {
             override fun doInBackground(vararg params: Void?): Void? {
-                MainRecordsTable.executeDataCollapse(algorithm.prefs!!.getLong(MainRecordsTable.SharedPrefsMainCollapsedConst, 0), algorithm.prefs!!, algorithm.database!!.currentDataBase!!)
+                MainRecordsTable.executeDataCollapse(algorithm.prefs!!.getLong(MainRecordsTable.SharedPrefsMainCollapsedConst, 0), algorithm.prefs!!, algorithm.database!!.writableDatabase)
                 return null
             }
 
@@ -449,6 +446,6 @@ class Algorithm : IntentService("Syncer") {
 
 }
 
-// TODO Integrate sleeping data. Develop and test algos.
+// TODO Found active status at sleep intervals
 // TODO Integrate 3d party services
 // TODO Hard Tasks auto launch

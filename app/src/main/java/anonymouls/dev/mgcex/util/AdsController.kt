@@ -7,6 +7,8 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.LinearLayout
 import com.google.android.gms.ads.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.util.*
 
 
@@ -25,7 +27,7 @@ object AdsController {
 
 
     fun initAdBanned(adObject: AdView, activity: Activity) {
-        //MobileAds.initialize(activity)
+        GlobalScope.launch { MobileAds.initialize(activity) }
         savedContext = activity
         //adObject.adListener = defaultListener
         adObject.loadAd(AdRequest.Builder().build())

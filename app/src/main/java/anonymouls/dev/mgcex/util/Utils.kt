@@ -10,8 +10,8 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.Toast
-import anonymouls.dev.mgcex.app.DeviceControllerActivity
 import anonymouls.dev.mgcex.app.R
+import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
 import java.text.DecimalFormat
 import java.util.*
 
@@ -140,6 +140,16 @@ object Utils {
                 val thousands: Int = newNumber.toInt() / 1000
                 "$thousands K"
             }
+        }
+    }
+
+    fun getDeltaCalendar(A: Calendar, B: Calendar, Field: Int): Long {
+        val diff: Long = A.timeInMillis - B.timeInMillis
+        return when (Field) {
+            Calendar.SECOND -> diff / 1000
+            Calendar.MINUTE -> diff / 1000 / 60
+            Calendar.HOUR_OF_DAY, Calendar.HOUR -> diff / 1000 / 60 / 60
+            else -> diff / 1000 / 60 / 60 / 24
         }
     }
 }

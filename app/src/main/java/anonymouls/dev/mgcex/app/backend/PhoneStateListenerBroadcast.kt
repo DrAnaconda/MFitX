@@ -1,4 +1,4 @@
-package anonymouls.dev.mgcex.app
+package anonymouls.dev.mgcex.app.backend
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -7,15 +7,12 @@ import android.database.Cursor
 import android.net.Uri
 import android.provider.ContactsContract
 import android.telephony.TelephonyManager
-import anonymouls.dev.mgcex.app.Backend.Algorithm
-import anonymouls.dev.mgcex.app.Backend.CommandInterpreter
-
 import anonymouls.dev.mgcex.util.Utils
 
 class PhoneStateListenerBroadcast : BroadcastReceiver() {
     // TODO Fix and test, not working
     override fun onReceive(context: Context, intent: Intent) {
-        if (DeviceControllerActivity.StatusCode >= 3) {
+        if (Algorithm.StatusCode.value!!.code >= 3) {
             if (!Utils.SharedPrefs!!.getBoolean("ReceiveCalls", true)) return
             val extras = intent.extras
             val State = extras!!.getString(TelephonyManager.EXTRA_STATE)

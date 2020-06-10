@@ -1,4 +1,4 @@
-package anonymouls.dev.mgcex.app
+package anonymouls.dev.mgcex.app.backend
 
 import android.app.Service
 import android.bluetooth.*
@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
-import anonymouls.dev.mgcex.app.Backend.Algorithm
 import java.util.*
 
 class UartService : Service() {

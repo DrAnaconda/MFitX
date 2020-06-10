@@ -1,11 +1,15 @@
-package anonymouls.dev.mgcex.DatabaseProvider
+package anonymouls.dev.mgcex.databaseProvider
 
 import android.content.ContentValues
+import android.content.Context
 import android.content.SharedPreferences
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import anonymouls.dev.mgcex.app.SettingsActivity
+import anonymouls.dev.mgcex.app.main.SettingsActivity
 import anonymouls.dev.mgcex.util.Utils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.lang.Math.abs
 import java.util.*
 
@@ -14,7 +18,7 @@ object MainRecordsTable {
     var ColumnsForExtraction = arrayOf("Date", "Steps", "Calories")
 
     fun getCreateTableCommandClone(): String {
-        return "CREATE TABLE " + DatabaseController.MainRecordsTableName + "COPY(" +
+        return "CREATE TABLE if not exists " + DatabaseController.MainRecordsTableName + "COPY(" +
                 ColumnNames[0] + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 ColumnNames[1] + " INTEGER UNIQUE, " +
                 ColumnNames[2] + " INTEGER, " +
@@ -22,8 +26,8 @@ object MainRecordsTable {
                 ");"
     }
 
-    fun GetCreateTableCommand(): String {
-        return "CREATE TABLE " + DatabaseController.MainRecordsTableName + "(" +
+    fun getCreateTableCommand(): String {
+        return "create table if not exists " + DatabaseController.MainRecordsTableName + "(" +
                 ColumnNames[0] + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 ColumnNames[1] + " INTEGER UNIQUE, " +
                 ColumnNames[2] + " INTEGER, " +
@@ -72,7 +76,10 @@ object MainRecordsTable {
         Values.put(ColumnNames[1], recordDate)
         Values.put(ColumnNames[2], Steps)
         Values.put(ColumnNames[3], Calories)
-        HRRecordsTable.updateAnalyticalViaMainInfo(TimeRecord, Steps, Operator)
+        GlobalScope.launch(Dispatchers.IO) {
+            HRRecordsTable.updateAnalyticalViaMainInfo(TimeRecord, Steps, Operator)
+            writeIntermediate(MainRecord(TimeRecord, Steps, Calories), Operator)
+        }
         try {
             val curs = Operator.query(DatabaseController.MainRecordsTableName + "COPY", arrayOf(ColumnNames[1]), " " + ColumnNames[1] + " = ?",
                     arrayOf(recordDate.toString()), null, null, null)
@@ -102,6 +109,7 @@ object MainRecordsTable {
             throw Exception("Update command is broken MainRecordsTableName:updateExisting")
         Operator.endTransaction()
     }
+
 //endregion
 
     fun extractRecords(From: Long, To: Long, Operator: SQLiteDatabase): Cursor {
@@ -129,7 +137,7 @@ object MainRecordsTable {
         return Record
     }
 
-    fun generateReport(From: Calendar?, To: Calendar?, Operator: SQLiteDatabase): MainReport {
+    fun generateReport(From: Calendar?, To: Calendar?, Operator: SQLiteDatabase, context: Context?): MainReport {
         val from: Long
         val to: Long
         if (From == null || To == null) {
@@ -145,10 +153,34 @@ object MainRecordsTable {
                         CustomDatabaseUtils.niceSQLFunctionBuilder("SUM", ColumnNames[3])),
                 ColumnNames[1] + " BETWEEN ? AND ?", arrayOf(from.toString(), to.toString()), null, null, null)
         curs.moveToFirst()
-        val result = MainReport(curs.getInt(1), curs.getInt(2), curs.getInt(0), null)
+        val result = MainReport(curs.getInt(1), curs.getInt(2), curs.getInt(0), null, context)
         curs.close()
         return result
     }
+
+//region advanced tracking
+
+    private fun extractFreshRecord(db: SQLiteDatabase): MainRecord {
+        val curs = db.query(DatabaseController.MainRecordsTableName, ColumnsForExtraction, null, null, null, null, ColumnNames[1] + " desc", "1")
+        return if (curs.count > 0) {
+            curs.moveToFirst();
+            val result = MainRecord(CustomDatabaseUtils.LongToCalendar(curs.getLong(0), true), curs.getInt(1), curs.getInt(2)); curs.close(); result
+        } else {
+            curs.close();
+            val calendar = Calendar.getInstance(); calendar.set(Calendar.HOUR_OF_DAY, 0); MainRecord(calendar, 0, 0)
+        }
+    }
+
+    private fun writeIntermediate(newData: MainRecord, db: SQLiteDatabase) {
+        val freshData = extractFreshRecord(db)
+        val deltaMinutes = kotlin.math.abs(Utils.getDeltaCalendar(freshData.RTime, newData.RTime, Calendar.MINUTE))
+        val deltaSteps = kotlin.math.abs(freshData.Steps - newData.Steps)
+        if (deltaMinutes > 120 && deltaSteps < 10) return
+        val speed = deltaSteps.toDouble() / deltaMinutes
+        AdvancedActivityTracker.insertRecord(freshData.RTime, deltaMinutes.toInt(), speed, db)
+    }
+
+//endregion
 
 //region optimization algos
 
@@ -240,13 +272,16 @@ object MainRecordsTable {
 
 //endregion
 
-    class MainRecord(private val RTime: Calendar, private val Steps: Int, private val Calories: Int)
+    class MainRecord(val RTime: Calendar, val Steps: Int, val Calories: Int)
 
-    class MainReport(var stepsCount: Int = -1, var caloriesCount: Int = -1, var recordsCount: Int = -1, var analytics: String? = null) {
+    class MainReport(var stepsCount: Int = -1, var caloriesCount: Int = -1, var recordsCount: Int = -1, var analytics: String? = null,
+                     private val context: Context?) {
         var passedKm: Float = 0.0f
 
         init {
-            passedKm = Utils.SharedPrefs!!.getFloat(SettingsActivity.stepsSize, 0.5f) * stepsCount
+            passedKm =
+                    if (context != null) Utils.getSharedPrefs(context).getFloat(SettingsActivity.stepsSize, 0.5f) * stepsCount
+                    else Utils.SharedPrefs!!.getFloat(SettingsActivity.stepsSize, 0.5f) * stepsCount
         }
     }
 

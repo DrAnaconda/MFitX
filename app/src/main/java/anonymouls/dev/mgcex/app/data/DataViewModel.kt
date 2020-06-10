@@ -9,16 +9,17 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import anonymouls.dev.mgcex.DatabaseProvider.CustomDatabaseUtils
-import anonymouls.dev.mgcex.DatabaseProvider.DatabaseController
-import anonymouls.dev.mgcex.DatabaseProvider.HRRecordsTable
-import anonymouls.dev.mgcex.DatabaseProvider.MainRecordsTable
 import anonymouls.dev.mgcex.app.R
+import anonymouls.dev.mgcex.databaseProvider.CustomDatabaseUtils
+import anonymouls.dev.mgcex.databaseProvider.DatabaseController
+import anonymouls.dev.mgcex.databaseProvider.HRRecordsTable
+import anonymouls.dev.mgcex.databaseProvider.MainRecordsTable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
+import java.lang.Math.random
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -39,8 +40,8 @@ class DataViewModel : ViewModel() {
     val loading: LiveData<Int>
         get() = _loading
 
-    private val _result = MutableLiveData<Record>()
-    val data: LiveData<Record>
+    private val _result = MutableLiveData<Queue<Record>>()
+    val data: LiveData<Queue<Record>>
         get() {
             return _result
         }
@@ -79,7 +80,7 @@ class DataViewModel : ViewModel() {
         startValue = currentLock
         while (currentLock < toLong) {
             _currentProgress.postValue(activity.getString(R.string.current_progress_date) + " " +
-                    convertDateWithScaling(CustomDatabaseUtils.LongToCalendar(currentLock, true), scale) + " to " +
+                    convertDateWithScaling(CustomDatabaseUtils.LongToCalendar(currentLock, true), scale) + " — " +
                     convertDateWithScaling(CustomDatabaseUtils.LongToCalendar(currentLock + staticOffset, true), scale) + " (" + calculatePercentage(currentLock, toLong) + "%)")
 
             if (cancelled) {
@@ -129,8 +130,7 @@ class DataViewModel : ViewModel() {
     fun fetchDataStageA(context: Context, From: Calendar, To: Calendar,
                         scale: DataView.Scalings, DataType: DataView.DataTypes) {
         this.cancelled = false
-        this.database = DatabaseController.getDCObject(context).currentDataBase!!
-        From.add(Calendar.DAY_OF_MONTH, -1)
+        this.database = DatabaseController.getDCObject(context).readableDatabase
         this.fromLong = CustomDatabaseUtils.CalendarToLong(From, true)
         this.toLong = CustomDatabaseUtils.CalendarToLong(To, true)
         currentLock = this.fromLong
@@ -139,10 +139,11 @@ class DataViewModel : ViewModel() {
         grouping = scale != DataView.Scalings.Day
         _loading.value = View.VISIBLE
         setOffset()
+        val inputQuene: Queue<Record> = LinkedList<Record>()
         viewModelScope.launch(Dispatchers.IO) {
             fetchDataStageB(context).collect {
-                if (it != null)
-                    _result.postValue(it)
+                if (it != null) {
+                    inputQuene.add(it); _result.postValue(inputQuene); }
                 else
                     _loading.postValue(View.GONE)
             }
@@ -195,6 +196,15 @@ class Record(Result: Cursor?, var recordDate: Long, isGrouping: Boolean, private
         return result
     }
 
+
+    companion object {
+        fun getTestRecord(): Record {
+            val result = Record(null, 202007070707, false, DataView.Scalings.Day)
+            result.mainValue = random().toInt() % 1000
+            result.whenCalendar = Calendar.getInstance(); result.whenCalendar.add(Calendar.MINUTE, -1 * (random().toInt() % 10000))
+            return result
+        }
+    }
 }
 
 /* REMOVED NOT OPTIMAL

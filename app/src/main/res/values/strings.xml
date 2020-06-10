@@ -91,7 +91,8 @@
         It is wrong. Only "fast phase" may be with this duration. Also hearth rate and sleep phases does have weak correlation.\n
         Also device starts recording sleep stats after setting up "sleep start" param, it is wrong, device should do it automatically.\n\nSleeping data is critical for hearth rate anomalies detection, so we are working about it. We will inform you about status
         of developing this function here.\nCurrent status: Analyzing correlation. Differential analysis heath rate and sleep stats.
-        Progress: Data seems some useless, but there is some part information, that can be used\n
+        Progress: Data seems some useless, but there is some part information, that can be used.\n
+        UDP: Data is being proceeding by some algos. Developing data visualisation modules\n
         \n\n
         Keep calm and wait for updates.
     </string>
@@ -133,4 +134,6 @@
     <string name="choose_period">Choose period</string>
     <string name="min_str">Low</string>
     <string name="current_progress_date">Current progress:</string>
+    <string name="sleep_data_analyzer">Sleep data analyzer is running...</string>
+    <string name="activity_data_analyzer">Activity data analyzer is running...</string>
 </resources>

@@ -1,4 +1,4 @@
-package anonymouls.dev.mgcex.DatabaseProvider
+package anonymouls.dev.mgcex.databaseProvider
 
 import android.content.ContentValues
 import android.database.Cursor
@@ -7,14 +7,14 @@ import android.database.sqlite.SQLiteDatabase
 object NotifyFilterTable {
     private val ColumnNames = arrayOf("ID", "Package", "Enabled")
 
-    fun GetCreateTableCommand(): String {
-        return "create table " + DatabaseController.NotifyFilterTableName +
+    fun getCreateTableCommand(): String {
+        return "create table if not exists " + DatabaseController.NotifyFilterTableName +
                 "(" + ColumnNames[0] + " integer primary key," +
                 ColumnNames[1] + " string unique," +
                 ColumnNames[2] + " boolean);"
     }
 
-    fun InsertRecord(Package: String, IsEnabled: Boolean, Operator: SQLiteDatabase) {
+    fun insertRecord(Package: String, IsEnabled: Boolean, Operator: SQLiteDatabase) {
         if (Package.length < 6) return
         val CV = ContentValues()
         CV.put(ColumnNames[1], Package)
@@ -45,7 +45,7 @@ object NotifyFilterTable {
         return req
     }
 
-    fun IsEnabled(Package: String, Operator: SQLiteDatabase): Boolean {
+    fun isEnabled(Package: String, Operator: SQLiteDatabase): Boolean {
         val req = Operator.query(DatabaseController.NotifyFilterTableName,
                 arrayOf(ColumnNames[2]),
                 ColumnNames[1] + " = \"" + Package + "\"", null, null, null, null, null)

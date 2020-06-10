@@ -8,10 +8,10 @@ import android.text.method.ScrollingMovementMethod
 import android.view.LayoutInflater
 import android.widget.LinearLayout
 import android.widget.TextView
-import anonymouls.dev.mgcex.DatabaseProvider.DatabaseController
-import anonymouls.dev.mgcex.DatabaseProvider.HRRecordsTable
-import anonymouls.dev.mgcex.DatabaseProvider.MainRecordsTable
 import anonymouls.dev.mgcex.app.R
+import anonymouls.dev.mgcex.databaseProvider.DatabaseController
+import anonymouls.dev.mgcex.databaseProvider.HRRecordsTable
+import anonymouls.dev.mgcex.databaseProvider.MainRecordsTable
 import anonymouls.dev.mgcex.util.AdsController
 import anonymouls.dev.mgcex.util.Analytics
 import anonymouls.dev.mgcex.util.HRAnalyzer
@@ -120,8 +120,8 @@ class MultitaskActivity : Activity() {
 
         LayoutInflater.from(this).inflate(R.xml.horizontal_divider, container!!)
 
-        val overallMainReport = MainRecordsTable.generateReport(fromPeriod, toPeriod, DatabaseController.getDCObject(this).currentDataBase!!)
-        val overallHRReport = HRRecordsTable.generateReport(fromPeriod, toPeriod, DatabaseController.getDCObject(this).currentDataBase!!)
+        val overallMainReport = MainRecordsTable.generateReport(fromPeriod, toPeriod, DatabaseController.getDCObject(this).readableDatabase, this)
+        val overallHRReport = HRRecordsTable.generateReport(fromPeriod, toPeriod, DatabaseController.getDCObject(this).readableDatabase)
         var overallAnalytics = ""
 
         if (overallMainReport.stepsCount == 0)
@@ -130,8 +130,7 @@ class MultitaskActivity : Activity() {
             createTextView(getString(R.string.passed) + Utils.bigNumberToString(overallMainReport.passedKm.toInt(), 1000) + getString(R.string.kilos_with)
                     + Utils.bigNumberToString(overallMainReport.stepsCount, 1) + getString(R.string.steps), false)
             createTextView(getString(R.string.burned_calories) + Utils.bigNumberToString(overallMainReport.caloriesCount, 1), false)
-            createTextView(getString(R.string.based_on) + Utils.bigNumberToString(overallMainReport.recordsCount, 1) + getString(R.string.activity_records)
-                    + getString(R.string.and) + Utils.bigNumberToString(overallHRReport.recordsCount, 1) + getString(R.string.HR_records),
+            createTextView(getString(R.string.based_on) + Utils.bigNumberToString(overallMainReport.recordsCount, 1) + getString(R.string.activity_records),
                     false)
         }
 
@@ -139,7 +138,8 @@ class MultitaskActivity : Activity() {
             createTextView(getString(R.string.no_hearth_rate_data), false)
         } else {
             var hrAnalytics = getString(R.string.min_HR) + overallHRReport.MinHR + getString(R.string.avg_HR) + overallHRReport.AvgHR + getString(R.string.max_HR) + overallHRReport.MaxHR + "\n"
-            hrAnalytics += getString(R.string.anomalies) + overallHRReport.anomaliesPercent + "%"
+            hrAnalytics += getString(R.string.anomalies) + overallHRReport.anomaliesPercent + "%\n"
+            hrAnalytics += getString(R.string.based_on) + Utils.bigNumberToString(overallHRReport.recordsCount, 1) + getString(R.string.HR_records)
             createTextView(hrAnalytics, false)
 
             when (HRAnalyzer.determineHRMainType(overallHRReport.AvgHR)) {

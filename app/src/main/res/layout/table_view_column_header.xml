@@ -9,8 +9,8 @@
     android:orientation="vertical">
 
     <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:background="#999999"
         android:orientation="horizontal">
 
@@ -18,7 +18,7 @@
         <TextView
             android:id="@+id/column_header_textView"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:layout_margin="4pt"
             android:background="#999999"

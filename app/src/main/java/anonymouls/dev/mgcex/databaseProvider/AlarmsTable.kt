@@ -1,4 +1,4 @@
-package anonymouls.dev.mgcex.DatabaseProvider
+package anonymouls.dev.mgcex.databaseProvider
 
 import android.content.ContentValues
 import android.database.Cursor
@@ -10,7 +10,7 @@ object AlarmsTable {
     val ColumnsNames = arrayOf("ID", "Hour", "Minute", "Days", "Enabled", "HourStart", "MinStart", "syncable")
 
     fun GetCreateTableCommand(): String {
-        return ("CREATE TABLE " + DatabaseController.AlarmsTableName + " (" +
+        return ("CREATE TABLE if not exists " + DatabaseController.AlarmsTableName + " (" +
                 ColumnsNames[0] + " INTEGER PRIMARY KEY," +
                 ColumnsNames[1] + " INTEGER," +
                 ColumnsNames[2] + " INTEGER," +

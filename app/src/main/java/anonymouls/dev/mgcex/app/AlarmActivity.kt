@@ -13,9 +13,10 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.*
 import androidx.constraintlayout.widget.ConstraintLayout
-import anonymouls.dev.mgcex.DatabaseProvider.AlarmsTable
-import anonymouls.dev.mgcex.DatabaseProvider.DatabaseController
-import anonymouls.dev.mgcex.app.Backend.CommandInterpreter
+import anonymouls.dev.mgcex.app.backend.CommandInterpreter
+import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
+import anonymouls.dev.mgcex.databaseProvider.AlarmsTable
+import anonymouls.dev.mgcex.databaseProvider.DatabaseController
 import java.util.*
 
 
@@ -106,7 +107,7 @@ class AlarmActivity : Activity() {
     fun onClickUniversal(v: View) {
         when (v.id) {
             R.id.DeleteBtn -> {
-                currentProvider!!.commitSuicide(DatabaseController.getDCObject(this).currentDataBase!!); onBackPressed()
+                currentProvider!!.commitSuicide(DatabaseController.getDCObject(this).writableDatabase); onBackPressed()
             }
             R.id.TargetHour -> createTargetTimePicker()
             R.id.TargetMinute -> createTargetTimePicker()
@@ -173,7 +174,7 @@ class AlarmActivity : Activity() {
     }
 
     private fun loadAlarms() {
-        val allAlarms = AlarmsTable.extractRecords(DatabaseController.getDCObject(this).currentDataBase!!)
+        val allAlarms = AlarmsTable.extractRecords(DatabaseController.getDCObject(this).readableDatabase)
         createHeader()
         alarmsCount = allAlarms.count
         if (allAlarms.count > 0) {
@@ -246,7 +247,7 @@ class AlarmActivity : Activity() {
             for (i in 0 until table!!.childCount) {
                 try {
                     val ATR = table!!.getChildAt(i) as AdvancedTableRow
-                    ATR.AP.saveAlarmRecord(DatabaseController.getDCObject(this).currentDataBase!!)
+                    ATR.AP.saveAlarmRecord(DatabaseController.getDCObject(this).writableDatabase)
                 } catch (Ex: Exception) {
                     // ignore
                 }
@@ -283,7 +284,7 @@ class AlarmActivity : Activity() {
                             tuesday!!.isChecked, wednesday!!.isChecked, thursday!!.isChecked,
                             friday!!.isChecked, saturday!!.isChecked, sunday!!.isChecked)
                 }
-                currentProvider!!.saveAlarmRecord(DatabaseController.getDCObject(this).currentDataBase!!)
+                currentProvider!!.saveAlarmRecord(DatabaseController.getDCObject(this).writableDatabase)
                 setContentView(R.layout.activity_alarm)
                 initView()
                 loadAlarms()

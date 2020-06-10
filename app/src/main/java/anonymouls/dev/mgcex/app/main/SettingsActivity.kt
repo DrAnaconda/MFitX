@@ -1,4 +1,4 @@
-package anonymouls.dev.mgcex.app
+package anonymouls.dev.mgcex.app.main
 
 import android.app.Activity
 import android.content.Context
@@ -11,39 +11,36 @@ import android.view.Gravity
 import android.view.MenuItem
 import android.view.View
 import android.widget.*
-import anonymouls.dev.mgcex.DatabaseProvider.DatabaseController
-import anonymouls.dev.mgcex.DatabaseProvider.NotifyFilterTable
-import anonymouls.dev.mgcex.app.Backend.Algorithm
-import anonymouls.dev.mgcex.app.Backend.CommandInterpreter
+import anonymouls.dev.mgcex.app.R
+import anonymouls.dev.mgcex.app.backend.Algorithm
+import anonymouls.dev.mgcex.app.backend.CommandInterpreter
+import anonymouls.dev.mgcex.app.backend.NotificationService
+import anonymouls.dev.mgcex.databaseProvider.DatabaseController
+import anonymouls.dev.mgcex.databaseProvider.NotifyFilterTable
 import anonymouls.dev.mgcex.util.Analytics
 import anonymouls.dev.mgcex.util.Utils
 
 class SettingsActivity : Activity() {
-    private var SharedPrefs: SharedPreferences? = null
+    private var sharedPrefs: SharedPreferences? = null
 
-    private var MinHRBox: EditText? = null
-    private var MaxHRBox: EditText? = null
-    private var AvgHRBox: EditText? = null
     private var stepSizeTextBox: EditText? = null
     private var secondsRepeatBox: EditText? = null
     private var repeatsNumberBox: EditText? = null
 
-    private var ReceiveNotificationBox: Switch? = null
-    private var ReceivePhoneCallBox: Switch? = null
-    private var EnableAutoIllumination: Switch? = null
-    private val LoadPackages: Button? = null
-    private var PackagesList: TableLayout? = null
+    private var receiveNotificationBox: Switch? = null
+    private var receivePhoneCallBox: Switch? = null
+    private var enableAutoIllumination: Switch? = null
+    private var packagesList: TableLayout? = null
     private var currentConnectionBox: TextView? = null
     private var breakConnectionBtn: Button? = null
 
-    private var DataView = false
-    private lateinit var defaultTextListener: TextWatcher
+    private var dataView = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
-        SharedPrefs = Utils.getSharedPrefs(this)
-        InitViews()
+        sharedPrefs = Utils.getSharedPrefs(this)
+        initViews()
     }
 
 
@@ -52,8 +49,8 @@ class SettingsActivity : Activity() {
             override fun afterTextChanged(p0: Editable?) {
                 if (p0.toString().isEmpty()) return
                 when (dataType) {
-                    0 -> SharedPrefs!!.edit().putFloat(param, p0.toString().replace(',', '.').toFloat()).apply()
-                    1 -> SharedPrefs!!.edit().putInt(param, p0.toString().toInt()).apply()
+                    0 -> sharedPrefs!!.edit().putFloat(param, p0.toString().replace(',', '.').toFloat()).apply()
+                    1 -> sharedPrefs!!.edit().putInt(param, p0.toString().toInt()).apply()
                 }
             }
 
@@ -65,40 +62,40 @@ class SettingsActivity : Activity() {
     private fun initTextBoxes() {
         stepSizeTextBox = findViewById(R.id.stepSize)
         stepSizeTextBox!!.addTextChangedListener(createTextWatcher(stepsSize, 0))
-        stepSizeTextBox!!.setText(SharedPrefs!!.getFloat(stepsSize, 0.66f).toString().replace('.', ','))
+        stepSizeTextBox!!.setText(sharedPrefs!!.getFloat(stepsSize, 0.66f).toString().replace('.', ','))
 
         secondsRepeatBox = findViewById(R.id.secondsRepeatsText)
         secondsRepeatBox!!.addTextChangedListener(createTextWatcher(secondsNotify, 1))
-        secondsRepeatBox!!.setText(SharedPrefs!!.getInt(secondsNotify, 5).toString())
+        secondsRepeatBox!!.setText(sharedPrefs!!.getInt(secondsNotify, 5).toString())
 
         repeatsNumberBox = findViewById(R.id.numberRepeatsTextBox)
         repeatsNumberBox!!.addTextChangedListener(createTextWatcher(repeatsNumbers, 1))
-        repeatsNumberBox!!.setText(SharedPrefs!!.getInt(repeatsNumbers, 3).toString())
+        repeatsNumberBox!!.setText(sharedPrefs!!.getInt(repeatsNumbers, 3).toString())
     }
 
-    private fun InitViews() = if (!DataView) {
-        ReceivePhoneCallBox = findViewById(R.id.PhoneSwitch)
-        EnableAutoIllumination = findViewById(R.id.GyroSwitch)
-        ReceiveNotificationBox = findViewById(R.id.NotificationsSwitch)
+    private fun initViews() = if (!dataView) {
+        receivePhoneCallBox = findViewById(R.id.PhoneSwitch)
+        enableAutoIllumination = findViewById(R.id.GyroSwitch)
+        receiveNotificationBox = findViewById(R.id.NotificationsSwitch)
         currentConnectionBox = findViewById(R.id.currentConnectionText)
         breakConnectionBtn = findViewById(R.id.breakConnectionBtn)
 
         initTextBoxes()
 
-        ReceiveNotificationBox!!.isChecked = SharedPrefs!!.getBoolean("NotificationGranted", false)
-        ReceiveNotificationBox!!.isChecked = Algorithm.isNotifyServiceAlive(this)
-        ReceivePhoneCallBox!!.isChecked = SharedPrefs!!.getBoolean("ReceiveCalls", true)
-        EnableAutoIllumination!!.isChecked = SharedPrefs!!.getBoolean("Illumination", false)
-        if (SharedPrefs!!.contains("IsConnected") && SharedPrefs!!.getBoolean("IsConnected", false)) {
-            currentConnectionBox!!.text = getString(R.string.current_connection) + SharedPrefs!!.getString("BandAddress", null)
+        receiveNotificationBox!!.isChecked = sharedPrefs!!.getBoolean("NotificationGranted", false)
+        receiveNotificationBox!!.isChecked = Algorithm.isNotifyServiceAlive(this)
+        receivePhoneCallBox!!.isChecked = sharedPrefs!!.getBoolean("ReceiveCalls", true)
+        enableAutoIllumination!!.isChecked = sharedPrefs!!.getBoolean("Illumination", false)
+        if (sharedPrefs!!.contains("IsConnected") && sharedPrefs!!.getBoolean("IsConnected", false)) {
+            currentConnectionBox!!.text = getString(R.string.current_connection) + sharedPrefs!!.getString("BandAddress", null)
             breakConnectionBtn!!.visibility = View.VISIBLE
         } else {
             currentConnectionBox!!.text = getString(R.string.connection_not_established)
             breakConnectionBtn!!.visibility = View.GONE
         }
     } else {
-        PackagesList = findViewById(R.id.DataGrid)
-        PackagesList!!.isStretchAllColumns = true
+        packagesList = findViewById(R.id.DataGrid)
+        packagesList!!.isStretchAllColumns = true
     }
 
     private fun showNotConnectedErrorToast() {
@@ -106,7 +103,7 @@ class SettingsActivity : Activity() {
     }
 
     private fun sendEraseDatabaseCommand() {
-        if (DeviceControllerActivity.StatusCode >= 3) {
+        if (Algorithm.StatusCode.value!!.code >= 3) {
             Algorithm.postCommand(CommandInterpreter.EraseDatabase(), false)
         } else {
             showNotConnectedErrorToast()
@@ -114,7 +111,7 @@ class SettingsActivity : Activity() {
     }
 
     private fun sendResetCommand() {
-        if (DeviceControllerActivity.StatusCode >= 3) {
+        if (Algorithm.StatusCode.value!!.code >= 3) {
             Algorithm.postCommand(CommandInterpreter.RestoreToDefaults(), false)
         } else {
             showNotConnectedErrorToast()
@@ -122,9 +119,9 @@ class SettingsActivity : Activity() {
     }
 
     private fun deAuthDevice() {
-        val IsConnected = SharedPrefs!!.getBoolean("IsConnected", false)
+        val IsConnected = sharedPrefs!!.getBoolean("IsConnected", false)
         if (IsConnected) {
-            SharedPrefs!!.edit().putBoolean("IsConnected", false).apply()
+            sharedPrefs!!.edit().putBoolean("IsConnected", false).apply()
             Algorithm.IsActive = false
             DeviceControllerActivity.instance!!.finish()
             setContentView(R.layout.activity_scan)
@@ -132,7 +129,7 @@ class SettingsActivity : Activity() {
         }
     }
 
-    private fun addToTable(Content: String, IsEnabled: Int) {
+    private fun addToTable(Content: String, IsEnabled: Boolean) {
         var drop = false
         val SW = Switch(this)
         val TR = CustomTableRow(this, Content, SW)
@@ -166,38 +163,30 @@ class SettingsActivity : Activity() {
         Info.textSize = 15f
         Info.gravity = Gravity.CENTER
 
-        SW.isChecked = IsEnabled == 1
+        SW.isChecked = IsEnabled
         SW.gravity = Gravity.END
         SW.layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.WRAP_CONTENT)
 
         TR.addView(appIcon)
         TR.addView(Info)
         TR.addView(SW)
-        if (IsEnabled == 0 && drop) {
-            NotifyFilterTable.dropRecord(Content, DatabaseController.getDCObject(this).currentDataBase!!)
+        if (!IsEnabled && drop) {
+            NotifyFilterTable.dropRecord(Content, DatabaseController.getDCObject(this).writableDatabase)
             return
         }
         TR.layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.MATCH_PARENT)
-        PackagesList!!.addView(TR)
+        packagesList!!.addView(TR)
     }
 
     private fun loadPackagesBtn() {
         setContentView(R.layout.activity_data_without_calendartool)
-        InitViews()
-        val I = Intent(Intent.ACTION_MAIN, null)
-        I.addCategory(Intent.CATEGORY_LAUNCHER)
-        val PackList = packageManager.queryIntentActivities(I, 0)
-        val Old = NotifyFilterTable.extractRecords(DatabaseController.getDCObject(this).currentDataBase!!)
-        if (Old != null && Old.count > 0) {
-            do {
-                addToTable(Old.getString(0), Old.getInt(1))
-            } while (Old.moveToNext())
-        }
-        Old?.close()
-        for (Pack in PackList) {
+        initViews()
+        val reqIntent = Intent(Intent.ACTION_MAIN, null)
+        reqIntent.addCategory(Intent.CATEGORY_LAUNCHER)
+        val packList = packageManager.queryIntentActivities(reqIntent, 0)
+        for (Pack in packList) {
             try {
-                NotifyFilterTable.InsertRecord(Pack.activityInfo.packageName,
-                        false, DatabaseController.getDCObject(this).currentDataBase!!)
+                addToTable(Pack.activityInfo.packageName, NotifyFilterTable.isEnabled(Pack.activityInfo.packageName, DatabaseController.getDCObject(this).writableDatabase))
             } catch (Ex: Exception) {
 
             }
@@ -208,7 +197,7 @@ class SettingsActivity : Activity() {
     fun onClickHandler(v: View) {
         when (v.id) {
             R.id.LoadPackListBtn -> {
-                DataView = true
+                dataView = true
                 loadPackagesBtn()
             }
             R.id.NotificationsSwitch -> {
@@ -217,13 +206,13 @@ class SettingsActivity : Activity() {
                 } else {
                     Utils.requestToBindNotifyService(this)
                 }
-                SharedPrefs!!.edit().putBoolean("NotificationGranted", true).apply()
+                sharedPrefs!!.edit().putBoolean("NotificationGranted", true).apply()
             }
             R.id.GyroSwitch -> {
-                CommandInterpreter.SetGyroAction(EnableAutoIllumination!!.isChecked)
-                SharedPrefs!!.edit().putBoolean("Illumination", EnableAutoIllumination!!.isChecked).apply()
+                CommandInterpreter.SetGyroAction(enableAutoIllumination!!.isChecked)
+                sharedPrefs!!.edit().putBoolean("Illumination", enableAutoIllumination!!.isChecked).apply()
             }
-            R.id.PhoneSwitch -> SharedPrefs!!.edit().putBoolean("ReceiveCalls", ReceivePhoneCallBox!!.isChecked).apply()
+            R.id.PhoneSwitch -> sharedPrefs!!.edit().putBoolean("ReceiveCalls", receivePhoneCallBox!!.isChecked).apply()
             R.id.RestoreToDefaultsBtn -> sendResetCommand()
             R.id.EraseDataOnRDeviceBtn -> sendEraseDatabaseCommand()
             R.id.breakConnectionBtn -> deAuthDevice()
@@ -235,17 +224,20 @@ class SettingsActivity : Activity() {
         if (!Algorithm.isNotifyServiceAlive(this)) {
             Algorithm.tryForceStartListener(this)
         } else {
-            SharedPrefs!!.edit().putBoolean("NotificationGranted", true).apply()
+            sharedPrefs!!.edit().putBoolean("NotificationGranted", true).apply()
         }
-        if (DataView) {
-            for (i in 0 until PackagesList!!.childCount) {
-                val CTR = PackagesList!!.getChildAt(i) as CustomTableRow
-                NotifyFilterTable.UpdateRecord(CTR.Package, CTR.IsEnabled.isChecked,
-                        DatabaseController.getDCObject(this).currentDataBase!!)
+        if (dataView) {
+            for (i in 0 until packagesList!!.childCount) {
+                val ctr = packagesList!!.getChildAt(i) as CustomTableRow
+                if (ctr.IsEnabled.isChecked)
+                    NotifyFilterTable.insertRecord(ctr.Package, ctr.IsEnabled.isChecked,
+                            DatabaseController.getDCObject(this).writableDatabase)
+                else
+                    NotifyFilterTable.dropRecord(ctr.Package, DatabaseController.getDCObject(this).writableDatabase)
             }
-            DataView = !DataView
+            dataView = !dataView
             setContentView(R.layout.activity_settings)
-            InitViews()
+            initViews()
         } else {
             super.onBackPressed()
         }

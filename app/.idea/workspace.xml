@@ -11,48 +11,38 @@
     <option name="TOOL_WINDOW_REGEXP_FILTER" value="false" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3c186351-a249-4717-90eb-6363f6accc15" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Gradle__com_evrencoskun_library_tableview_0_8_9_2_aar.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/AlarmsTable.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/CustomDatabaseUtils.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/DatabaseController.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/HRRecordsTable.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/MainRecordsTable.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/NotifyFilterTable.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/SleepRecordsTable.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/SleepSessionsTable.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/AlarmActivity.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/AlarmProvider.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/Backend/Algorithm.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/Backend/CommandCallbacks.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/Backend/CommandInterpreter.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/DeviceControllerActivity.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/NotificationService.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/PhoneStateListenerBroadcast.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/Scanner/DeviceAdapter.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/Scanner/ScanActivity.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/Scanner/ScannerCallback.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/SettingsActivity.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/UartService.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/UartServiceBroadcastInterpreter.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/data/DataView.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/data/DataViewModel.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/data/MultitaskActivity.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/data/MyTableAdapter.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/util/AdsController.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/util/Analytics.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/util/HRAnalyzer.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/util/Utils.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/res/layout/table_view_cell_layout.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/res/layout/table_view_column_header.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/res/layout/table_view_corner_layout.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/res/layout/table_view_row_header_layout.xml" afterDir="false" />
+    <list default="true" id="3c186351-a249-4717-90eb-6363f6accc15" name="Default Changelist" comment="Research Data Complete (Kotlin Coroutines + ViewModel + External table layout)&#10;Data table upgraded to V2.0">
+      <change afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/main/DeviceControllerViewModel.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/caches/build_file_checksums.ser" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/build_file_checksums.ser" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/AndroidManifest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/DatabaseController.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/DatabaseController.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/MainRecordsTable.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/MainRecordsTable.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/NotifyFilterTable.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/DatabaseProvider/NotifyFilterTable.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/AlarmActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/AlarmActivity.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/AlarmProvider.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/AlarmProvider.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/Backend/Algorithm.kt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/Backend/CommandCallbacks.kt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/Backend/CommandInterpreter.kt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/DeviceControllerActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/main/DeviceControllerActivity.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/NotificationService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/backend/NotificationService.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/PhoneStateListenerBroadcast.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/backend/PhoneStateListenerBroadcast.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/Scanner/ScanActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/Scanner/ScanActivity.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/SettingsActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/main/SettingsActivity.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/UartService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/backend/UartService.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/UartServiceBroadcastInterpreter.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/backend/UartServiceBroadcastInterpreter.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/data/DataView.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/data/DataView.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/data/DataViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/data/DataViewModel.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/data/MyTableAdapter.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/data/MyTableAdapter.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/util/AdsController.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/util/AdsController.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/util/HRAnalyzer.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/util/HRAnalyzer.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/util/Utils.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/util/Utils.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/res/layout/activity_data_view.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/res/layout/activity_data_view.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/layout/table_item.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/res/values/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/res/values/strings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/res/layout/activity_device_controller.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/res/layout/activity_device_controller.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/res/layout/activity_settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/res/layout/activity_settings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/res/layout/table_view_column_header.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/res/layout/table_view_column_header.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/res/values-ru/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/res/values-ru/strings.xml" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -60,7 +50,7 @@
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="Nexus_5X_API_29_x86" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="CA1724004545" />
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
       <ProjectState />
@@ -79,8 +69,8 @@
         <option value="layoutResourceFile_vertical" />
         <option value="layoutResourceFile" />
         <option value="Kotlin File" />
-        <option value="Class" />
         <option value="resourceFile" />
+        <option value="Class" />
       </list>
     </option>
   </component>
@@ -105,24 +95,26 @@
     <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
     <property name="ApkExportedModule" value="app" />
     <property name="BundleExportedModule" value="app" />
-    <property name="DEBUGGABLE_DEVICE" value="Nexus_5X_API_29_x86 [emulator-5554]" />
+    <property name="DEBUGGABLE_DEVICE" value="nous-ns5502-CA1724004545" />
     <property name="DEBUGGABLE_PROCESS" value="anonymouls.dev.MGCEX" />
     <property name="DEBUGGER_ID" value="Auto" />
     <property name="DeviceAndSnapshotComboBoxAction.selectedDevice" value="CA1724004545" />
-    <property name="DeviceAndSnapshotComboBoxAction.selectionTime" value="2020-06-05T18:10:17.444Z" />
+    <property name="DeviceAndSnapshotComboBoxAction.selectionTime" value="2020-06-08T16:43:26.086Z" />
     <property name="ExportApk.ApkPath" value="$PROJECT_DIR$" />
     <property name="ExportApk.BuildVariants" value="release" />
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="SHOW_ALL_PROCESSES" value="true" />
     <property name="android.recentlyUsedThemes" value="Base.Theme.AppCompat.Light&#10;Base.Theme.AppCompat" />
     <property name="last_directory_selection" value="$PROJECT_DIR$/src/main/res/drawable" />
-    <property name="last_opened_file_path" value="$USER_HOME$/Downloads/Telegram Desktop/MGCEX.db-journal" />
+    <property name="last_opened_file_path" value="$USER_HOME$/Downloads/ResourceNestingExample-master" />
     <property name="memory.settings.postsync.do.not.ask.for.project" value="true" />
     <property name="run.code.analysis.last.selected.profile" value="pProject Default" />
     <property name="settings.editor.selected.configurable" value="AndroidSdkUpdater" />
   </component>
   <component name="RecentsManager">
     <key name="MoveKotlinTopLevelDeclarationsDialog.RECENTS_KEY">
+      <recent name="anonymouls.dev.mgcex.app.backend" />
+      <recent name="anonymouls.dev.mgcex.app.main" />
       <recent name="anonymouls.dev.MGCEX.App.Backend" />
       <recent name="anonymouls.dev.MGCEX.App.Scanner" />
       <recent name="anonymouls.dev.MGCEX.App.Data" />
@@ -246,8 +238,8 @@
       </Native>
       <Profilers>
         <option name="ADVANCED_PROFILING_ENABLED" value="false" />
-        <option name="STARTUP_CPU_PROFILING_ENABLED" value="false" />
-        <option name="STARTUP_CPU_PROFILING_CONFIGURATION_NAME" value="Sample Java Methods" />
+        <option name="STARTUP_CPU_PROFILING_ENABLED" value="true" />
+        <option name="STARTUP_CPU_PROFILING_CONFIGURATION_NAME" value="Trace Java Methods" />
       </Profilers>
       <option name="DEEP_LINK" value="" />
       <option name="ACTIVITY_CLASS" value="" />
@@ -299,7 +291,14 @@
       <option name="project" value="LOCAL" />
       <updated>1591507361400</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="Research Data Complete (Kotlin Coroutines + ViewModel + External table layout)&#10;Data table upgraded to V2.0">
+      <created>1591571967151</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1591571967151</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -343,11 +342,6 @@
           <option name="timeStamp" value="9" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="kotlin-line">
-          <url>file://$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/Backend/CommandCallbacks.kt</url>
-          <line>70</line>
-          <option name="timeStamp" value="16" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="kotlin-line">
           <url>file://$PROJECT_DIR$/src/main/java/anonymouls/dev/mgcex/app/Scanner/ScannerCallback.kt</url>
           <line>14</line>
           <option name="timeStamp" value="35" />
@@ -359,10 +353,8 @@
     </breakpoint-manager>
     <watches-manager>
       <configuration name="appLinux">
-        <watch expression="this.dateString" language="kotlin" />
-        <watch expression="(high/low/100).toInt().toString()" />
-        <watch expression="(b/c.toDouble()*a).toInt().toString()" />
-        <watch expression="b/c.toDouble()*a" />
+        <watch expression="size.x" />
+        <watch expression="(size.x / 2) / columns" />
       </configuration>
     </watches-manager>
   </component>

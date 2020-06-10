@@ -6,16 +6,14 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.RadioGroup
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.databinding.BindingAdapter
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.ViewModelProviders
-import androidx.recyclerview.widget.RecyclerView
-import anonymouls.dev.mgcex.app.DeviceControllerActivity
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.databinding.ActivityDataViewBinding
+import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
 import anonymouls.dev.mgcex.util.AdsController
-import com.google.android.gms.ads.AdView
 import java.util.*
 
 class DataView : AppCompatActivity() {
@@ -36,7 +34,6 @@ class DataView : AppCompatActivity() {
 
     private var requestBtn: MenuItem? = null
     private var dataIntent: String? = null
-    private var ad: AdView? = null
 
     private var scale = Scalings.Day
 
@@ -47,8 +44,16 @@ class DataView : AppCompatActivity() {
         binding.lifecycleOwner = this
         binding.mainTable.setAdapter(customAdapter)
 
+        AdsController.initAdBanned(binding.dataAD, this)
+
         customViewModel.data.observe(this, androidx.lifecycle.Observer {
-            customAdapter.addRow(customAdapter.countRows, null, it.getCellsList() as MutableList<Cell?>)
+            while (it.size > 0) {
+                try {
+                    customAdapter.addRow(customAdapter.countRows, null, it.remove().getCellsList() as MutableList<Cell?>)
+                } catch (ex: Exception) {
+                    continue
+                }
+            }
         })
     }
 
@@ -60,9 +65,7 @@ class DataView : AppCompatActivity() {
         mainStepsColumns = arrayOf(getString(R.string.DateTime), getString(R.string.steps_str))
         mainColumns = arrayOf(getString(R.string.DateTime), getString(R.string.calories_str), getString(R.string.steps_str))
         initBindings()
-        return // TODO
-        ad = findViewById(R.id.dataAD)
-        AdsController.initAdBanned(ad!!, this) ///graph add?
+        ///graph add?
     }
 
     private fun headerChooser(): Array<String> {
@@ -128,8 +131,10 @@ class DataView : AppCompatActivity() {
         val targetTimeSet = DatePickerDialog.OnDateSetListener { DatePicker, year, month, day ->
             val buffer = Calendar.getInstance()
             buffer.set(year, month, day, 0, 0)
-            stageC(buffer, scaling)
-            //else stageD(buffer, buffer, scaling)
+            if (scaling != Scalings.Day) // TODO: For test this can be commented
+                stageC(buffer, scaling)
+            else
+                stageD(buffer, buffer, scaling)
         }
         DatePickerDialog(this, targetTimeSet, Calendar.getInstance().get(Calendar.YEAR),
                 Calendar.getInstance().get(Calendar.MONTH), Calendar.getInstance().get(Calendar.DAY_OF_MONTH)).show()
@@ -143,8 +148,7 @@ class DataView : AppCompatActivity() {
     }
 
 
-    fun onCancelClick(v: View) {
-        //v.visibility = View.GONE
+    fun onCancelClick(v: View?) {
         customViewModel.cancelled = true
     }
 
@@ -153,8 +157,6 @@ class DataView : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        //customViewModel.data.observe(this, androidx.lifecycle.Observer {Log.i("AAAAA", it.toString())        })
 
         AdsController.showUltraRare(this)
         init()
@@ -194,6 +196,12 @@ class DataView : AppCompatActivity() {
         super.onBackPressed()
     }
 
+    override fun onLowMemory() {
+        Toast.makeText(this, "Too much memory consumed, stopping", Toast.LENGTH_LONG).show()
+        onCancelClick(null)
+        super.onLowMemory()
+    }
+
     override fun onDestroy() {
         AdsController.cancelBigAD()
         super.onDestroy()
@@ -209,15 +217,7 @@ class DataView : AppCompatActivity() {
         private var ViewMode = 0
 
     }
-
-    object DataBindingAdapter {
-        @JvmStatic
-        @BindingAdapter(value = ["setAdapter"])
-        fun RecyclerView.bindRecyclerViewAdapter(adapter: RecyclerView.Adapter<*>) {
-            this.run {
-                this.setHasFixedSize(true)
-                this.adapter = adapter
-            }
-        }
-    }
 }
+
+// TODO Today IS NOT prev day+today, check it
+// TODO Mutable<Record> is not cool, need upgrade to <Mutable<RecordList>> or something? Quene?

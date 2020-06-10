@@ -1,4 +1,4 @@
-package anonymouls.dev.mgcex.app
+package anonymouls.dev.mgcex.app.backend
 
 import android.bluetooth.BluetoothAdapter.STATE_CONNECTED
 import android.content.ContentResolver
@@ -9,9 +9,9 @@ import android.os.IBinder
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import anonymouls.dev.mgcex.DatabaseProvider.DatabaseController
-import anonymouls.dev.mgcex.DatabaseProvider.NotifyFilterTable
-import anonymouls.dev.mgcex.app.Backend.Algorithm
+import anonymouls.dev.mgcex.app.main.SettingsActivity
+import anonymouls.dev.mgcex.databaseProvider.DatabaseController
+import anonymouls.dev.mgcex.databaseProvider.NotifyFilterTable
 import anonymouls.dev.mgcex.util.Utils
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -21,7 +21,7 @@ class NotificationService : NotificationListenerService() {
     override fun onCreate() {
         super.onCreate()
         instance = this
-        NotificationService.contentResolver = contentResolver
+        Companion.contentResolver = contentResolver
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -49,8 +49,8 @@ class NotificationService : NotificationListenerService() {
         instance = this
         if (!Algorithm.IsActive || Settings.Global.getInt(contentResolver, "zen_mode") > 0) return
         val pack = sbn.packageName
-        if (!NotifyFilterTable.IsEnabled(pack,
-                        DatabaseController.getDCObject(applicationContext).currentDataBase!!))
+        if (!NotifyFilterTable.isEnabled(pack,
+                        DatabaseController.getDCObject(applicationContext).readableDatabase))
             return
         val extras = sbn.notification.extras
         var title = extras.getString("android.title")
@@ -67,7 +67,7 @@ class NotificationService : NotificationListenerService() {
 
         }
         if (UartService.instance != null && (UartService.instance!!.mConnectionState >= STATE_CONNECTED
-                        || DeviceControllerActivity.StatusCode >= 3)) {
+                        || Algorithm.StatusCode.value!!.code >= 3)) {
             if (title != null)
                 PendingList.add(CustomNotification(pack, title, text, sbn))
             else
@@ -116,7 +116,7 @@ class NotificationService : NotificationListenerService() {
             val aN = activeNotifications
             for (notify in aN) {
                 if (notify.id == this.ID) {
-                    cancelled = true; return true;
+                    cancelled = true; return true
                 }
             }
             return false

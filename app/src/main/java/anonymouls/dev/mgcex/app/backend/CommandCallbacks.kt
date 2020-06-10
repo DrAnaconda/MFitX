@@ -2,13 +2,13 @@ package anonymouls.dev.mgcex.app.backend
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
-import anonymouls.dev.mgcex.DatabaseProvider.*
 import anonymouls.dev.mgcex.app.main.DeviceControllerViewModel
+import anonymouls.dev.mgcex.databaseProvider.*
 import java.util.*
 
 internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandReaction {
 
-    private val database: SQLiteDatabase = DatabaseController.getDCObject(context).currentDataBase!!
+    private val database: SQLiteDatabase = DatabaseController.getDCObject(context).writableDatabase
     private var lastSyncMain: Long = -1
     private var lastSyncHR: Long = -1
 

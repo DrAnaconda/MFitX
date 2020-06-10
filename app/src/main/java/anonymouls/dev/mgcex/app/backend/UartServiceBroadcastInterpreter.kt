@@ -1,18 +1,19 @@
-package anonymouls.dev.mgcex.app
+package anonymouls.dev.mgcex.app.backend
 
 import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.AsyncTask
-import android.view.View
-import anonymouls.dev.mgcex.app.Backend.Algorithm
-import anonymouls.dev.mgcex.app.Backend.CommandInterpreter
 
 class UartServiceBroadcastInterpreter : BroadcastReceiver() {
 
-    private val tsk = InsertTask()
+    private var tsk = InsertTask()
 
+    @ExperimentalStdlibApi
+    val dataToHandle = ArrayDeque<ByteArray>()
+
+    @ExperimentalStdlibApi
     override fun onReceive(context: Context, intent: Intent) {
         val Action = intent.action
         when (Action) {
@@ -33,56 +34,47 @@ class UartServiceBroadcastInterpreter : BroadcastReceiver() {
                 Algorithm.SelfPointer?.postShortMessageDivider(Message)
             }
             UartService.ACTION_GATT_CONNECTED -> {
-                DeviceControllerActivity.StatusCode = 1
+                Algorithm.StatusCode.postValue(Algorithm.StatusCodes.Connected)
                 UartService.instance?.retryDiscovering()
-                Algorithm.LastStatus = "Status : Connected"
+                //Algorithm.LastStatus =  "Status : Connected"
             }
             UartService.ACTION_GATT_DISCONNECTED -> {
-                DeviceControllerActivity.StatusCode = -1
-                Algorithm.LastStatus = "Status : Device lost. Trying to reconnect"
-                DeviceControllerActivity.instance?.realTimeSwitch?.visibility = View.GONE
+                Algorithm.StatusCode.postValue(Algorithm.StatusCodes.Disconnected)
+                //Algorithm.LastStatus = "Status : Device lost. Trying to reconnect"
             }
             UartService.ACTION_DATA_AVAILABLE -> {
-                DeviceControllerActivity.StatusCode = 5
-                tsk.dataToHandle.add(intent.getByteArrayExtra(UartService.EXTRA_DATA)!!)
-                if (tsk.status != AsyncTask.Status.RUNNING) {
+                //DeviceControllerActivity.StatusCode = 5
+                dataToHandle.add(intent.getByteArrayExtra(UartService.EXTRA_DATA)!!)
+                if (tsk.status == AsyncTask.Status.FINISHED) tsk = InsertTask()
+                else if (tsk.status != AsyncTask.Status.RUNNING) {
                     tsk.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
                 }
             }
             UartService.ACTION_GATT_SERVICES_DISCOVERED -> {
                 UartService.instance?.enableTXNotification()
-                DeviceControllerActivity.StatusCode = 2
-                DeviceControllerActivity.instance?.realTimeSwitch?.visibility = View.VISIBLE
+                Algorithm.StatusCode.postValue(Algorithm.StatusCodes.GattReady)
             }
 // gatt init failed ?
         }
     }
 
-    private class InsertTask : AsyncTask<Void, Void, Void>() {
+    inner class InsertTask : AsyncTask<Void, Void, Void>() {
 
-        val dataToHandle = ArrayList<ByteArray>()
-
+        @ExperimentalStdlibApi
         override fun doInBackground(vararg params: Void?): Void? {
             Thread.currentThread().name = "Database Inserter"
-            while (true) {
+            while (dataToHandle.size > 0) {
                 try {
-                    for (x in 0 until dataToHandle.size - 1) {
-                        var cmd: ByteArray
-                        if (x < dataToHandle.size - 1) {
-                            if (dataToHandle[x] != null) { // it is not true, sometimes null is coming
-                                cmd = dataToHandle[x].clone()
-                            } else {
-                                dataToHandle.removeAt(x); continue
-                            }
-                        } else break
-                        dataToHandle.removeAt(x)
-                        CommandInterpreter.CommandAction(cmd)
-                        Algorithm.SelfPointer?.startWorkInProgress()
-                    }
+                    CommandInterpreter.CommandAction(dataToHandle.removeFirst())
+                    Algorithm.SelfPointer?.startWorkInProgress()
                 } catch (ex: Exception) {
-                    continue
+
                 }
             }
+            return null
         }
+
     }
+
+
 }

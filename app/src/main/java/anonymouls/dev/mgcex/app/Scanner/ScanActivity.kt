@@ -20,8 +20,8 @@ import android.view.View
 import android.widget.ListView
 import android.widget.ProgressBar
 import android.widget.Toast
-import anonymouls.dev.mgcex.app.DeviceControllerActivity
 import anonymouls.dev.mgcex.app.R
+import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
 import anonymouls.dev.mgcex.util.Analytics
 import anonymouls.dev.mgcex.util.Utils
 import java.util.*

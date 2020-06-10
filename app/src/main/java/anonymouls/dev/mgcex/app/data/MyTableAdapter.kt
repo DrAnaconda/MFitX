@@ -77,8 +77,7 @@ class MyTableViewAdapter(private val context: Activity) : AbstractTableAdapter<C
         // Then you should consider the below lines. Otherwise, you can ignore them.
 
         // It is necessary to remeasure itself.
-        viewHolder.cell_container.layoutParams.width = LinearLayout.LayoutParams.WRAP_CONTENT
-        viewHolder.cell_textview.requestLayout()
+        calculateSize(viewHolder.cell_textview, columnPosition, this.mColumnHeaderItems.size - 1)
     }
 
     override fun addRow(rowPosition: Int, rowHeaderItem: RowHeader?, cellItems: MutableList<Cell?>?) {
@@ -87,9 +86,24 @@ class MyTableViewAdapter(private val context: Activity) : AbstractTableAdapter<C
     }
 
     fun removeEverything() {
-        this.removeRowRange(0, countRows)
+        try {
+            if (countRows > 0) this.removeRowRange(0, countRows)
+        } catch (e: Exception) {
+        }
         countRows = 0
         this.setAllItems(null, null, null)
+    }
+
+    private fun calculateSize(holder: View, position: Int, otherColumns: Int) {
+        var size: Point = Point(1, 1)
+        context.windowManager.defaultDisplay.getSize(size)
+        if (otherColumns > 2)
+            size = Point((size.x * 0.95f).toInt(), (size.y * 0.95).toInt())
+        if (position == 0)
+            holder.layoutParams.width = (size.x / 2)
+        else
+            holder.layoutParams.width = (size.x / 2) / otherColumns
+        holder.requestLayout()
     }
 
     /**
@@ -149,17 +163,7 @@ class MyTableViewAdapter(private val context: Activity) : AbstractTableAdapter<C
         val columnHeaderViewHolder = holder as MyColumnHeaderViewHolder
         columnHeaderViewHolder.cell_textview.text = columnHeader.data
 
-        val columns = this.mColumnHeaderItems.size - 1
-
-        var size: Point = Point(1, 1)
-        context.windowManager.defaultDisplay.getSize(size)
-
-        if (columnPosition == 0)
-            columnHeaderViewHolder.column_header_container.layoutParams.width = (size.x / 2)
-        else
-            columnHeaderViewHolder.column_header_container.layoutParams.width = (size.x / 2) / columns
-
-        columnHeaderViewHolder.cell_textview.requestLayout()
+        calculateSize(columnHeaderViewHolder.column_header_container, columnPosition, this.mColumnHeaderItems.size - 1)
     }
 
     /**

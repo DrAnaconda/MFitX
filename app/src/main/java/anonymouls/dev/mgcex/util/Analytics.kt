@@ -5,7 +5,7 @@ import android.os.Bundle
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 
-
+// TODO Check everything before release
 class Analytics(context: Context) {
 
     private val fireInstance: FirebaseAnalytics = FirebaseAnalytics.getInstance(context)

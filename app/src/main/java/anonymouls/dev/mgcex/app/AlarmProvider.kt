@@ -2,9 +2,9 @@ package anonymouls.dev.mgcex.app
 
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import anonymouls.dev.mgcex.DatabaseProvider.AlarmsTable
-import anonymouls.dev.mgcex.app.Backend.Algorithm
-import anonymouls.dev.mgcex.app.Backend.CommandInterpreter
+import anonymouls.dev.mgcex.app.backend.Algorithm
+import anonymouls.dev.mgcex.app.backend.CommandInterpreter
+import anonymouls.dev.mgcex.databaseProvider.AlarmsTable
 import java.util.*
 
 class AlarmProvider(var Hour: Int, var Minute: Int, var DayMask: Int, ID: Long, var IsEnabled: Boolean,
