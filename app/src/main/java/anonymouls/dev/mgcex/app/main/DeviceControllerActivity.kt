@@ -39,7 +39,6 @@ class DeviceControllerActivity : AppCompatActivity() {
 
     private val customViewModel by lazy {
         ViewModelProviders.of(this, MyViewModelFactory(this)).get(DeviceControllerViewModel::class.java)
-
     }
 
     var binding: ActivityDeviceControllerBinding? = null
@@ -70,8 +69,7 @@ class DeviceControllerActivity : AppCompatActivity() {
             val mNotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             mNotificationManager.cancel(21)
         }
-        IsActive = true
-        isFirstLaunch = true
+        DeviceControllerViewModel.instance?.reInit()
     }
 
     //region default android
@@ -99,8 +97,6 @@ class DeviceControllerActivity : AppCompatActivity() {
 
     public override fun onStop() {
         super.onStop()
-        IsActive = false
-        isFirstLaunch = true
     }
 
     public override fun onResume() {
@@ -148,9 +144,7 @@ class DeviceControllerActivity : AppCompatActivity() {
     }
 
     public override fun onDestroy() {
-        IsActive = false
         instance = null
-        isFirstLaunch = true
         super.onDestroy()
     }
 
@@ -190,14 +184,10 @@ class DeviceControllerActivity : AppCompatActivity() {
             }
             R.id.SyncNowContainer -> {
                 if (DeviceControllerViewModel.instance == null || DeviceControllerViewModel.instance?.workInProgress == null
-                        || DeviceControllerViewModel.instance?.workInProgress!!.value == View.GONE) {
+                        || DeviceControllerViewModel.instance?.workInProgress!!.value == View.VISIBLE) {
                     Toast.makeText(this, getString(R.string.wait_untill_complete), Toast.LENGTH_LONG).show()
                 } else {
-                    Timer().schedule(object : TimerTask() {
-                        override fun run() {
-                            Algorithm.SelfPointer?.executeForceSync(true)
-                        }
-                    }, 1500)
+                    Algorithm.SelfPointer?.thread?.interrupt()
                 }
             }
             R.id.HRContainer -> launchDataGraph("HR")
@@ -313,9 +303,6 @@ class DeviceControllerActivity : AppCompatActivity() {
     }
 
     companion object {
-
-        var IsActive = false
-        var isFirstLaunch: Boolean = true
 
         const val ExtraDevice = "EXTRA_BLE_DEVICE"
         var instance: DeviceControllerActivity? = null

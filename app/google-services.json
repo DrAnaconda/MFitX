@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "208485423361-6aor4jhk8pat2gb381262fkaomq3qmhc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "anonymouls.dev.MGCEX",
+            "certificate_hash": "196d1759d1dd64e8b88e2560738c26bdf05aac8b"
+          }
+        },
+        {
           "client_id": "208485423361-inabooe6dn3h00ram17k90oassfcv2c3.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -41,7 +49,8 @@
             }
           ]
         }
-      }
+      },
+      "admob_app_id": "ca-app-pub-3631159279486321~5110209612"
     }
   ],
   "configuration_version": "1"

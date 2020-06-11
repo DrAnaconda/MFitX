@@ -19,27 +19,16 @@ import anonymouls.dev.mgcex.databaseProvider.DatabaseController
 import anonymouls.dev.mgcex.databaseProvider.NotifyFilterTable
 import anonymouls.dev.mgcex.util.Analytics
 import anonymouls.dev.mgcex.util.Utils
+import okhttp3.internal.Util
 
 class SettingsActivity : Activity() {
-    private var sharedPrefs: SharedPreferences? = null
-
-    private var stepSizeTextBox: EditText? = null
-    private var secondsRepeatBox: EditText? = null
-    private var repeatsNumberBox: EditText? = null
-
-    private var receiveNotificationBox: Switch? = null
-    private var receivePhoneCallBox: Switch? = null
-    private var enableAutoIllumination: Switch? = null
     private var packagesList: TableLayout? = null
-    private var currentConnectionBox: TextView? = null
-    private var breakConnectionBtn: Button? = null
 
     private var dataView = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
-        sharedPrefs = Utils.getSharedPrefs(this)
         initViews()
     }
 
@@ -49,8 +38,8 @@ class SettingsActivity : Activity() {
             override fun afterTextChanged(p0: Editable?) {
                 if (p0.toString().isEmpty()) return
                 when (dataType) {
-                    0 -> sharedPrefs!!.edit().putFloat(param, p0.toString().replace(',', '.').toFloat()).apply()
-                    1 -> sharedPrefs!!.edit().putInt(param, p0.toString().toInt()).apply()
+                    0 -> Utils.getSharedPrefs(this@SettingsActivity).edit().putFloat(param, p0.toString().replace(',', '.').toFloat()).apply()
+                    1 -> Utils.getSharedPrefs(this@SettingsActivity).edit().putInt(param, p0.toString().toInt()).apply()
                 }
             }
 
@@ -60,42 +49,35 @@ class SettingsActivity : Activity() {
     }
 
     private fun initTextBoxes() {
-        stepSizeTextBox = findViewById(R.id.stepSize)
-        stepSizeTextBox!!.addTextChangedListener(createTextWatcher(stepsSize, 0))
-        stepSizeTextBox!!.setText(sharedPrefs!!.getFloat(stepsSize, 0.66f).toString().replace('.', ','))
+        findViewById<EditText>(R.id.stepSize).addTextChangedListener(createTextWatcher(stepsSize, 0))
+        findViewById<EditText>(R.id.stepSize).setText(Utils.getSharedPrefs(this).getFloat(stepsSize, 0.66f).toString().replace('.', ','))
 
-        secondsRepeatBox = findViewById(R.id.secondsRepeatsText)
-        secondsRepeatBox!!.addTextChangedListener(createTextWatcher(secondsNotify, 1))
-        secondsRepeatBox!!.setText(sharedPrefs!!.getInt(secondsNotify, 5).toString())
+        findViewById<EditText>(R.id.secondsRepeatsText).addTextChangedListener(createTextWatcher(secondsNotify, 1))
+        findViewById<EditText>(R.id.secondsRepeatsText).setText(Utils.getSharedPrefs(this).getInt(secondsNotify, 5).toString())
 
-        repeatsNumberBox = findViewById(R.id.numberRepeatsTextBox)
-        repeatsNumberBox!!.addTextChangedListener(createTextWatcher(repeatsNumbers, 1))
-        repeatsNumberBox!!.setText(sharedPrefs!!.getInt(repeatsNumbers, 3).toString())
+        findViewById<EditText>(R.id.numberRepeatsTextBox).addTextChangedListener(createTextWatcher(repeatsNumbers, 1))
+        findViewById<EditText>(R.id.numberRepeatsTextBox).setText(Utils.getSharedPrefs(this).getInt(repeatsNumbers, 3).toString())
     }
 
-    private fun initViews() = if (!dataView) {
-        receivePhoneCallBox = findViewById(R.id.PhoneSwitch)
-        enableAutoIllumination = findViewById(R.id.GyroSwitch)
-        receiveNotificationBox = findViewById(R.id.NotificationsSwitch)
-        currentConnectionBox = findViewById(R.id.currentConnectionText)
-        breakConnectionBtn = findViewById(R.id.breakConnectionBtn)
+    private fun initViews() {
+        if (!dataView) {
+            initTextBoxes()
 
-        initTextBoxes()
-
-        receiveNotificationBox!!.isChecked = sharedPrefs!!.getBoolean("NotificationGranted", false)
-        receiveNotificationBox!!.isChecked = Algorithm.isNotifyServiceAlive(this)
-        receivePhoneCallBox!!.isChecked = sharedPrefs!!.getBoolean("ReceiveCalls", true)
-        enableAutoIllumination!!.isChecked = sharedPrefs!!.getBoolean("Illumination", false)
-        if (sharedPrefs!!.contains("IsConnected") && sharedPrefs!!.getBoolean("IsConnected", false)) {
-            currentConnectionBox!!.text = getString(R.string.current_connection) + sharedPrefs!!.getString("BandAddress", null)
-            breakConnectionBtn!!.visibility = View.VISIBLE
+            findViewById<Switch>(R.id.NotificationsSwitch).isChecked = Utils.getSharedPrefs(this).getBoolean("NotificationGranted", false)
+            findViewById<Switch>(R.id.NotificationsSwitch).isChecked = Algorithm.isNotifyServiceAlive(this)
+            findViewById<Switch>(R.id.PhoneSwitch).isChecked = Utils.getSharedPrefs(this).getBoolean("ReceiveCalls", true)
+            findViewById<Switch>(R.id.GyroSwitch).isChecked = Utils.getSharedPrefs(this).getBoolean("Illumination", false)
+            if (Utils.getSharedPrefs(this).contains("IsConnected") && Utils.getSharedPrefs(this).getBoolean("IsConnected", false)) {
+                findViewById<TextView>(R.id.currentConnectionText).text = getString(R.string.current_connection) + Utils.getSharedPrefs(this).getString("BandAddress", null)
+                findViewById<Button>(R.id.breakConnectionBtn).visibility = View.VISIBLE
+            } else {
+                findViewById<TextView>(R.id.currentConnectionText).text = getString(R.string.connection_not_established)
+                findViewById<Button>(R.id.breakConnectionBtn).visibility = View.GONE
+            }
         } else {
-            currentConnectionBox!!.text = getString(R.string.connection_not_established)
-            breakConnectionBtn!!.visibility = View.GONE
+            packagesList = findViewById(R.id.DataGrid)
+            packagesList!!.isStretchAllColumns = true
         }
-    } else {
-        packagesList = findViewById(R.id.DataGrid)
-        packagesList!!.isStretchAllColumns = true
     }
 
     private fun showNotConnectedErrorToast() {
@@ -119,9 +101,9 @@ class SettingsActivity : Activity() {
     }
 
     private fun deAuthDevice() {
-        val IsConnected = sharedPrefs!!.getBoolean("IsConnected", false)
+        val IsConnected = Utils.getSharedPrefs(this).getBoolean("IsConnected", false)
         if (IsConnected) {
-            sharedPrefs!!.edit().putBoolean("IsConnected", false).apply()
+            Utils.getSharedPrefs(this).edit().putBoolean("IsConnected", false).apply()
             Algorithm.IsActive = false
             DeviceControllerActivity.instance!!.finish()
             setContentView(R.layout.activity_scan)
@@ -206,17 +188,18 @@ class SettingsActivity : Activity() {
                 } else {
                     Utils.requestToBindNotifyService(this)
                 }
-                sharedPrefs!!.edit().putBoolean("NotificationGranted", true).apply()
+                Utils.getSharedPrefs(this).edit().putBoolean("NotificationGranted", true).apply()
             }
             R.id.GyroSwitch -> {
-                CommandInterpreter.SetGyroAction(enableAutoIllumination!!.isChecked)
-                sharedPrefs!!.edit().putBoolean("Illumination", enableAutoIllumination!!.isChecked).apply()
+                CommandInterpreter.SetGyroAction(findViewById<Switch>(v.id).isChecked)
+                Utils.getSharedPrefs(this).edit().putBoolean("Illumination", findViewById<Switch>(v.id).isChecked).apply()
             }
-            R.id.PhoneSwitch -> sharedPrefs!!.edit().putBoolean("ReceiveCalls", receivePhoneCallBox!!.isChecked).apply()
+            R.id.PhoneSwitch -> Utils.getSharedPrefs(this).edit().putBoolean("ReceiveCalls", findViewById<Switch>(v.id).isChecked).apply()
             R.id.RestoreToDefaultsBtn -> sendResetCommand()
             R.id.EraseDataOnRDeviceBtn -> sendEraseDatabaseCommand()
             R.id.breakConnectionBtn -> deAuthDevice()
             R.id.analyticsOn -> Utils.SharedPrefs?.edit()?.putBoolean(Analytics.HelpData, findViewById<Switch>(R.id.analyticsOn).isChecked)?.apply()
+            R.id.ignoreLightSleepData -> Utils.getSharedPrefs(this).edit().putBoolean(lightSleepIgnore, findViewById<Switch>(v.id).isChecked).apply()
         }
     }
 
@@ -224,7 +207,7 @@ class SettingsActivity : Activity() {
         if (!Algorithm.isNotifyServiceAlive(this)) {
             Algorithm.tryForceStartListener(this)
         } else {
-            sharedPrefs!!.edit().putBoolean("NotificationGranted", true).apply()
+            Utils.getSharedPrefs(this).edit().putBoolean("NotificationGranted", true).apply()
         }
         if (dataView) {
             for (i in 0 until packagesList!!.childCount) {
@@ -257,5 +240,6 @@ class SettingsActivity : Activity() {
         const val secondsNotify = "secondsRepeat"
         const val repeatsNumbers = "repeatsNumber"
         const val stepsSize = "Step_Size"
+        const val lightSleepIgnore = "LightIgnore"
     }
 }

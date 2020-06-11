@@ -2,6 +2,8 @@ package anonymouls.dev.mgcex.databaseProvider
 
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
+import androidx.lifecycle.MutableLiveData
+import anonymouls.dev.mgcex.app.backend.Algorithm
 import anonymouls.dev.mgcex.util.Utils
 import java.util.*
 import kotlin.collections.ArrayList
@@ -100,7 +102,7 @@ object SleepRecordsTable {
         var iterator = 0
 
         if (curs.count > 0) {
-            GlobalSettings.isLaunched = true
+            GlobalSettings.isLaunched.postValue(true)
             curs.moveToFirst()
             while (curs.getInt(4) != 1) curs.moveToNext()
             lockedFirstTime = curs.getLong(1)
@@ -134,13 +136,13 @@ object SleepRecordsTable {
             } while (curs.moveToNext())
         }
         curs.close()
-        GlobalSettings.isLaunched = false
+        GlobalSettings.isLaunched.postValue(false)
     }
 
 
     object GlobalSettings {
         var ignoreLightSleepData = false
-        var isLaunched = false
+        var isLaunched = MutableLiveData<Boolean>(false)
     }
 }
 

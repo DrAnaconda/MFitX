@@ -177,6 +177,7 @@
 
                 <TextView
                     android:layout_width="wrap_content"
+                    android:textColor="#000000"
                     android:layout_height="wrap_content"
                     android:text="@string/apps_settings"
                     android:textSize="7pt"
@@ -193,6 +194,15 @@
                     android:text="@string/send_anonymous_stats_and_data_usage"
                     android:textSize="6.15pt" />
 
+                <Switch
+                    android:id="@+id/ignoreLightSleepData"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4pt"
+                    android:checked="true"
+                    android:onClick="onClickHandler"
+                    android:text="@string/ignore_light_sleep_phase"
+                    android:textSize="6.15pt" />
 
             </LinearLayout>
 
@@ -230,6 +240,8 @@
                     android:autofillHints="AUTOFILL_HINT_BIRTH_DATE_MONTH"
                     android:ems="10"
                     android:inputType="number"
+                    android:gravity="center"
+                    android:textAlignment="center"
                     app:layout_constraintBottom_toBottomOf="@+id/repeat_notify_text"
                     app:layout_constraintStart_toEndOf="@+id/repeat_notify_text"
                     app:layout_constraintTop_toTopOf="@+id/repeat_notify_text"
@@ -243,6 +255,8 @@
                     android:layout_marginStart="8dp"
                     android:layout_marginBottom="8dp"
                     android:autofillHints="AUTOFILL_HINT_BIRTH_DATE_MONTH"
+                    android:gravity="center"
+                    android:textAlignment="center"
                     android:ems="10"
                     android:inputType="number"
                     app:layout_constraintBottom_toBottomOf="@id/times_everybox"

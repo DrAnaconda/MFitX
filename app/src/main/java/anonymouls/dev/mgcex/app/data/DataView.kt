@@ -43,13 +43,15 @@ class DataView : AppCompatActivity() {
         binding.viewmodel = customViewModel
         binding.lifecycleOwner = this
         binding.mainTable.setAdapter(customAdapter)
+        binding.mainTable.rowHeaderWidth = 0
+        binding.mainTable.setHasFixedWidth(true)
 
         AdsController.initAdBanned(binding.dataAD, this)
 
         customViewModel.data.observe(this, androidx.lifecycle.Observer {
             while (it.size > 0) {
                 try {
-                    customAdapter.addRow(customAdapter.countRows, null, it.remove().getCellsList() as MutableList<Cell?>)
+                    customAdapter.addRow(customAdapter.countRows++, null, it.remove().getCellsList() as MutableList<Cell?>)
                 } catch (ex: Exception) {
                     continue
                 }

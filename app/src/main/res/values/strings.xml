@@ -136,4 +136,5 @@
     <string name="current_progress_date">Current progress:</string>
     <string name="sleep_data_analyzer">Sleep data analyzer is running...</string>
     <string name="activity_data_analyzer">Activity data analyzer is running...</string>
+    <string name="ignore_light_sleep_phase">Ignore light sleep phase</string>
 </resources>

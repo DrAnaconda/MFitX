@@ -12,6 +12,8 @@ import android.os.Build
 import android.widget.Toast
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
+import anonymouls.dev.mgcex.app.main.SettingsActivity
+import anonymouls.dev.mgcex.databaseProvider.SleepRecordsTable
 import java.text.DecimalFormat
 import java.util.*
 
@@ -36,8 +38,10 @@ object Utils {
 
 
     fun getSharedPrefs(context: Context?): SharedPreferences {
-        if (SharedPrefs == null || context != null)
-            SharedPrefs = context!!.getSharedPreferences("MainPrefs", Context.MODE_PRIVATE)
+        if (SharedPrefs == null && context != null) {
+            SharedPrefs = context.getSharedPreferences("MainPrefs", Context.MODE_PRIVATE)
+            SleepRecordsTable.GlobalSettings.ignoreLightSleepData = SharedPrefs!!.getBoolean(SettingsActivity.lightSleepIgnore, true)
+        }
         if (!SharedPrefs!!.contains(Analytics.UserID))
             SharedPrefs!!.edit().putString(Analytics.UserID, UUID.randomUUID().toString()).apply()
         return SharedPrefs!!

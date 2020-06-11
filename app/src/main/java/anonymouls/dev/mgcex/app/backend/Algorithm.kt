@@ -4,19 +4,18 @@ import android.app.IntentService
 import android.app.Service
 import android.content.*
 import android.content.pm.PackageManager
-import android.os.AsyncTask
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.view.View
 import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import anonymouls.dev.mgcex.app.AlarmProvider
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
 import anonymouls.dev.mgcex.app.main.DeviceControllerViewModel
 import anonymouls.dev.mgcex.databaseProvider.*
-import anonymouls.dev.mgcex.util.HRAnalyzer
 import anonymouls.dev.mgcex.util.Utils
 import java.text.SimpleDateFormat
 import java.util.*
@@ -25,6 +24,8 @@ class Algorithm : IntentService("Syncer") {
     override fun onHandleIntent(intent: Intent?) {
         Thread.currentThread().name = "Syncer"
         Thread.currentThread().priority = Thread.MIN_PRIORITY
+        this.thread = Thread.currentThread()
+        init()
         run()
     }
 
@@ -32,25 +33,22 @@ class Algorithm : IntentService("Syncer") {
 
     private var database: DatabaseController? = null
     private var prefs: SharedPreferences? = null
+    private var workInProgress = false
+    var thread: Thread? = null
 
     private var lastMainSync = Calendar.getInstance()
     private var lastHRSync = Calendar.getInstance()
     private var lastSleepSync = Calendar.getInstance()
+
+
+    private var serviceObject: IBinder? = null
+    private var serviceName: ComponentName? = null
 
 //endregion
 
 
     enum class StatusCodes(val code: Int) { BluetoothDisabled(-2), DeviceLost(-1), Disconnected(0), Connected(1), GattReady(2) }
 
-
-    var synchronizer = 0
-    private var isSchleduled = false
-    private var syncTimer = Timer()
-    private var lastStatus = ""
-
-    private var serviceObject: IBinder? = null
-    private var serviceName: ComponentName? = null
-    private var hardTask: AsyncTask<Void, Void, Void>? = null
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
@@ -104,38 +102,6 @@ class Algorithm : IntentService("Syncer") {
         getLastMainSync()
     }
 
-    fun startWorkInProgress() {
-        synchronizer = 0
-        if (!isSchleduled) {
-            syncTimer.schedule(object : TimerTask() {
-                override fun run() {
-                    checkWorkInProgress()
-                }
-            }, 2000, 2000)
-            isSchleduled = true
-        }
-    }
-
-    private fun stopTimer() {
-        syncTimer.cancel()
-        syncTimer.purge()
-        isSchleduled = false
-    }
-
-    private fun checkWorkInProgress() {
-        if (synchronizer++ > 5) {
-            DeviceControllerViewModel.instance?.workInProgress?.postValue(View.GONE)
-            stopTimer()
-            additionalStatus = null
-            this.lastStatus.replace(getString(R.string.downloading_data_status), "")
-            changeStatus(lastStatus)
-        } else {
-            additionalStatus = getString(R.string.downloading_data_status)
-            DeviceControllerViewModel.instance?.workInProgress?.postValue(View.VISIBLE)
-            changeStatus(lastStatus)
-        }
-    }
-
     override fun onDestroy() {
         unregisterReceiver(SBIReceiver)
         unregisterReceiver(PhoneListener)
@@ -156,7 +122,7 @@ class Algorithm : IntentService("Syncer") {
 
     private fun getLastMainSync() {
         if (database != null)
-            lastMainSync = CustomDatabaseUtils.GetLastSyncFromTable(DatabaseController.MainRecordsTableName,
+            lastMainSync = CustomDatabaseUtils.GetLastSyncFromTable(MainRecordsTable.TableName,
                     MainRecordsTable.ColumnNames, true, database!!.readableDatabase)
     }
 
@@ -235,53 +201,28 @@ class Algorithm : IntentService("Syncer") {
         Thread.sleep(50)
     }
 
-    fun executeForceSync(IsFromActivity: Boolean) {
+    private fun executeForceSync() {
         DeviceControllerViewModel.instance?.workInProgress?.postValue(View.VISIBLE)
         getLastHRSync()
         getLastMainSync()
-        if (IsFromActivity) forceSyncHR()
-        postCommand(CommandInterpreter.requestHRHistory(lastHRSync), false)
-        customWait(1000)
         postCommand(CommandInterpreter.SyncTime(Calendar.getInstance()), false)
         customWait(1000)
         postCommand(CommandInterpreter.GetMainInfoRequest(), false)
         customWait(1000)
         postCommand(CommandInterpreter.requestSleepHistory(lastSleepSync), false)
         customWait(1000)
+        postCommand(CommandInterpreter.requestHRHistory(lastHRSync), false)
+        customWait(1000)
         //if (IsAlarmingTriggered && !IsFromActivity) alarmTriggerDecider(0)
-        if (IsFromActivity) DeviceControllerViewModel.instance?.workInProgress?.postValue(View.GONE)
-        changeStatus(this.lastStatus)
-    }
-
-
-    var additionalStatus: String? = null
-
-    private fun changeStatus(Text: String) {
-        var text = Text
-        if (Text.isNotEmpty())
-            this.lastStatus = Text
-        if (!text.isNotEmpty() && this.lastStatus.isNotEmpty())
-            text = this.lastStatus
-        if (HRAnalyzer.isShadowAnalyzerRunning)
-            text += "\n" + getString(R.string.activity_data_analyzer)
-        if (SleepRecordsTable.GlobalSettings.isLaunched)
-            text += "\n" + getString(R.string.sleep_data_analyzer)
-        if (additionalStatus != null) {
-            if (additionalStatus != null && !text.contains(additionalStatus!!))
-                text += "\n" + additionalStatus
-            additionalStatus = null
-        }
-        LastStatus = text
-        DeviceControllerViewModel.instance?._currentStatus?.postValue(text)
     }
 
 //region background taskforce
 
     private fun run() {
         if (Thread.currentThread().name !== "Syncer") return
-        HRAnalyzer.analyzeShadowMainData(this.database!!.writableDatabase)
         while (UartService.instance == null) customWait(3000)
         while (IsActive) {
+            workInProgress = true
             when (StatusCode.value!!) {
                 StatusCodes.BluetoothDisabled -> bluetoothDisabledAlgo()
                 StatusCodes.Disconnected, StatusCodes.DeviceLost -> deviceLostAlgo()
@@ -292,53 +233,53 @@ class Algorithm : IntentService("Syncer") {
     }
 
     private fun executeMainAlgo() {
-        changeStatus(getString(R.string.connected_syncing))
+        currentAlgoStatus.postValue(getString(R.string.connected_syncing))
         if (!isNotifyServiceAlive(this)) tryForceStartListener(this)
-        if (DeviceControllerActivity.isFirstLaunch) {
-            forceSyncHR()
-            DeviceControllerActivity.isFirstLaunch = false
-        }
-        executeForceSync(false)
+        executeForceSync()
         NextSync = Calendar.getInstance()
         NextSync!!.add(Calendar.MILLISECOND, MainSyncPeriodSeconds)
-        this.lastStatus = getString(R.string.next_sync_status) + SimpleDateFormat("HH:mm", Locale.getDefault()).format(NextSync!!.time)
-        changeStatus(lastStatus)
-        if (!DatabaseController.getDCObject(this).writableDatabase.inTransaction() && hardTask == null) {
-            hardTask = AsyncCollapser(this)
-            hardTask!!.execute()
+        currentAlgoStatus.postValue(getString(R.string.next_sync_status) + SimpleDateFormat("HH:mm", Locale.getDefault()).format(NextSync!!.time))
+        workInProgress = false
+        try {
+            Thread.sleep(MainSyncPeriodSeconds.toLong())
+        } catch (e: InterruptedException) {
         }
-        DeviceControllerViewModel.instance?.workInProgress?.postValue(View.GONE)
-        customWait(MainSyncPeriodSeconds.toLong())
-        DeviceControllerViewModel.instance?.workInProgress?.postValue(View.VISIBLE)
+        workInProgress = true
     }
 
     private fun bluetoothDisabledAlgo() {
-        if (DeviceControllerActivity.IsActive) {
+        if (DeviceControllerActivity.instance != null) {
             Utils.requestEnableBluetooth(DeviceControllerActivity.instance!!)
             if (Utils.bluetoothEngaging(DeviceControllerActivity.instance!!)) {
                 StatusCode.postValue(StatusCodes.Disconnected)
-                changeStatus(getString(R.string.status_engaging))
+                currentAlgoStatus.postValue(getString(R.string.status_engaging))
             } else {
-                changeStatus(getString(R.string.offline_mode))
+                currentAlgoStatus.postValue(getString(R.string.offline_mode))
             }
         }
     }
 
     private fun deviceLostAlgo() {
         if (UartService.instance!!.connect(LockedAddress)) {
-            changeStatus(getString(R.string.conntecting_status))
+            currentAlgoStatus.postValue(getString(R.string.conntecting_status))
             while (UartService.instance!!.mConnectionState < UartService.STATE_CONNECTED) {
-                Thread.sleep(2500)
+                try {
+                    Thread.sleep(2500)
+                } catch (e: InterruptedException) {
+                }
             }
             StatusCode.postValue(StatusCodes.Connected)
         }
     }
 
     private fun connectedAlgo() {
-        changeStatus(getString(R.string.discovering))
+        currentAlgoStatus.postValue(getString(R.string.discovering))
         if (UartService.instance!!.mConnectionState < UartService.STATE_DISCOVERED) {
-            Thread.sleep(3000)
             UartService.instance!!.retryDiscovering()
+            try {
+                Thread.sleep(60000)
+            } catch (e: InterruptedException) {
+            }
         } else {
             StatusCode.postValue(StatusCodes.GattReady)
         }
@@ -346,12 +287,10 @@ class Algorithm : IntentService("Syncer") {
 
 //endregion
 
-    private fun forceSyncHR() {
-        forceHRSync = true
+    fun forceSyncHR() {
         postCommand(CommandInterpreter.HRRealTimeControl(true), false)
-        customWait(12000)
+        customWait(15000)
         postCommand(CommandInterpreter.HRRealTimeControl(false), true)
-        forceHRSync = true
     }
 
     inner class LocalBinder : Binder() {
@@ -370,14 +309,13 @@ class Algorithm : IntentService("Syncer") {
         var SelfPointer: Algorithm? = null
         var StatusCode = MutableLiveData(StatusCodes.Disconnected)
 
-        var LastStatus: String = ""
-
         var MainSyncPeriodSeconds = 310000 // 5`10`` in millis
         const val StatusAction = "STATUS_CHANGED"
 
         private var AvgHR: Int = 0
         private var AlarmFiredIterator = 0
-        var forceHRSync = false
+
+        val currentAlgoStatus = MutableLiveData<String>()
 
         var LockedAddress: String? = null
 
@@ -415,37 +353,14 @@ class Algorithm : IntentService("Syncer") {
             try {
                 Thread.sleep(MiliSecs)
             } catch (e: InterruptedException) {
-                e.printStackTrace()
+                //
             }
 
-        }
-
-        class AsyncCollapser(private val algorithm: Algorithm) : AsyncTask<Void, Void, Void>() {
-            override fun doInBackground(vararg params: Void?): Void? {
-                MainRecordsTable.executeDataCollapse(algorithm.prefs!!.getLong(MainRecordsTable.SharedPrefsMainCollapsedConst, 0), algorithm.prefs!!, algorithm.database!!.writableDatabase)
-                return null
-            }
-
-            override fun onCancelled(result: Void?) {
-                algorithm.hardTask = null
-                super.onCancelled(result)
-            }
-
-            override fun onCancelled() {
-                algorithm.hardTask = null
-                super.onCancelled()
-            }
-
-            override fun onPostExecute(result: Void?) {
-                algorithm.hardTask = null
-                super.onPostExecute(result)
-            }
         }
     }
 
-
 }
 
-// TODO Found active status at sleep intervals
+// TODO Found active status at sleep intervals. Integrate data visualization
 // TODO Integrate 3d party services
 // TODO Hard Tasks auto launch

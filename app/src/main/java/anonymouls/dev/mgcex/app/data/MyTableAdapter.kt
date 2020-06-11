@@ -33,7 +33,6 @@ class MyTableViewAdapter(private val context: Activity) : AbstractTableAdapter<C
 
     var countRows = 0
 
-
     /**
      * This is sample CellViewHolder class
      * This viewHolder must be extended from AbstractViewHolder class instead of RecyclerView.ViewHolder.
@@ -80,11 +79,6 @@ class MyTableViewAdapter(private val context: Activity) : AbstractTableAdapter<C
         calculateSize(viewHolder.cell_textview, columnPosition, this.mColumnHeaderItems.size - 1)
     }
 
-    override fun addRow(rowPosition: Int, rowHeaderItem: RowHeader?, cellItems: MutableList<Cell?>?) {
-        super.addRow(rowPosition, rowHeaderItem, cellItems)
-        countRows++
-    }
-
     fun removeEverything() {
         try {
             if (countRows > 0) this.removeRowRange(0, countRows)
@@ -97,12 +91,10 @@ class MyTableViewAdapter(private val context: Activity) : AbstractTableAdapter<C
     private fun calculateSize(holder: View, position: Int, otherColumns: Int) {
         var size: Point = Point(1, 1)
         context.windowManager.defaultDisplay.getSize(size)
-        if (otherColumns > 2)
-            size = Point((size.x * 0.95f).toInt(), (size.y * 0.95).toInt())
         if (position == 0)
             holder.layoutParams.width = (size.x / 2)
         else
-            holder.layoutParams.width = (size.x / 2) / otherColumns
+            holder.layoutParams.width = ((size.x / 2) / otherColumns)
         holder.requestLayout()
     }
 
@@ -209,8 +201,8 @@ class MyTableViewAdapter(private val context: Activity) : AbstractTableAdapter<C
         // Get Row Header xml Layout
         val layout = LayoutInflater.from(parent.context)
                 .inflate(R.layout.table_view_row_header_layout, parent, false)
-
         // Create a Row Header ViewHolder
+
         return MyRowHeaderViewHolder(layout)
     }
 
@@ -219,6 +211,7 @@ class MyTableViewAdapter(private val context: Activity) : AbstractTableAdapter<C
 
         val rowHeaderViewHolder = holder as MyRowHeaderViewHolder
         rowHeaderViewHolder.cell_textview.text = rowHeader.data
+        holder.itemView.layoutParams.width = 0
     }
 
     /**

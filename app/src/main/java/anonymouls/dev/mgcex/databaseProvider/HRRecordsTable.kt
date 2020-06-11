@@ -1,4 +1,4 @@
-package anonymouls.dev.mgcex.DatabaseProvider
+package anonymouls.dev.mgcex.databaseProvider
 
 import android.content.ContentValues
 import android.database.Cursor
@@ -14,8 +14,8 @@ object HRRecordsTable {
     val ColumnsNames = arrayOf("ID", "Date", "HRValue", "AnalyticType")
     val ColumnsForExtraction = arrayOf("Date", "HRValue")
 
-    fun GetCreateTableCommand(): String {
-        return ("CREATE TABLE " + DatabaseController.HRRecordsTableName + " (" +
+    fun getCreateTableCommand(): String {
+        return ("CREATE TABLE if not exists " + DatabaseController.HRRecordsTableName + " (" +
                 ColumnsNames[0] + " INTEGER PRIMARY KEY AUTOINCREMENT," +
                 ColumnsNames[1] + " INTEGER UNIQUE," +
                 ColumnsNames[2] + " INTEGER," +
@@ -41,10 +41,7 @@ object HRRecordsTable {
     }
 
     private fun updateRecord(ID: Long, values: ContentValues, Operator: SQLiteDatabase) {
-        Operator.beginTransaction()
-        if (Operator.update(DatabaseController.HRRecordsTableName, values, " " + ColumnsNames[0] + " = ?", arrayOf(ID.toString())) == 1)
-            Operator.setTransactionSuccessful()
-        Operator.endTransaction()
+        Operator.update(DatabaseController.HRRecordsTableName, values, " " + ColumnsNames[0] + " = ?", arrayOf(ID.toString()))
     }
 
     fun insertRecord(RecordTime: Calendar, HRValue: Int, Operator: SQLiteDatabase): Long {
@@ -60,11 +57,12 @@ object HRRecordsTable {
         }
     }
 
+
     fun updateAnalyticalViaMainInfo(RecordTime: Calendar, Steps: Int, Operator: SQLiteDatabase) {
         if (abs((RecordTime.timeInMillis - Calendar.getInstance().timeInMillis) / 1000 / 60) > 30) return
         val from = CustomDatabaseUtils.CalendarToLong(RecordTime, true) - 10
         val to = from + 20
-        val curs = Operator.query(DatabaseController.MainRecordsTableName, arrayOf(MainRecordsTable.ColumnNames[2]), " " + MainRecordsTable.ColumnNames[1] + " BETWEEN ? AND ?",
+        val curs = Operator.query(MainRecordsTable.TableName, arrayOf(MainRecordsTable.ColumnNames[2]), " " + MainRecordsTable.ColumnNames[1] + " BETWEEN ? AND ?",
                 arrayOf(from.toString(), to.toString()), null, null, null, "1")
         if (curs.count > 0) {
             curs.moveToFirst()

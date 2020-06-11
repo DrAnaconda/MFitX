@@ -67,8 +67,7 @@
             app:layout_constraintBottom_toTopOf="@+id/dataAdsHolder"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/constraintLayout"
-            app:row_header_width="0pt" />
+            app:layout_constraintTop_toBottomOf="@+id/constraintLayout" />
 
 
         <LinearLayout

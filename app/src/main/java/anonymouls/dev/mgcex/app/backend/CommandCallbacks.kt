@@ -15,8 +15,8 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
     override fun MainInfo(Steps: Int, Calories: Int) {
         try {
             lastSyncMain = CustomDatabaseUtils.CalendarToLong(Calendar.getInstance(), true)
-            DeviceControllerViewModel.instance?._lastStepsIncomed?.postValue(Steps); DeviceControllerViewModel.savedSteps = Steps
-            DeviceControllerViewModel.instance?._lastCcalsIncomed?.postValue(Calories); DeviceControllerViewModel.savedCCals = Calories
+            DeviceControllerViewModel.instance?._lastStepsIncomed?.postValue(Steps); savedValues.savedSteps = Steps
+            DeviceControllerViewModel.instance?._lastCcalsIncomed?.postValue(Calories); savedValues.savedCCals = Calories
             MainRecordsTable.insertRecordV2(Calendar.getInstance(), Steps, Calories, database)
         } catch (Ex: Exception) {
 
@@ -25,8 +25,10 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
 
     override fun BatteryInfo(Charge: Int) {
         try {
-            if (Charge > 0)
-                DeviceControllerViewModel.instance?._batteryHolder?.postValue(Charge); DeviceControllerViewModel.savedBattery = Charge
+            if (Charge > 0) {
+                DeviceControllerViewModel.instance?._batteryHolder?.postValue(Charge);
+                savedValues.savedBattery = Charge
+            }
             // TODO Power consumption and battery health
         } catch (Ex: Exception) {
 
@@ -38,7 +40,7 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
         if (ResultHR < 0) ResultHR = (ResultHR and 0xFF)
         //if (DeviceControllerViewModel.instance?..IsAlarmWaiting) DeviceControllerViewModel.instance?..SelfPointer?.alarmTriggerDecider(ResultHR)
         if (lastSyncHR <= CustomDatabaseUtils.CalendarToLong(Time, true)) {
-            DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(ResultHR); DeviceControllerViewModel.savedHR = ResultHR
+            DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(ResultHR); savedValues.savedHR = ResultHR
             lastSyncHR = CustomDatabaseUtils.CalendarToLong(Time, true)
         }
     }
@@ -50,7 +52,7 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
             if (ResultHR < 0) ResultHR = (ResultHR and 0xFF)
             HRRecordsTable.insertRecord(Time, ResultHR, database)
             if (lastSyncHR < CustomDatabaseUtils.CalendarToLong(Time, true)) {
-                DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(ResultHR); DeviceControllerViewModel.savedHR = ResultHR
+                DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(ResultHR); savedValues.savedHR = ResultHR
                 lastSyncHR = CustomDatabaseUtils.CalendarToLong(Time, true)
             }
 
@@ -67,8 +69,8 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
             if (MainRecordsTable.insertRecordV2(Time, Steps, Calories, database) > 0) {
                 val current = CustomDatabaseUtils.CalendarToLong(Time, true)
                 if (current > lastSyncMain) {
-                    DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(Calories); DeviceControllerViewModel.savedCCals = Calories
-                    DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(Steps); DeviceControllerViewModel.savedSteps = Steps
+                    DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(Calories); savedValues.savedCCals = Calories
+                    DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(Steps); savedValues.savedSteps = Steps
                     lastSyncMain = CustomDatabaseUtils.CalendarToLong(Time, true)
                 }
             }
@@ -90,6 +92,16 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
 
 
     companion object {
+
         lateinit var SelfPointer: CommandCallbacks
+
+        object savedValues {
+
+            var savedCCals = -1
+            var savedSteps = -1
+            var savedHR = -1
+            var savedBattery = -1
+            var savedStatus = ""
+        }
     }
 }

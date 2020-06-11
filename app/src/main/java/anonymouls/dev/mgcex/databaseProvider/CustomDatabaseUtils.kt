@@ -1,7 +1,8 @@
-package anonymouls.dev.mgcex.DatabaseProvider
+package anonymouls.dev.mgcex.databaseProvider
 
 import android.database.sqlite.SQLiteDatabase
 import java.util.*
+import kotlin.collections.ArrayList
 
 object CustomDatabaseUtils {
 
@@ -78,11 +79,11 @@ object CustomDatabaseUtils {
             Year++
             Month -= 11
         }
-        var Result = Integer.toString(Year)
-        Result += if (Month > 9) Integer.toString(Month) else "0" + Integer.toString(Month)
-        Result += if (Day > 9) Integer.toString(Day) else "0" + Integer.toString(Day)
-        Result += if (Hour > 9) Integer.toString(Hour) else "0" + Integer.toString(Hour)
-        Result += if (Minute > 9) Integer.toString(Minute) else "0" + Integer.toString(Minute)
+        var Result = Year.toString()
+        Result += if (Month > 9) Month.toString() else "0$Month"
+        Result += if (Day > 9) Day.toString() else "0$Day"
+        Result += if (Hour > 9) Hour.toString() else "0$Hour"
+        Result += if (Minute > 9) Minute.toString() else "0$Minute"
         return java.lang.Long.parseLong(Result)
     }
 
@@ -103,6 +104,15 @@ object CustomDatabaseUtils {
 
     fun niceSQLFunctionBuilder(function: String, param: String): String {
         return "$function($param)"
+    }
+
+    fun <T> listIDsForEnum(list: ArrayList<T>): String {
+        var result = ""
+        for (x in list.indices) {
+            result += list[x].toString()
+            if (x == list.size - 1) break else result += ','
+        }
+        return "($result)"
     }
 }
 

@@ -5,13 +5,15 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.AsyncTask
+import android.os.Handler
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import java.util.*
+import kotlin.collections.ArrayDeque
 
 class UartServiceBroadcastInterpreter : BroadcastReceiver() {
 
     private var tsk = InsertTask()
-
-    @ExperimentalStdlibApi
-    val dataToHandle = ArrayDeque<ByteArray>()
 
     @ExperimentalStdlibApi
     override fun onReceive(context: Context, intent: Intent) {
@@ -43,38 +45,80 @@ class UartServiceBroadcastInterpreter : BroadcastReceiver() {
                 //Algorithm.LastStatus = "Status : Device lost. Trying to reconnect"
             }
             UartService.ACTION_DATA_AVAILABLE -> {
-                //DeviceControllerActivity.StatusCode = 5
-                dataToHandle.add(intent.getByteArrayExtra(UartService.EXTRA_DATA)!!)
+                if (Algorithm.StatusCode.value!!.code < Algorithm.StatusCodes.GattReady.code)
+                    Algorithm.StatusCode.postValue(Algorithm.StatusCodes.GattReady)
+                tsk.dataToHandle.add(intent.getByteArrayExtra(UartService.EXTRA_DATA)!!)
+                tsk.thread?.interrupt()
                 if (tsk.status == AsyncTask.Status.FINISHED) tsk = InsertTask()
                 else if (tsk.status != AsyncTask.Status.RUNNING) {
                     tsk.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
                 }
             }
             UartService.ACTION_GATT_SERVICES_DISCOVERED -> {
-                UartService.instance?.enableTXNotification()
                 Algorithm.StatusCode.postValue(Algorithm.StatusCodes.GattReady)
+                UartService.instance?.enableTXNotification()
+                Algorithm.SelfPointer?.thread?.interrupt()
             }
 // gatt init failed ?
         }
     }
 
-    inner class InsertTask : AsyncTask<Void, Void, Void>() {
 
-        @ExperimentalStdlibApi
-        override fun doInBackground(vararg params: Void?): Void? {
-            Thread.currentThread().name = "Database Inserter"
+}
+
+class InsertTask : AsyncTask<Void, Void, Void>() {
+
+    @ExperimentalStdlibApi
+    val dataToHandle = ArrayDeque<ByteArray>()
+    var thread: Thread? = null
+    var timer: Timer = Timer("UIKostilSyncer")
+
+    private var confirmA = false
+    private var confirmB = false
+
+    override fun onPreExecute() {
+        super.onPreExecute()
+        val timertask: TimerTask = object : TimerTask() {
+            override fun run() {
+                if (confirmA && confirmB)
+                    _insertedRunning.postValue(false)
+                if (confirmA && !confirmB) confirmB = true
+            }
+        }
+        timer = Timer()
+        timer.schedule(timertask, 10000, 10000)
+    }
+
+    @ExperimentalStdlibApi
+    override fun doInBackground(vararg params: Void?): Void? {
+        Thread.currentThread().name = "Database Inserter"
+        thread = Thread.currentThread()
+        while (true) {
+            if (dataToHandle.size > 0) _insertedRunning.postValue(true)
             while (dataToHandle.size > 0) {
                 try {
                     CommandInterpreter.CommandAction(dataToHandle.removeFirst())
-                    Algorithm.SelfPointer?.startWorkInProgress()
+                    confirmA = false; confirmB = false
                 } catch (ex: Exception) {
 
                 }
             }
-            return null
+            try {
+                confirmA = true
+                Thread.sleep(Long.MAX_VALUE)
+            } catch (e: InterruptedException) {
+                thread?.isInterrupted
+            }
         }
-
     }
 
+    companion object {
+        private var _insertedRunning = MutableLiveData<Boolean>(false)
 
+        val insertedRunning: LiveData<Boolean>
+            get() {
+                return _insertedRunning
+            }
+
+    }
 }

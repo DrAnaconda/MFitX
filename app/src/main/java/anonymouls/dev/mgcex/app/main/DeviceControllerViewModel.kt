@@ -5,6 +5,18 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.*
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.backend.Algorithm
+import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.savedValues.savedBattery
+import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.savedValues.savedCCals
+import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.savedValues.savedHR
+import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.savedValues.savedStatus
+import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.savedValues.savedSteps
+import anonymouls.dev.mgcex.app.backend.InsertTask
+import anonymouls.dev.mgcex.databaseProvider.HRRecordsTable
+import anonymouls.dev.mgcex.databaseProvider.SleepRecordsTable
+import anonymouls.dev.mgcex.util.HRAnalyzer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 
 class MyViewModelFactory(private val activity: AppCompatActivity) : ViewModelProvider.Factory {
@@ -14,7 +26,9 @@ class MyViewModelFactory(private val activity: AppCompatActivity) : ViewModelPro
 
 }
 
-class DeviceControllerViewModel(activity: AppCompatActivity) : ViewModel() {
+class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewModel() {
+
+    //region live models
 
     val workInProgress = MutableLiveData(View.GONE)
     val _batteryHolder = MutableLiveData(savedBattery)
@@ -53,15 +67,13 @@ class DeviceControllerViewModel(activity: AppCompatActivity) : ViewModel() {
             return _hrVisibility
         }
 
+    //endregion
+
+    private var firstLaunch = true
+
     init {
         instance = this
-        Algorithm.StatusCode.observe(activity, Observer {
-            if (it.code < 3) _hrVisibility.postValue(View.GONE) else _hrVisibility.postValue(View.VISIBLE)
-        })
-        if (savedCCals != -1) _lastCcalsIncomed.postValue(savedCCals)
-        if (savedSteps != -1) _lastStepsIncomed.postValue(savedSteps)
-        if (savedBattery != -1) _batteryHolder.postValue(savedBattery)
-        if (savedHR != -1) _lastHearthRateIncomed.postValue(savedHR)
+        reInit()
     }
 
     override fun onCleared() {
@@ -69,13 +81,79 @@ class DeviceControllerViewModel(activity: AppCompatActivity) : ViewModel() {
         super.onCleared()
     }
 
-    companion object {
+    private fun updateStatus(text: String, force: Boolean = false) {
+        if (savedStatus.length != 0) {
+            val statusParts = savedStatus.split('\n').toMutableList()
+            var newStatus = ""
+            if (text.length > 0 && statusParts.size > 0) statusParts[0] = text
+            for (x in statusParts.indices) {
+                newStatus += statusParts[x]; if (x != statusParts.size - 1) newStatus += '\n' else break
+            }
+            savedStatus = newStatus
+            if (statusParts.size == 1 && !force) workInProgress.postValue(View.GONE) else workInProgress.postValue(View.VISIBLE)
+            _currentStatus.postValue(savedStatus)
+        }
+    }
 
+    private fun checkForStatus(status: String): Boolean {
+        return savedStatus.contains(status)
+    }
+
+    private fun createObserverForString(status: String, arg: Boolean) {
+        if (arg && !checkForStatus(status)) {
+            savedStatus += "\n" + status
+        } else if (!arg) {
+            savedStatus = savedStatus.replace("\n" + status, "")
+        }
+        updateStatus("")
+    }
+
+
+    fun reInit() {
+
+
+        if (savedStatus.length == 0) savedStatus = activity.getString(R.string.status_label)
+        Algorithm.StatusCode.observe(activity, Observer {
+            if (it.code < Algorithm.StatusCodes.GattReady.code) {
+                _hrVisibility.postValue(View.GONE)
+                workInProgress.postValue(View.VISIBLE)
+            } else {
+                _hrVisibility.postValue(View.VISIBLE)
+                if (firstLaunch) {
+                    firstLaunch = false
+                    GlobalScope.launch(Dispatchers.IO) { Algorithm.SelfPointer?.forceSyncHR() }
+                }
+                updateStatus("")
+            }
+        })
+        Algorithm.currentAlgoStatus.observe(activity, Observer {
+            updateStatus(it)
+        })
+
+        SleepRecordsTable.GlobalSettings.isLaunched.observe(activity, Observer {
+            createObserverForString(activity.getString(R.string.sleep_data_analyzer), it)
+        })
+        HRAnalyzer.isShadowAnalyzerRunning.observe(activity, Observer {
+            createObserverForString(activity.getString(R.string.activity_data_analyzer), it)
+        })
+        InsertTask.insertedRunning.observe(activity, Observer {
+            createObserverForString(activity.getString(R.string.downloading_data_status), it)
+        })
+
+
+
+        if (Algorithm.StatusCode.value!!.code < Algorithm.StatusCodes.GattReady.code)
+            _hrVisibility.postValue(View.GONE)
+        else _hrVisibility.postValue(View.VISIBLE)
+        if (savedCCals != -1) _lastCcalsIncomed.postValue(savedCCals)
+        if (savedSteps != -1) _lastStepsIncomed.postValue(savedSteps)
+        if (savedBattery != -1) _batteryHolder.postValue(savedBattery)
+        if (savedHR != -1) _lastHearthRateIncomed.postValue(savedHR)
+        if (savedStatus.length > 0) _currentStatus.postValue(savedStatus)
+    }
+
+    companion object {
         var instance: DeviceControllerViewModel? = null
-        var savedCCals = -1
-        var savedSteps = -1
-        var savedHR = -1
-        var savedBattery = -1
     }
 
 }
