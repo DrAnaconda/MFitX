@@ -75,7 +75,7 @@ class CommandInterpreter {
             }
         }
 
-        fun GetMainInfoRequest(): ByteArray {
+        fun getMainInfoRequest(): ByteArray {
             val CUtil = Calendar.getInstance()
             // 00 00        // + 12 + Month + Day + FF FF
             val Request = (GetMainInfo +
@@ -230,7 +230,7 @@ class CommandInterpreter {
 
         }
 
-        private fun MainHistoryHandler(Input: ByteArray) {
+        private fun mainHistoryHandler(Input: ByteArray) {
             if (Input[4].toInt() != 81 && Input[5].toInt() != 32) return
             val RecordTime = Calendar.getInstance()
             RecordTime.set(RecordTime.get(Calendar.YEAR), Input[7].toInt(), Input[8].toInt(), Input[9].toInt(), 0)
@@ -263,7 +263,7 @@ class CommandInterpreter {
                 -> HRHistoryHandler(Input)
                 (5).toByte() -> BatteryCommandHandler(Input)
                 (4).toByte() -> HRRTHandler(Input)
-                (22).toByte() -> MainHistoryHandler(Input)
+                (22).toByte() -> mainHistoryHandler(Input)
                 (11).toByte() -> SleepHistoryHandler(Input)
             }//SleepHistoryHandler(Input);
         }

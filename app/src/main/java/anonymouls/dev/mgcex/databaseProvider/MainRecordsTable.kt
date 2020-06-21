@@ -2,7 +2,6 @@ package anonymouls.dev.mgcex.databaseProvider
 
 import android.content.ContentValues
 import android.content.Context
-import android.content.SharedPreferences
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import anonymouls.dev.mgcex.app.main.SettingsActivity
@@ -20,7 +19,7 @@ object MainRecordsTable {
     var ColumnNames = arrayOf("ID", "Date", "Steps", "Calories")
     var ColumnsForExtraction = arrayOf("Date", "Steps", "Calories")
 
-    var ColumnNamesCloneAdditional = arrayListOf("Analyzed", "Synced")
+    var ColumnNamesCloneAdditional = arrayListOf("Analyzed")
 
     fun getCreateTableCommandClone(): String {
         return "CREATE TABLE if not exists " + TableName + "COPY(" +
@@ -28,8 +27,7 @@ object MainRecordsTable {
                 ColumnNames[1] + " INTEGER UNIQUE, " +
                 ColumnNames[2] + " INTEGER, " +
                 ColumnNames[3] + " INTEGER," +
-                ColumnNamesCloneAdditional[0] + " BOOLEAN default false," +
-                ColumnNamesCloneAdditional[1] + " BOOLEAN default false" +
+                ColumnNamesCloneAdditional[0] + " INTEGER default 0" +
                 ");"
     }
 
@@ -69,7 +67,7 @@ object MainRecordsTable {
 
         return if (curs.count > 0) {
             curs.moveToFirst()
-            if (curs.getLong(1) > Steps || curs.getLong(2) > Calories)
+            if (curs.getLong(1) > Steps)
                 throw Exception("Corrupted Data")
             val result = curs.getLong(0); curs.close(); result
         } else null
@@ -88,7 +86,7 @@ object MainRecordsTable {
             writeIntermediate(MainRecord(TimeRecord, Steps, Calories), Operator)
         }
         try {
-            val curs = Operator.query(MainRecordsTable.TableName + "COPY", arrayOf(ColumnNames[1]), " " + ColumnNames[1] + " = ?",
+            val curs = Operator.query(MainRecordsTable.TableName + "COPY", arrayOf(ColumnNames[1]), ColumnNames[1] + " = ?",
                     arrayOf(recordDate.toString()), null, null, null)
             if (curs.count == 0)
                 Operator.insert(MainRecordsTable.TableName + "COPY", null, Values)
@@ -165,10 +163,10 @@ object MainRecordsTable {
     private fun extractFreshRecord(db: SQLiteDatabase): MainRecord {
         val curs = db.query(MainRecordsTable.TableName, ColumnsForExtraction, null, null, null, null, ColumnNames[1] + " desc", "1")
         return if (curs.count > 0) {
-            curs.moveToFirst();
+            curs.moveToFirst()
             val result = MainRecord(CustomDatabaseUtils.LongToCalendar(curs.getLong(0), true), curs.getInt(1), curs.getInt(2)); curs.close(); result
         } else {
-            curs.close();
+            curs.close()
             val calendar = Calendar.getInstance(); calendar.set(Calendar.HOUR_OF_DAY, 0); MainRecord(calendar, 0, 0)
         }
     }

@@ -5,9 +5,7 @@ package anonymouls.dev.mgcex.util
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
-import android.os.AsyncTask
 import androidx.lifecycle.MutableLiveData
-import anonymouls.dev.mgcex.app.backend.Algorithm
 import anonymouls.dev.mgcex.databaseProvider.*
 import java.util.*
 import kotlin.math.abs
@@ -57,9 +55,12 @@ object HRAnalyzer {
 
     fun analyzeShadowMainData(operator: SQLiteDatabase) {
         val curs = operator.query(MainRecordsTable.TableName + "COPY",
-                arrayOf(MainRecordsTable.ColumnNames[0], MainRecordsTable.ColumnNames[2], MainRecordsTable.ColumnNames[1]),
-                MainRecordsTable.ColumnNamesCloneAdditional[0] + " = 0", null, null, null, "Date")
-        if (curs?.count == 0) return
+                arrayOf(MainRecordsTable.ColumnNames[0], MainRecordsTable.ColumnNames[2], MainRecordsTable.ColumnNames[1], MainRecordsTable.ColumnNamesCloneAdditional[0]),
+                MainRecordsTable.ColumnNamesCloneAdditional[0] + " = 0",
+                null, null, null, "Date")
+        if (curs.count == 0) {
+            curs.close(); return
+        }
         var prevSteps = -1
         var prevTime: Long = -1
         var prevID: Long = -1

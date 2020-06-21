@@ -5,7 +5,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.AsyncTask
-import android.os.Handler
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import java.util.*
@@ -86,7 +85,7 @@ class InsertTask : AsyncTask<Void, Void, Void>() {
             }
         }
         timer = Timer()
-        timer.schedule(timertask, 10000, 10000)
+        timer.schedule(timertask, 5000, 5000)
     }
 
     @ExperimentalStdlibApi
@@ -102,6 +101,7 @@ class InsertTask : AsyncTask<Void, Void, Void>() {
                 } catch (ex: Exception) {
 
                 }
+                if (dataToHandle.size > 2500) dataToHandle.clear()
             }
             try {
                 confirmA = true

@@ -9,9 +9,6 @@ import android.database.sqlite.SQLiteOpenHelper
 import android.os.Build
 import android.os.Environment
 import anonymouls.dev.mgcex.util.HRAnalyzer
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import java.io.File
 import java.util.*
 
@@ -31,8 +28,7 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
 
     private fun fixTableByDate(db: SQLiteDatabase, table: String) {
         val now = CustomDatabaseUtils.CalendarToLong(Calendar.getInstance(), true)
-        val dateStr = if (table.toLowerCase().contains("sleep")) "Timestamp" else "Date"
-        var curs = db.query(table, arrayOf(CustomDatabaseUtils.niceSQLFunctionBuilder("COUNT", "*")), " $dateStr > ?",
+        var curs = db.query(table, arrayOf(CustomDatabaseUtils.niceSQLFunctionBuilder("COUNT", "*")), " DATE > ?",
                 arrayOf(now.toString()), null, null, null, null)
         curs.moveToFirst()
         val brokenCount = curs.getInt(0)
@@ -44,7 +40,7 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
         val brokenPercent = (brokenCount.toFloat() / overall.toFloat()) * 100.0f
         if (brokenPercent > 0 && brokenPercent < 5)
             db.delete(table, " DATE > ?", arrayOf(now.toString()))
-        db.delete(table, " $dateStr < 100000000000 OR $dateStr > 999999999999", null)
+        db.delete(table, " DATE < 100000000000 OR DATE > 999999999999", null)
     }
 
     private fun fixData(db: SQLiteDatabase) {
@@ -52,6 +48,8 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
         fixTableByDate(db, HRRecordsTableName)
         fixTableByDate(db, MainRecordsTable.TableName + "COPY")
         fixTableByDate(db, SleepRecordsTable.TableName)
+        fixTableByDate(db, SleepSessionsTable.TableName)
+        fixTableByDate(db, AdvancedActivityTracker.TableName)
         SleepRecordsTable.fixDurations(db)
     }
 
@@ -71,31 +69,36 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
         }
     }
 
+    fun initRepairsAndSync(db: SQLiteDatabase) {
+        checkCreateAllTables(db)
+        fixData(db)
+        SleepRecordsTable.executeAnalyze(db); SleepSessionsTable.doubleCheck(db)
+        HRAnalyzer.analyzeShadowMainData(db)
+    }
+
 //region overloads
 
     override fun onCreate(db: SQLiteDatabase) {
         checkCreateAllTables(db)
     }
 
-    override fun onDowngrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
-        super.onDowngrade(db, oldVersion, newVersion)
-    }
-
     override fun onOpen(db: SQLiteDatabase?) {
         super.onOpen(db)
-        if (db != null) {
-            checkCreateAllTables(db)
-            fixData(db)
-            GlobalScope.launch(Dispatchers.IO) { SleepRecordsTable.executeAnalyze(db) }
-            GlobalScope.launch(Dispatchers.IO) { HRAnalyzer.analyzeShadowMainData(db) }
-        }
+        db?.enableWriteAheadLogging()
+        //if (db != null) initRepairsAndSync(db)
     }
-
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion <= 1 && newVersion == VersionCodes.AdvancedTracking.code) db.execSQL("drop table if exists " + SleepSessionsTable.TableName)
         if (newVersion == VersionCodes.SyncFlags.code && oldVersion <= VersionCodes.AdvancedTracking.code) {
             db.execSQL("alter table " + MainRecordsTable.TableName + "COPY" + " add column " + MainRecordsTable.ColumnNamesCloneAdditional[0] + " boolean default false")
             db.execSQL("alter table " + MainRecordsTable.TableName + "COPY" + " add column " + MainRecordsTable.ColumnNamesCloneAdditional[1] + " boolean default false")
+        }
+        if (newVersion == VersionCodes.FixMain.code) {
+            CustomDatabaseUtils.reCreateTable(MainRecordsTable.TableName + "COPY",
+                    arrayListOf(MainRecordsTable.ColumnNames[0], MainRecordsTable.ColumnNames[1],
+                            MainRecordsTable.ColumnNames[2], MainRecordsTable.ColumnNames[3], MainRecordsTable.ColumnNamesCloneAdditional[0]),
+                    MainRecordsTable.getCreateTableCommandClone(), db)
+            db.execSQL("update ${MainRecordsTable.TableName}COPY set ${MainRecordsTable.ColumnNamesCloneAdditional[0]} = 0")
         }
         checkCreateAllTables(db)
     }
@@ -103,7 +106,10 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
 //endregion
 
     companion object {
-        private enum class VersionCodes(val code: Int) { Default(0), AdvancedTracking(2), SyncFlags(3) }
+        private enum class VersionCodes(val code: Int) {
+            Default(0), AdvancedTracking(2), SyncFlags(3),
+            FixMain(4)
+        }
 
         private var DatabaseDir = ""
         private var DatabaseName = ""
@@ -133,7 +139,7 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
             if (!File(DatabaseDir).exists()) File(DatabaseDir).mkdirs()
             if (DCObject == null) {
                 nameResolver(context)
-                DCObject = DatabaseController(context, DatabaseName, null, VersionCodes.SyncFlags.code)
+                DCObject = DatabaseController(context, DatabaseName, null, VersionCodes.FixMain.code)
             }
             return DCObject as DatabaseController
         }

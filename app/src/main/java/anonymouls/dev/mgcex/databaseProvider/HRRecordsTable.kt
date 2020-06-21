@@ -9,7 +9,7 @@ import kotlin.math.abs
 
 object HRRecordsTable {
 
-    enum class AnalyticTypes(val type: Byte) { Unknown(0), Steady(1), PhysicalStress(2), LowPhysical(3), MediumPhysical(4), Sleeping(8) }
+    enum class AnalyticTypes(val type: Byte) { Unknown(0), Steady(1), PhysicalStress(2), LowPhysical(3), MediumPhysical(4), SleepingLight(7), Sleeping(8) }
 
     val ColumnsNames = arrayOf("ID", "Date", "HRValue", "AnalyticType")
     val ColumnsForExtraction = arrayOf("Date", "HRValue")
@@ -76,12 +76,17 @@ object HRRecordsTable {
         }
     }
 
-    fun updateAnalyticalViaSleepInterval(From: Calendar, To: Calendar, Operator: SQLiteDatabase) {
+    fun updateAnalyticalViaSleepInterval(From: Calendar, To: Calendar, isDeep: Boolean, Operator: SQLiteDatabase) {
         val from = CustomDatabaseUtils.CalendarToLong(From, true)
         val to = CustomDatabaseUtils.CalendarToLong(To, true)
         val values = ContentValues()
-        values.put(ColumnsNames[3], AnalyticTypes.Sleeping.type)
-        Operator.update(DatabaseController.HRRecordsTableName, values, " " + ColumnsNames[1] + " BETWEEN ? AND ?", arrayOf(from.toString(), to.toString()))
+        if (isDeep)
+            values.put(ColumnsNames[3], AnalyticTypes.Sleeping.type)
+        else
+            values.put(ColumnsNames[3], AnalyticTypes.SleepingLight.type)
+        Operator.update(DatabaseController.HRRecordsTableName, values,
+                ColumnsNames[1] + " BETWEEN ? AND ? AND " + ColumnsNames[3] + " < 1"
+                , arrayOf(from.toString(), to.toString()))
     }
 
 //endregion

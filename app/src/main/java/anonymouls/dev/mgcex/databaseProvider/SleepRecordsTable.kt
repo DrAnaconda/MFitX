@@ -3,7 +3,6 @@ package anonymouls.dev.mgcex.databaseProvider
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
 import androidx.lifecycle.MutableLiveData
-import anonymouls.dev.mgcex.app.backend.Algorithm
 import anonymouls.dev.mgcex.util.Utils
 import java.util.*
 import kotlin.collections.ArrayList
@@ -11,7 +10,7 @@ import kotlin.math.abs
 
 object SleepRecordsTable {
     const val TableName = "SleepRecords"
-    val ColumnNames = arrayOf("ID", "Timestamp", "IDSS", "Duration", "Type")
+    val ColumnNames = arrayOf("ID", "Date", "IDSS", "Duration", "Type")
 
 
     fun getCreateTableCommand(): String {
@@ -21,15 +20,47 @@ object SleepRecordsTable {
                 ColumnNames[2] + " INTEGER null," +
                 ColumnNames[3] + " INTEGER," +
                 ColumnNames[4] + " INTEGER," +
-                "FOREIGN KEY (" + ColumnNames[2] + ") REFERENCES " + SleepSessionsTable.TableName + " (" + SleepSessionsTable.ColumnNames[0] + ") ON DELETE SET NULL" +
+                "FOREIGN KEY (" + ColumnNames[2] + ") REFERENCES " + SleepSessionsTable.TableName + " (" + SleepSessionsTable.ColumnNames[0] + ") ON DELETE CASCADE" +
                 ");"
+    }
+
+    fun getLastSync(db: SQLiteDatabase): Long {
+        val curs = db.query(TableName, arrayOf(ColumnNames[1]), null, null, null, null, ColumnNames[1] + " DESC", "1")
+        if (curs.count > 0) {
+            curs.moveToFirst()
+            return curs.getLong(0)
+        }
+        curs.close()
+        val result = Calendar.getInstance(); result.add(Calendar.MONTH, -6)
+        return CustomDatabaseUtils.CalendarToLong(result, true)
+    }
+
+    private fun assignSSID(recordDate: Long, Duration: Int, Type: Int, Operator: SQLiteDatabase): Long {
+        var result: Long = -1
+        when (Type) {
+            SleepRecord.RecordTypes.LightOrOverall.code -> {
+                if (Duration > 90) {
+                    result = SleepSessionsTable.insertRecord(recordDate, Operator)
+                } else {
+                    result = SleepSessionsTable.findAssigment(recordDate, Operator)
+                }
+            }
+            SleepRecord.RecordTypes.Deep.code -> {
+                result = SleepSessionsTable.findAssigment(recordDate, Operator)
+            }
+        }
+        return result
     }
 
     fun insertRecord(RecordTime: Calendar, SSID: Long, Duration: Int, Type: Int, Operator: SQLiteDatabase): Long {
         val Values = ContentValues()
+        var SSID = SSID
         val recordDate = CustomDatabaseUtils.CalendarToLong(RecordTime, true)
         Values.put(ColumnNames[1], recordDate)
-        if (SSID > 0) Values.put(ColumnNames[2], SSID)
+        if (SSID < 1) {
+            SSID = assignSSID(CustomDatabaseUtils.CalendarToLong(RecordTime, true), Duration, Type, Operator)
+        }
+        Values.put(ColumnNames[2], SSID)
         Values.put(ColumnNames[3], Duration)
         Values.put(ColumnNames[4], Type)
         return try {
@@ -60,19 +91,10 @@ object SleepRecordsTable {
         curs.close()
     }
 
-    class SleepRecord(private val RTime: Calendar, private val Duration: Int, private val TypeRecord: Int) {
-        companion object {
-            private val DeepSleepType: Short = 0
-            private val LightSleepType: Short = 1
-            private val AwakeType: Short = 2
-        }
-    }
-
-
-    private fun setHRActivity(from: Long, duration: Int, db: SQLiteDatabase) {
+    private fun setHRActivity(from: Long, duration: Int, isDeep: Boolean, db: SQLiteDatabase) {
         val calendarFrom = CustomDatabaseUtils.LongToCalendar(from, true)
         val calendarTo = CustomDatabaseUtils.LongToCalendar(from, true); calendarTo.add(Calendar.MINUTE, duration)
-        HRRecordsTable.updateAnalyticalViaSleepInterval(calendarFrom, calendarTo, db)
+        HRRecordsTable.updateAnalyticalViaSleepInterval(calendarFrom, calendarTo, isDeep, db)
     }
 
     private fun checkIsNext(timeLongA: Long, currentTime: Long): Boolean {
@@ -82,8 +104,8 @@ object SleepRecordsTable {
         return delta >= 8
     }
 
-    private fun pushSession(idsList: ArrayList<Long>, durability: Int, deepDurability: Int, startTime: Long, db: SQLiteDatabase) {
-        val sessionID = SleepSessionsTable.insertRecord(startTime, durability, deepDurability, db)
+    private fun pushSession(idsList: ArrayList<Long>, startTime: Long, db: SQLiteDatabase) {
+        val sessionID = SleepSessionsTable.insertRecord(startTime, db)
         val content = ContentValues(); content.put(ColumnNames[2], sessionID)
         val paramString = CustomDatabaseUtils.listIDsForEnum(idsList)
         db.update(TableName, content, "(" + ColumnNames[2] + " = -1 or " + ColumnNames[2] + " is null) and " + ColumnNames[0] + " in " + paramString,
@@ -109,21 +131,20 @@ object SleepRecordsTable {
             do {
                 when (curs.getInt(4)) {
                     2 -> {
-                        setHRActivity(curs.getLong(1), curs.getInt(3), db)
+                        setHRActivity(curs.getLong(1), curs.getInt(3), true, db)
                         overallDeepDuration += curs.getInt(3)
+                        AdvancedActivityTracker.optimizeBySleepRange(lockedFirstTime, curs.getLong(1) + curs.getInt(3).toLong(), db)
                     }
                     1 -> {
                         if (!checkIsNext(lockedFirstTime, curs.getLong(1))) {
                             idsToNext.add(curs.getLong(0))
                         } else {
-                            pushSession(idsToNext, overallDuration, overallDeepDuration, lockedFirstTime, db)
+                            pushSession(idsToNext, lockedFirstTime, db)
                             if (!GlobalSettings.ignoreLightSleepData) {
                                 val endCalendar = CustomDatabaseUtils.LongToCalendar(lockedFirstTime, true)
                                 endCalendar.add(Calendar.MINUTE, overallDuration)
-                                setHRActivity(lockedFirstTime, overallDuration, db)
+                                setHRActivity(lockedFirstTime, overallDuration, false, db)
                                 AdvancedActivityTracker.optimizeBySleepRange(lockedFirstTime, CustomDatabaseUtils.CalendarToLong(endCalendar, true), db)
-                            } else {
-                                // TODO What to do next?
                             }
                             overallDeepDuration = 0; overallDuration = 0; idsToNext.clear(); lockedFirstTime = curs.getLong(1)
                         }
@@ -131,7 +152,7 @@ object SleepRecordsTable {
                 }
                 overallDuration += curs.getInt(3)
                 idsToNext.add(curs.getLong(0))
-                if (iterator++ >= curs.count - 1) pushSession(idsToNext, overallDuration, overallDeepDuration, lockedFirstTime, db)
+                if (iterator++ >= curs.count - 1) pushSession(idsToNext, lockedFirstTime, db)
 
             } while (curs.moveToNext())
         }
@@ -139,12 +160,13 @@ object SleepRecordsTable {
         GlobalSettings.isLaunched.postValue(false)
     }
 
+    class SleepRecord(var RTime: Long, var Duration: Int, var TypeRecord: Int) {
+        enum class RecordTypes(val code: Int) { Deep(2), LightOrOverall(1) }
+
+    }
 
     object GlobalSettings {
         var ignoreLightSleepData = false
         var isLaunched = MutableLiveData<Boolean>(false)
     }
 }
-
-
-// Works fine

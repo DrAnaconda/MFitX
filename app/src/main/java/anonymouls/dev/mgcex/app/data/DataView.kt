@@ -133,10 +133,7 @@ class DataView : AppCompatActivity() {
         val targetTimeSet = DatePickerDialog.OnDateSetListener { DatePicker, year, month, day ->
             val buffer = Calendar.getInstance()
             buffer.set(year, month, day, 0, 0)
-            if (scaling != Scalings.Day) // TODO: For test this can be commented
-                stageC(buffer, scaling)
-            else
-                stageD(buffer, buffer, scaling)
+            stageC(buffer, scaling)
         }
         DatePickerDialog(this, targetTimeSet, Calendar.getInstance().get(Calendar.YEAR),
                 Calendar.getInstance().get(Calendar.MONTH), Calendar.getInstance().get(Calendar.DAY_OF_MONTH)).show()

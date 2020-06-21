@@ -9,7 +9,6 @@ import android.os.Build
 import android.os.IBinder
 import android.view.View
 import androidx.core.app.NotificationManagerCompat
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import anonymouls.dev.mgcex.app.AlarmProvider
 import anonymouls.dev.mgcex.app.R
@@ -17,6 +16,9 @@ import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
 import anonymouls.dev.mgcex.app.main.DeviceControllerViewModel
 import anonymouls.dev.mgcex.databaseProvider.*
 import anonymouls.dev.mgcex.util.Utils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -35,11 +37,6 @@ class Algorithm : IntentService("Syncer") {
     private var prefs: SharedPreferences? = null
     private var workInProgress = false
     var thread: Thread? = null
-
-    private var lastMainSync = Calendar.getInstance()
-    private var lastHRSync = Calendar.getInstance()
-    private var lastSleepSync = Calendar.getInstance()
-
 
     private var serviceObject: IBinder? = null
     private var serviceName: ComponentName? = null
@@ -114,16 +111,31 @@ class Algorithm : IntentService("Syncer") {
         init()
     }
 
-    private fun getLastHRSync() {
-        if (database != null)
-            lastHRSync = CustomDatabaseUtils.GetLastSyncFromTable(DatabaseController.HRRecordsTableName,
+    private fun getLastHRSync(): Calendar {
+        return if (database != null)
+            CustomDatabaseUtils.getLastSyncFromTable(DatabaseController.HRRecordsTableName,
                     HRRecordsTable.ColumnsNames, true, database!!.readableDatabase)
+        else {
+            val result = Calendar.getInstance(); result.add(Calendar.MONTH, -6); result
+        }
     }
 
-    private fun getLastMainSync() {
-        if (database != null)
-            lastMainSync = CustomDatabaseUtils.GetLastSyncFromTable(MainRecordsTable.TableName,
+    private fun getLastMainSync(): Calendar {
+        return if (database != null)
+            CustomDatabaseUtils.getLastSyncFromTable(MainRecordsTable.TableName,
                     MainRecordsTable.ColumnNames, true, database!!.readableDatabase)
+        else {
+            val result = Calendar.getInstance(); result.add(Calendar.MONTH, -6); result
+        }
+    }
+
+    private fun getLastSleepSync(): Calendar {
+        return if (database != null)
+            CustomDatabaseUtils.LongToCalendar(SleepRecordsTable.getLastSync(database!!.readableDatabase), true)
+        else {
+            val result = Calendar.getInstance(); result.add(Calendar.MONTH, -6); return result
+        }
+
     }
 
     /*
@@ -203,15 +215,14 @@ class Algorithm : IntentService("Syncer") {
 
     private fun executeForceSync() {
         DeviceControllerViewModel.instance?.workInProgress?.postValue(View.VISIBLE)
-        getLastHRSync()
-        getLastMainSync()
+        GlobalScope.launch(Dispatchers.IO) { database?.initRepairsAndSync(database!!.writableDatabase) }
         postCommand(CommandInterpreter.SyncTime(Calendar.getInstance()), false)
         customWait(1000)
-        postCommand(CommandInterpreter.GetMainInfoRequest(), false)
+        postCommand(CommandInterpreter.getMainInfoRequest(), false)
         customWait(1000)
-        postCommand(CommandInterpreter.requestSleepHistory(lastSleepSync), false)
+        postCommand(CommandInterpreter.requestSleepHistory(getLastSleepSync()), false)
         customWait(1000)
-        postCommand(CommandInterpreter.requestHRHistory(lastHRSync), false)
+        postCommand(CommandInterpreter.requestHRHistory(getLastHRSync()), false)
         customWait(1000)
         //if (IsAlarmingTriggered && !IsFromActivity) alarmTriggerDecider(0)
     }

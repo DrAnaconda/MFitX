@@ -2,7 +2,6 @@ package anonymouls.dev.mgcex.databaseProvider
 
 import android.database.sqlite.SQLiteDatabase
 import java.util.*
-import kotlin.collections.ArrayList
 
 object CustomDatabaseUtils {
 
@@ -87,7 +86,7 @@ object CustomDatabaseUtils {
         return java.lang.Long.parseLong(Result)
     }
 
-    fun GetLastSyncFromTable(TableName: String, ReqColumns: Array<String>, IsShort: Boolean, Operator: SQLiteDatabase): Calendar {
+    fun getLastSyncFromTable(TableName: String, ReqColumns: Array<String>, IsShort: Boolean, Operator: SQLiteDatabase): Calendar {
         val record = Operator.query(TableName, ReqColumns, null, null, null, null,
                 ReqColumns[1] + " DESC", "1")
         record.moveToFirst()
@@ -113,6 +112,18 @@ object CustomDatabaseUtils {
             if (x == list.size - 1) break else result += ','
         }
         return "($result)"
+    }
+
+    fun reCreateTable(TableName: String, TargetColumns: ArrayList<String>, TargetNewTableSql: String, db: SQLiteDatabase) {
+//        db.execSQL("alter table $TableName rename to tmp")
+        db.execSQL(TargetNewTableSql)
+        var selectExp = ""
+        for (x in TargetColumns.indices) {
+            selectExp += TargetColumns[x]
+            if (x == TargetColumns.size - 1) break else selectExp += ','
+        }
+        db.execSQL("insert into $TableName select $selectExp from tmp")
+        db.execSQL("drop table tmp")
     }
 }
 

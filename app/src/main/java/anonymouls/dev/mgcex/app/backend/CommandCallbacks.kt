@@ -25,8 +25,8 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
 
     override fun BatteryInfo(Charge: Int) {
         try {
-            if (Charge > 0) {
-                DeviceControllerViewModel.instance?._batteryHolder?.postValue(Charge);
+            if (Charge > 5) {
+                DeviceControllerViewModel.instance?._batteryHolder?.postValue(Charge)
                 savedValues.savedBattery = Charge
             }
             // TODO Power consumption and battery health
@@ -36,6 +36,7 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
     }
 
     override fun HRIncome(Time: Calendar, HRValue: Int) {
+        if (Time.time > Calendar.getInstance().time) return
         var ResultHR = HRValue
         if (ResultHR < 0) ResultHR = (ResultHR and 0xFF)
         //if (DeviceControllerViewModel.instance?..IsAlarmWaiting) DeviceControllerViewModel.instance?..SelfPointer?.alarmTriggerDecider(ResultHR)
@@ -81,6 +82,7 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
     }
 
     override fun SleepHistoryRecord(Time: Calendar, Duration: Int, Type: Int) {
+        if (Time.time > Calendar.getInstance().time) return
         try {
             var newDuration = Duration
             if (newDuration < 0) newDuration = (newDuration and 0xFF)

@@ -8,7 +8,7 @@ object AdvancedActivityTracker {
 
     const val TableName = "AdvancedActivity"
 
-    val TableColumns = arrayListOf("ID", "fixStart", "deltaMin", "deltaSteps")
+    val TableColumns = arrayListOf("ID", "DATE", "deltaMin", "deltaSteps")
 
     fun getCreateCommand(): String {
         return "Create table if not exists " + TableName + "(" +
