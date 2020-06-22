@@ -6,9 +6,6 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import anonymouls.dev.mgcex.app.main.SettingsActivity
 import anonymouls.dev.mgcex.util.Utils
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import java.lang.Math.abs
 import java.util.*
 
@@ -73,7 +70,7 @@ object MainRecordsTable {
         } else null
     }
 
-    fun insertRecordV2(TimeRecord: Calendar, Steps: Int, Calories: Int, Operator: SQLiteDatabase): Long {
+    fun insertRecordV2(TimeRecord: Calendar, Steps: Int, Calories: Int, Operator: SQLiteDatabase, historical: Boolean): Long {
         if (CustomDatabaseUtils.CalendarToLong(TimeRecord, false) >
                 CustomDatabaseUtils.CalendarToLong(Calendar.getInstance(), true)) return -1
         val Values = ContentValues()
@@ -81,15 +78,15 @@ object MainRecordsTable {
         Values.put(ColumnNames[1], recordDate)
         Values.put(ColumnNames[2], Steps)
         Values.put(ColumnNames[3], Calories)
-        GlobalScope.launch(Dispatchers.IO) {
+        if (historical) {
             HRRecordsTable.updateAnalyticalViaMainInfo(TimeRecord, Steps, Operator)
             writeIntermediate(MainRecord(TimeRecord, Steps, Calories), Operator)
         }
         try {
-            val curs = Operator.query(MainRecordsTable.TableName + "COPY", arrayOf(ColumnNames[1]), ColumnNames[1] + " = ?",
+            val curs = Operator.query(TableName + "COPY", arrayOf(ColumnNames[1]), ColumnNames[1] + " = ?",
                     arrayOf(recordDate.toString()), null, null, null)
             if (curs.count == 0)
-                Operator.insert(MainRecordsTable.TableName + "COPY", null, Values)
+                Operator.insert(TableName + "COPY", null, Values)
             curs.close()
         } catch (ex: Exception) {
         }
@@ -160,8 +157,9 @@ object MainRecordsTable {
 
 //region advanced tracking
 
-    private fun extractFreshRecord(db: SQLiteDatabase): MainRecord {
-        val curs = db.query(MainRecordsTable.TableName, ColumnsForExtraction, null, null, null, null, ColumnNames[1] + " desc", "1")
+    private fun extractFreshRecord(limiter: Long, db: SQLiteDatabase): MainRecord {
+        val curs = db.query(MainRecordsTable.TableName, ColumnsForExtraction,
+                "DATE < $limiter", null, null, null, ColumnNames[1] + " desc", "1")
         return if (curs.count > 0) {
             curs.moveToFirst()
             val result = MainRecord(CustomDatabaseUtils.LongToCalendar(curs.getLong(0), true), curs.getInt(1), curs.getInt(2)); curs.close(); result
@@ -172,7 +170,7 @@ object MainRecordsTable {
     }
 
     private fun writeIntermediate(newData: MainRecord, db: SQLiteDatabase) {
-        val freshData = extractFreshRecord(db)
+        val freshData = extractFreshRecord(CustomDatabaseUtils.CalendarToLong(newData.RTime, true), db)
         val deltaMinutes = kotlin.math.abs(Utils.getDeltaCalendar(freshData.RTime, newData.RTime, Calendar.MINUTE))
         val deltaSteps = kotlin.math.abs(freshData.Steps - newData.Steps)
         if (deltaMinutes > 120 && deltaSteps < 10) return

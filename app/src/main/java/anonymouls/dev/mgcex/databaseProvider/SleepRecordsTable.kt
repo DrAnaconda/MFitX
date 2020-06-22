@@ -57,7 +57,7 @@ object SleepRecordsTable {
         var SSID = SSID
         val recordDate = CustomDatabaseUtils.CalendarToLong(RecordTime, true)
         Values.put(ColumnNames[1], recordDate)
-        if (SSID < 1) {
+        if (SSID < 0) {
             SSID = assignSSID(CustomDatabaseUtils.CalendarToLong(RecordTime, true), Duration, Type, Operator)
         }
         Values.put(ColumnNames[2], SSID)

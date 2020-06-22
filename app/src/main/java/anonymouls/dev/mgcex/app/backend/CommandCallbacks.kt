@@ -17,7 +17,7 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
             lastSyncMain = CustomDatabaseUtils.CalendarToLong(Calendar.getInstance(), true)
             DeviceControllerViewModel.instance?._lastStepsIncomed?.postValue(Steps); savedValues.savedSteps = Steps
             DeviceControllerViewModel.instance?._lastCcalsIncomed?.postValue(Calories); savedValues.savedCCals = Calories
-            MainRecordsTable.insertRecordV2(Calendar.getInstance(), Steps, Calories, database)
+            MainRecordsTable.insertRecordV2(Calendar.getInstance(), Steps, Calories, database, false)
         } catch (Ex: Exception) {
 
         }
@@ -67,7 +67,7 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
         if (Time.time > Calendar.getInstance().time) return
         if (Steps <= 0 || Calories <= 0) return
         try {
-            if (MainRecordsTable.insertRecordV2(Time, Steps, Calories, database) > 0) {
+            if (MainRecordsTable.insertRecordV2(Time, Steps, Calories, database, true) > 0) {
                 val current = CustomDatabaseUtils.CalendarToLong(Time, true)
                 if (current > lastSyncMain) {
                     DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(Calories); savedValues.savedCCals = Calories

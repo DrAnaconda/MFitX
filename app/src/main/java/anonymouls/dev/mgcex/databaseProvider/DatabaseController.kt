@@ -8,7 +8,6 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.os.Build
 import android.os.Environment
-import anonymouls.dev.mgcex.util.HRAnalyzer
 import java.io.File
 import java.util.*
 
@@ -72,8 +71,8 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
     fun initRepairsAndSync(db: SQLiteDatabase) {
         checkCreateAllTables(db)
         fixData(db)
-        SleepRecordsTable.executeAnalyze(db); SleepSessionsTable.doubleCheck(db)
-        HRAnalyzer.analyzeShadowMainData(db)
+        SleepRecordsTable.executeAnalyze(db)
+        //AdvancedActivityTracker.fixDeltas(db)
     }
 
 //region overloads
