@@ -16,6 +16,7 @@ import anonymouls.dev.mgcex.app.main.SettingsActivity
 import anonymouls.dev.mgcex.databaseProvider.SleepRecordsTable
 import java.text.DecimalFormat
 import java.util.*
+import kotlin.math.roundToInt
 
 object Utils {
 
@@ -147,13 +148,13 @@ object Utils {
         }
     }
 
-    fun getDeltaCalendar(A: Calendar, B: Calendar, Field: Int): Long {
+    fun getDeltaCalendar(A: Calendar, B: Calendar, Field: Int): Int {
         val diff: Long = A.timeInMillis - B.timeInMillis
         return when (Field) {
-            Calendar.SECOND -> diff / 1000
-            Calendar.MINUTE -> diff / 1000 / 60
-            Calendar.HOUR_OF_DAY, Calendar.HOUR -> diff / 1000 / 60 / 60
-            else -> diff / 1000 / 60 / 60 / 24
+            Calendar.SECOND -> (diff.toDouble() / 1000).roundToInt()
+            Calendar.MINUTE -> (diff.toDouble() / 1000 / 60).roundToInt() + 1
+            Calendar.HOUR_OF_DAY, Calendar.HOUR -> (diff.toDouble() / 1000 / 60 / 60).roundToInt()
+            else -> (diff.toDouble() / 1000 / 60 / 60 / 24).roundToInt()
         }
     }
 }

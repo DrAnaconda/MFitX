@@ -29,10 +29,12 @@ object AdvancedActivityTracker {
     }
 
     fun insertRecord(time: Calendar, deltaMin: Int, speedMin: Double, db: SQLiteDatabase): Long {
+        if (deltaMin < 5) return -1
         return insertRecord(CustomDatabaseUtils.CalendarToLong(time, true), deltaMin, speedMin, db)
     }
 
     fun insertRecord(time: Long, deltaMin: Int, speedMin: Double, db: SQLiteDatabase): Long {
+        if (deltaMin < 5) return -1
         val content = ContentValues()
         content.put(TableColumns[2], deltaMin)
         content.put(TableColumns[3], speedMin)
@@ -53,25 +55,21 @@ object AdvancedActivityTracker {
         if (curs.count > 0) {
             curs.moveToFirst()
             var lockedTime = CustomDatabaseUtils.LongToCalendar(curs.getLong(1), true)
-            var lockedDelta = curs.getInt(2)
             for (x in 0 until curs.count - 1) {
                 curs.moveToNext()
                 val trueDelta = abs(Utils.getDeltaCalendar(CustomDatabaseUtils.LongToCalendar(curs.getLong(1), true),
-                        lockedTime, Calendar.MINUTE)).toInt()
-                if (trueDelta != lockedDelta) {
-                    val steps = curs.getDouble(3) * curs.getInt(2)
-                    val trueDeltaSteps = if (trueDelta > 0) steps / trueDelta else 0.0
-                    val content = ContentValues()
-                    content.put(TableColumns[2], trueDelta)
-                    content.put(TableColumns[3], trueDeltaSteps)
-                    try {
-                        db.update(TableName, content, "DATE = ?",
-                                arrayOf(CustomDatabaseUtils.CalendarToLong(lockedTime, true).toString()))
-                    } catch (e: Exception) {
-                    }
-                    lockedTime = CustomDatabaseUtils.LongToCalendar(curs.getLong(1), true)
-                    lockedDelta = curs.getInt(2)
-                }
+                        lockedTime, Calendar.MINUTE)) + 1
+                val steps = curs.getDouble(3) * curs.getInt(2)
+                val trueDeltaSteps = if (trueDelta > 0) steps / trueDelta else 0.0
+                val content = ContentValues()
+                val testB = curs.getLong(1)
+                val test = abs(CustomDatabaseUtils.CalendarToLong(lockedTime, true)
+                        - curs.getLong(1))
+                content.put(TableColumns[2], trueDelta)
+                content.put(TableColumns[3], trueDeltaSteps)
+                db.update(TableName, content, "DATE = ?",
+                        arrayOf(CustomDatabaseUtils.CalendarToLong(lockedTime, true).toString()))
+                lockedTime = CustomDatabaseUtils.LongToCalendar(curs.getLong(1), true)
             }
         }
         curs.close()

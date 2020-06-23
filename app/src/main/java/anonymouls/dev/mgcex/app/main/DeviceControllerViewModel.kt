@@ -1,6 +1,8 @@
 package anonymouls.dev.mgcex.app.main
 
+import android.os.Build
 import android.view.View
+import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.*
 import anonymouls.dev.mgcex.app.R
@@ -11,7 +13,6 @@ import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.savedValues.s
 import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.savedValues.savedStatus
 import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.savedValues.savedSteps
 import anonymouls.dev.mgcex.app.backend.InsertTask
-import anonymouls.dev.mgcex.databaseProvider.HRRecordsTable
 import anonymouls.dev.mgcex.databaseProvider.SleepRecordsTable
 import anonymouls.dev.mgcex.util.HRAnalyzer
 import kotlinx.coroutines.Dispatchers
@@ -140,6 +141,34 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
             createObserverForString(activity.getString(R.string.downloading_data_status), it)
         })
 
+        currentBattery.observe(activity, Observer {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                when {
+                    it < 5 -> {
+                    }
+                    it < 33 ->
+                        activity.findViewById<ImageView>(R.id.batteryIcon)
+                                .setImageDrawable(activity.getDrawable(R.drawable.chargelow_icon))
+                    it < 66 ->
+                        activity.findViewById<ImageView>(R.id.batteryIcon)
+                                .setImageDrawable(activity.getDrawable(R.drawable.chargemed_icon))
+                    else -> activity.findViewById<ImageView>(R.id.batteryIcon)
+                            .setImageDrawable(activity.getDrawable(R.drawable.chargefull_icon))
+                }
+            } else {
+                when {
+                    it < 5 -> {
+                    }
+                    it < 33 ->
+                        activity.findViewById<ImageView>(R.id.batteryIcon).setImageResource(R.drawable.chargelow_icon)
+                    it < 66 ->
+                        activity.findViewById<ImageView>(R.id.batteryIcon)
+                                .setImageResource((R.drawable.chargemed_icon))
+                    else -> activity.findViewById<ImageView>(R.id.batteryIcon)
+                            .setImageResource((R.drawable.chargefull_icon))
+                }
+            }
+        })
 
 
         if (Algorithm.StatusCode.value!!.code < Algorithm.StatusCodes.GattReady.code)

@@ -153,8 +153,10 @@
                 android:paddingTop="8dp"
                 android:paddingRight="8dp"
                 android:paddingBottom="8dp"
+                android:maxWidth="64dp"
+                android:maxHeight="64dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/calories_btn_icon" />
+                android:src="@drawable/calories_icon_btn" />
 
             <TextView
                 android:id="@+id/CaloriesValue"
@@ -184,6 +186,7 @@
             android:paddingTop="8dp"
             android:paddingRight="8dp"
             android:paddingBottom="8dp"
+            ads:layout_constraintBottom_toBottomOf="@+id/SettingContainer"
             app:layout_constraintLeft_toRightOf="@id/SettingContainer"
             app:layout_constraintTop_toBottomOf="@+id/StepsContainer">
 
@@ -195,12 +198,14 @@
                 android:clickable="false"
                 android:contentDescription="@string/alarm_window_show"
                 android:enabled="false"
+                android:maxWidth="64dp"
+                android:maxHeight="64dp"
                 android:paddingLeft="8dp"
                 android:paddingTop="8dp"
                 android:paddingRight="8dp"
                 android:paddingBottom="8dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/alarm_btn_icon" />
+                android:src="@drawable/alarm_icon" />
 
         </LinearLayout>
 
@@ -231,8 +236,10 @@
                 android:paddingTop="8dp"
                 android:paddingRight="8dp"
                 android:paddingBottom="8dp"
+                android:maxWidth="64dp"
+                android:maxHeight="64dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/synchronize_btn_icon" />
+                android:src="@drawable/sync_icon" />
 
         </LinearLayout>
 
@@ -240,7 +247,7 @@
             android:id="@+id/ExitBtnContainer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:layout_marginLeft="8dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/custom_border"
             android:onClick="onClickHandler"
@@ -249,6 +256,7 @@
             android:paddingTop="8dp"
             android:paddingRight="8dp"
             android:paddingBottom="8dp"
+            ads:layout_constraintBottom_toBottomOf="@+id/SyncNowContainer"
             app:layout_constraintLeft_toRightOf="@id/SyncNowContainer"
             app:layout_constraintTop_toBottomOf="@+id/BatteryContainer">
 
@@ -260,12 +268,14 @@
                 android:clickable="false"
                 android:contentDescription="@string/exit_and_close_btn"
                 android:enabled="false"
+                android:maxWidth="64dp"
+                android:maxHeight="64dp"
                 android:paddingLeft="8dp"
                 android:paddingTop="8dp"
                 android:paddingRight="8dp"
                 android:paddingBottom="8dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/exit_btn_icon" />
+                android:src="@drawable/exit_icon" />
 
         </LinearLayout>
 
@@ -283,6 +293,7 @@
             android:paddingTop="8dp"
             android:paddingRight="8dp"
             android:paddingBottom="8dp"
+            ads:layout_constraintBottom_toBottomOf="@+id/CaloriesContainer"
             app:layout_constraintStart_toEndOf="@+id/CaloriesContainer"
             app:layout_constraintTop_toBottomOf="@+id/StatusText">
 
@@ -293,12 +304,14 @@
                 android:clickable="false"
                 android:contentDescription="@string/steps_completed_icon"
                 android:enabled="false"
+                android:maxWidth="64dp"
+                android:maxHeight="64dp"
                 android:paddingLeft="8dp"
                 android:paddingTop="8dp"
                 android:paddingRight="8dp"
                 android:paddingBottom="8dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/steps_btn_icon" />
+                android:src="@drawable/steps_icon" />
 
             <TextView
                 android:id="@+id/StepsValue"
@@ -318,7 +331,7 @@
         <LinearLayout
             android:id="@+id/HRContainer"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:layout_marginStart="8dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/custom_border"
@@ -328,6 +341,7 @@
             android:paddingTop="8dp"
             android:paddingRight="8dp"
             android:paddingBottom="8dp"
+            ads:layout_constraintBottom_toBottomOf="@+id/CaloriesContainer"
             app:layout_constraintStart_toEndOf="@+id/StepsContainer"
             app:layout_constraintTop_toBottomOf="@+id/StatusText">
 
@@ -339,12 +353,15 @@
                 android:clickable="false"
                 android:contentDescription="@string/pulse_icon"
                 android:enabled="false"
+                android:layout_weight="0.5"
+                android:maxWidth="64dp"
                 android:paddingLeft="8dp"
                 android:paddingTop="8dp"
                 android:paddingRight="8dp"
                 android:paddingBottom="8dp"
+                android:maxHeight="64dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/pulse_btn_icon" />
+                android:src="@drawable/pulse_icon" />
 
             <TextView
                 android:id="@+id/HRValue"
@@ -364,7 +381,7 @@
         <LinearLayout
             android:id="@+id/BatteryContainer"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:layout_marginStart="8dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/custom_border"
@@ -378,18 +395,22 @@
             app:layout_constraintTop_toBottomOf="@+id/StatusText">
 
             <ImageView
+                android:id="@+id/batteryIcon"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:adjustViewBounds="true"
                 android:clickable="false"
                 android:contentDescription="@string/battery_charge_icon"
                 android:enabled="false"
+                android:layout_weight="0.5"
+                android:maxWidth="64dp"
                 android:paddingLeft="8dp"
                 android:paddingTop="8dp"
                 android:paddingRight="8dp"
                 android:paddingBottom="8dp"
+                android:maxHeight="64dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/battery_btn_icon" />
+                android:src="@drawable/chargefull_icon" />
 
             <TextView
                 android:id="@+id/BatteryStatus"
@@ -434,8 +455,10 @@
                 android:paddingTop="8dp"
                 android:paddingRight="8dp"
                 android:paddingBottom="8dp"
+                android:maxWidth="64dp"
+                android:maxHeight="64dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/settings_btn_icon" />
+                android:src="@drawable/settings_icon" />
 
         </LinearLayout>
 

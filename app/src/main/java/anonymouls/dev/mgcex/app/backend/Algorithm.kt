@@ -113,7 +113,7 @@ class Algorithm : IntentService("Syncer") {
 
     private fun getLastHRSync(): Calendar {
         return if (database != null)
-            CustomDatabaseUtils.getLastSyncFromTable(DatabaseController.HRRecordsTableName,
+            CustomDatabaseUtils.getLastSyncFromTable(HRRecordsTable.TableName,
                     HRRecordsTable.ColumnsNames, true, database!!.readableDatabase)
         else {
             val result = Calendar.getInstance(); result.add(Calendar.MONTH, -6); result
@@ -137,68 +137,6 @@ class Algorithm : IntentService("Syncer") {
         }
 
     }
-
-    /*
-    private fun checkForAlarmWaiting(): Boolean {
-        val Now = Calendar.getInstance()
-        val NowHour = Now.get(Calendar.HOUR_OF_DAY)
-        val NowMinute = Now.get(Calendar.MINUTE)
-        if (ApproachingAlarm!!.HourStart <= NowHour || ApproachingAlarm!!.HourStart == NowHour
-                && ApproachingAlarm!!.MinuteStart <= NowMinute) {
-            IsAlarmWaiting = true
-        }
-        return IsAlarmWaiting
-    }*/
-    /*
-    private fun checkForAlarms() {
-        val Alarm = AlarmsTable.GetApproachingAlarm()
-        if (Alarm.count > 0) {
-            do {
-                val Buff = AlarmProvider.LoadFromCursor(Alarm)
-                if (AlarmProvider.IsAlarmsEqual(ApproachingAlarm, Buff)) {
-                    if (!IsAlarmKilled) checkForAlarmWaiting()
-                } else {
-                    ApproachingAlarm = AlarmProvider.LoadFromCursor(Alarm)
-                    IsAlarmKilled = false
-                }
-
-            } while (Alarm.moveToNext())
-        }
-    }
-    fun alarmTriggerDecider(HRValue: Int) {
-        val hour = Calendar.getInstance().get(Calendar.HOUR)
-        val minute = Calendar.getInstance().get(Calendar.MINUTE)
-        if (IsAlarmKilled) {
-            AlarmFiredIterator = 0
-            return
-        }
-        if (HRValue >= AvgHR || IsAlarmingTriggered
-                || hour >= ApproachingAlarm!!.Hour && minute >= ApproachingAlarm!!.Minute) {
-            IsAlarmingTriggered = true
-            if (ApproachingAlarm!!.DayMask == 128) ApproachingAlarm!!.IsEnabled = false
-            postCommand(CommandInterpreter.BuildLongNotify("WAKE UP!"), true)
-            val resultIntent = Intent(this, UartServiceBroadcastInterpreter::class.java)
-            resultIntent.action = "AlarmAction"
-            val resultPendingIntent = PendingIntent.getBroadcast(this, 0, resultIntent, PendingIntent.FLAG_UPDATE_CURRENT)
-            val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                Notification.Builder(this, "ALARMS")
-                        .setSmallIcon(R.drawable.ic_launcher)
-                        .setContentText("Maybe you should kill it?")
-                        .setContentTitle("Alarm is ringing")
-                        .setContentIntent(resultPendingIntent)
-            } else {
-                Notification.Builder(this)
-                        .setSmallIcon(R.drawable.ic_launcher)
-                        .setContentText("Maybe you should kill it?")
-                        .setContentTitle("Alarm is ringing")
-                        .setContentIntent(resultPendingIntent)
-            }
-            val notification = builder.build()
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.notify(21, notification)
-        }
-    }
-    */
 
     fun postShortMessageDivider(Input: String) {
         val Req = CommandInterpreter.BuildNotify(Input)

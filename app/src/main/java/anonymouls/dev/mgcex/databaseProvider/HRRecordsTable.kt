@@ -5,17 +5,21 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import anonymouls.dev.mgcex.util.HRAnalyzer
 import java.util.*
-import kotlin.math.abs
 
 object HRRecordsTable {
 
-    enum class AnalyticTypes(val type: Byte) { Unknown(0), Steady(1), PhysicalStress(2), LowPhysical(3), MediumPhysical(4), SleepingLight(7), Sleeping(8) }
+    enum class AnalyticTypes(val type: Byte) {
+        Unknown(0), Steady(1), PhysicalStress(2),
+        LowPhysical(3), MediumPhysical(4), SleepingLight(7), Sleeping(8)
+    }
+
+    const val TableName = "HRRecords"
 
     val ColumnsNames = arrayOf("ID", "Date", "HRValue", "AnalyticType")
     val ColumnsForExtraction = arrayOf("Date", "HRValue")
 
     fun getCreateTableCommand(): String {
-        return ("CREATE TABLE if not exists " + DatabaseController.HRRecordsTableName + " (" +
+        return ("CREATE TABLE if not exists $TableName (" +
                 ColumnsNames[0] + " INTEGER PRIMARY KEY AUTOINCREMENT," +
                 ColumnsNames[1] + " INTEGER UNIQUE," +
                 ColumnsNames[2] + " INTEGER," +
@@ -27,7 +31,7 @@ object HRRecordsTable {
 
     private fun isAlreadyExistsV2(Target: Calendar, Operator: SQLiteDatabase): Long? {
         val DT = CustomDatabaseUtils.CalendarToLong(Target, true)
-        val data = Operator.query(DatabaseController.HRRecordsTableName, arrayOf(ColumnsNames[0]),
+        val data = Operator.query(TableName, arrayOf(ColumnsNames[0]),
                 ColumnsNames[1] + " = ?", arrayOf(DT.toString()), null, null, null, "1")
         data.moveToFirst()
         return if (data.count > 0) {
@@ -41,7 +45,7 @@ object HRRecordsTable {
     }
 
     private fun updateRecord(ID: Long, values: ContentValues, Operator: SQLiteDatabase) {
-        Operator.update(DatabaseController.HRRecordsTableName, values, " " + ColumnsNames[0] + " = ?", arrayOf(ID.toString()))
+        Operator.update(TableName, values, " " + ColumnsNames[0] + " = ?", arrayOf(ID.toString()))
     }
 
     fun insertRecord(RecordTime: Calendar, HRValue: Int, Operator: SQLiteDatabase): Long {
@@ -50,7 +54,7 @@ object HRRecordsTable {
         values.put(ColumnsNames[2], HRValue)
         val checkID = isAlreadyExistsV2(RecordTime, Operator)
         if (checkID == null)
-            return Operator.insert(DatabaseController.HRRecordsTableName, null, values)
+            return Operator.insert(TableName, null, values)
         else {
             updateRecord(checkID, values, Operator)
             return checkID
@@ -58,22 +62,17 @@ object HRRecordsTable {
     }
 
 
-    fun updateAnalyticalViaMainInfo(RecordTime: Calendar, Steps: Int, Operator: SQLiteDatabase) {
-        if (abs((RecordTime.timeInMillis - Calendar.getInstance().timeInMillis) / 1000 / 60) > 30) return
-        val from = CustomDatabaseUtils.CalendarToLong(RecordTime, true) - 10
-        val to = from + 20
-        val curs = Operator.query(MainRecordsTable.TableName, arrayOf(MainRecordsTable.ColumnNames[2]), " " + MainRecordsTable.ColumnNames[1] + " BETWEEN ? AND ?",
-                arrayOf(from.toString(), to.toString()), null, null, null, "1")
-        if (curs.count > 0) {
-            curs.moveToFirst()
-            val values = ContentValues()
-            val deltaInMinutes = MainRecordsTable.getDeltaInMinutes(RecordTime, Operator).toInt()
-            if (deltaInMinutes > 250 || deltaInMinutes <= -1) return
-            val type = HRAnalyzer.physicalStressDetermining(abs(curs.getInt(0) - Steps), deltaInMinutes); curs.close()
-            values.put(ColumnsNames[3], AnalyticTypes.valueOf(type.name).type)
-            Operator.update(DatabaseController.HRRecordsTableName, values, " " + ColumnsNames[1] + " BETWEEN ? AND ? AND " + ColumnsNames[3] + " = 0",
-                    arrayOf(from.toString(), to.toString()))
-        }
+    fun updateAnalyticalViaMainInfo(deltaMin: Int, stepsMin: Double, from: Long,
+                                    db: SQLiteDatabase) {
+        val calendarTo = CustomDatabaseUtils.LongToCalendar(from, true)
+        calendarTo.add(Calendar.MINUTE, deltaMin)
+        val to = CustomDatabaseUtils.CalendarToLong(calendarTo, true) + 1
+        val arctificalCoeff = 1 + (deltaMin - 5) * ((3 - 1) / (60 - 5))
+        val mutatedSteps = stepsMin * arctificalCoeff
+        val content = ContentValues()
+        content.put(ColumnsNames[3], HRAnalyzer.physicalStressDetermining(mutatedSteps).type)
+        db.update(TableName, content, ColumnsNames[1] + " BETWEEN ? AND ?",
+                arrayOf((from - 1).toString(), to.toString()))
     }
 
     fun updateAnalyticalViaSleepInterval(From: Calendar, To: Calendar, isDeep: Boolean, Operator: SQLiteDatabase) {
@@ -84,24 +83,26 @@ object HRRecordsTable {
             values.put(ColumnsNames[3], AnalyticTypes.Sleeping.type)
         else
             values.put(ColumnsNames[3], AnalyticTypes.SleepingLight.type)
-        Operator.update(DatabaseController.HRRecordsTableName, values,
-                ColumnsNames[1] + " BETWEEN ? AND ? AND " + ColumnsNames[3] + " < 1"
-                , arrayOf(from.toString(), to.toString()))
+        Operator.update(TableName, values,
+                ColumnsNames[1] + " BETWEEN ? AND ? AND AnalyticType < 8",
+                arrayOf(from.toString(), to.toString()))
     }
 
 //endregion
 
     /* region data extraction */
     fun getOverallAverage(Operator: SQLiteDatabase): Int {
-        val curs = Operator.query(DatabaseController.HRRecordsTableName,
+        val curs = Operator.query(TableName,
                 arrayOf(CustomDatabaseUtils.niceSQLFunctionBuilder("AVG", ColumnsNames[2])), null, null, null, null, null)
         curs.moveToFirst()
-        return curs.getInt(0)
+        val result = curs.getInt(0)
+        curs.close()
+        return result
     }
 
     fun extractRecords(From: Long, To: Long, Operator: SQLiteDatabase): Cursor? {
         try {
-            val record = Operator.query(DatabaseController.HRRecordsTableName, ColumnsForExtraction,
+            val record = Operator.query(TableName, ColumnsForExtraction,
                     ColumnsNames[1] + " BETWEEN ? AND ?", arrayOf(java.lang.Long.toString(From), java.lang.Long.toString(To)), null, null, ColumnsNames[1])
             record.moveToFirst()
             return record
@@ -112,7 +113,7 @@ object HRRecordsTable {
     }
 
     fun extractFuncOnInterval(Where: Long, To: Long, Operator: SQLiteDatabase): Cursor {
-        val record = Operator.query(DatabaseController.HRRecordsTableName, arrayOf("AVG(HRValue)", "MIN(HRValue)", "MAX(HRValue)"),
+        val record = Operator.query(TableName, arrayOf("AVG(HRValue)", "MIN(HRValue)", "MAX(HRValue)"),
                 ColumnsNames[1] + " BETWEEN ? AND ?", arrayOf(java.lang.Long.toString(Where), java.lang.Long.toString(To)), null, null, ColumnsNames[1])
         record.moveToFirst()
         return record
@@ -120,8 +121,8 @@ object HRRecordsTable {
 //endregion
 
     fun generateReport(From: Calendar?, To: Calendar?, Operator: SQLiteDatabase): HRReport {
-        var from: Long
-        var to: Long
+        val from: Long
+        val to: Long
         if (From == null || To == null) {
             from = 0
             to = Long.MAX_VALUE
@@ -129,19 +130,21 @@ object HRRecordsTable {
             from = CustomDatabaseUtils.CalendarToLong(From, true)
             to = CustomDatabaseUtils.CalendarToLong(To, true)
         }
-        val curs = Operator.query(DatabaseController.HRRecordsTableName,
+        val curs = Operator.query(TableName,
                 arrayOf(CustomDatabaseUtils.niceSQLFunctionBuilder("COUNT", "*"), //0
                         CustomDatabaseUtils.niceSQLFunctionBuilder("AVG", ColumnsNames[2]),//1
                         CustomDatabaseUtils.niceSQLFunctionBuilder("MIN", ColumnsNames[2]),//2
                         CustomDatabaseUtils.niceSQLFunctionBuilder("MAX", ColumnsNames[2])),//3
                 ColumnsNames[1] + " BETWEEN ? AND ?", arrayOf(from.toString(), to.toString()), null, null, null)
         curs.moveToFirst()
-        return HRReport(curs.getInt(2), curs.getInt(1), curs.getInt(3), curs.getInt(0), countAnomalies(From, To, curs.getInt(1), Operator))
+        val result = HRReport(curs.getInt(2), curs.getInt(1), curs.getInt(3), curs.getInt(0), countAnomalies(From, To, curs.getInt(1), Operator))
+        curs.close()
+        return result
     }
 
     private fun countAnomalies(From: Calendar?, To: Calendar?, avgHR: Int, Operator: SQLiteDatabase): Int {
-        var from: Long
-        var to: Long
+        val from: Long
+        val to: Long
         if (From == null || To == null) {
             from = 0
             to = Long.MAX_VALUE
@@ -151,11 +154,12 @@ object HRRecordsTable {
         }
         //val lowerDelta = avgHR-(avgHR*0.2f)
         val upperDelta = avgHR + (avgHR * 0.2f)
-        var curs = Operator.query(DatabaseController.HRRecordsTableName, arrayOf(CustomDatabaseUtils.niceSQLFunctionBuilder("COUNT", "*")),
+        val curs = Operator.query(TableName, arrayOf(CustomDatabaseUtils.niceSQLFunctionBuilder("COUNT", "*")),
                 ColumnsNames[1] + " BETWEEN ? AND ? AND (" + ColumnsNames[2] + " > ?)",
                 arrayOf(from.toString(), to.toString(), upperDelta.toInt().toString()), null, null, null)
         curs.moveToFirst()
-        return curs.getInt(0)
+        val result = curs.getInt(0); curs.close()
+        return result
     }
 
     class HRReport(val MinHR: Int, val AvgHR: Int, val MaxHR: Int, val recordsCount: Int, anomaliesReport: Int) {

@@ -33,15 +33,12 @@ object HRAnalyzer {
         return HR > upperDelta
     }
 
-    fun physicalStressDetermining(delta: Int, minutesDelta: Int): HRRecordsTable.AnalyticTypes {
-        var stepsPerMinute: Float = delta.toFloat() / minutesDelta.toFloat()
-        if (minutesDelta == 0) stepsPerMinute = 0.0f
+    fun physicalStressDetermining(deltaSteps: Double): HRRecordsTable.AnalyticTypes {
         return when {
-            stepsPerMinute < 5 -> HRRecordsTable.AnalyticTypes.Steady
-            stepsPerMinute < 10 -> HRRecordsTable.AnalyticTypes.LowPhysical
-            stepsPerMinute < 15 -> HRRecordsTable.AnalyticTypes.MediumPhysical
+            deltaSteps < 30 -> HRRecordsTable.AnalyticTypes.Steady
+            deltaSteps < 80 -> HRRecordsTable.AnalyticTypes.LowPhysical
+            deltaSteps < 110 -> HRRecordsTable.AnalyticTypes.MediumPhysical
             else -> HRRecordsTable.AnalyticTypes.PhysicalStress
         }
     }
-
 }

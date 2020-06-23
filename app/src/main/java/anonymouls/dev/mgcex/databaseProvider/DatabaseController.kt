@@ -44,7 +44,7 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
 
     private fun fixData(db: SQLiteDatabase) {
         fixTableByDate(db, MainRecordsTable.TableName)
-        fixTableByDate(db, HRRecordsTableName)
+        fixTableByDate(db, HRRecordsTable.TableName)
         fixTableByDate(db, MainRecordsTable.TableName + "COPY")
         fixTableByDate(db, SleepRecordsTable.TableName)
         fixTableByDate(db, SleepSessionsTable.TableName)
@@ -71,8 +71,8 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
     fun initRepairsAndSync(db: SQLiteDatabase) {
         checkCreateAllTables(db)
         fixData(db)
-        SleepRecordsTable.executeAnalyze(db)
-        //AdvancedActivityTracker.fixDeltas(db)
+//        db.execSQL("delete from ${AdvancedActivityTracker.TableName} where deltaMin < 5")
+//        AdvancedActivityTracker.fixDeltas(db)
     }
 
 //region overloads
@@ -87,18 +87,7 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
         //if (db != null) initRepairsAndSync(db)
     }
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        if (oldVersion <= 1 && newVersion == VersionCodes.AdvancedTracking.code) db.execSQL("drop table if exists " + SleepSessionsTable.TableName)
-        if (newVersion == VersionCodes.SyncFlags.code && oldVersion <= VersionCodes.AdvancedTracking.code) {
-            db.execSQL("alter table " + MainRecordsTable.TableName + "COPY" + " add column " + MainRecordsTable.ColumnNamesCloneAdditional[0] + " boolean default false")
-            db.execSQL("alter table " + MainRecordsTable.TableName + "COPY" + " add column " + MainRecordsTable.ColumnNamesCloneAdditional[1] + " boolean default false")
-        }
-        if (newVersion == VersionCodes.FixMain.code) {
-            CustomDatabaseUtils.reCreateTable(MainRecordsTable.TableName + "COPY",
-                    arrayListOf(MainRecordsTable.ColumnNames[0], MainRecordsTable.ColumnNames[1],
-                            MainRecordsTable.ColumnNames[2], MainRecordsTable.ColumnNames[3], MainRecordsTable.ColumnNamesCloneAdditional[0]),
-                    MainRecordsTable.getCreateTableCommandClone(), db)
-            db.execSQL("update ${MainRecordsTable.TableName}COPY set ${MainRecordsTable.ColumnNamesCloneAdditional[0]} = 0")
-        }
+
         checkCreateAllTables(db)
     }
 
@@ -113,7 +102,6 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
         private var DatabaseDir = ""
         private var DatabaseName = ""
         const val AlarmsTableName = "Alarms"
-        const val HRRecordsTableName = "HRRecords"
         const val NotifyFilterTableName = "Notify"
 
         var DCObject: DatabaseController? = null
