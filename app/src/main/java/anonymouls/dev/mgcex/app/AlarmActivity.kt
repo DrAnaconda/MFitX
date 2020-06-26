@@ -13,10 +13,10 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.*
 import androidx.constraintlayout.widget.ConstraintLayout
-import anonymouls.dev.mgcex.app.backend.CommandInterpreter
 import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
 import anonymouls.dev.mgcex.databaseProvider.AlarmsTable
 import anonymouls.dev.mgcex.databaseProvider.DatabaseController
+import anonymouls.dev.mgcex.util.Utils
 import java.util.*
 
 
@@ -94,8 +94,8 @@ class AlarmActivity : Activity() {
 
     private fun createTargetTimePicker() {
         val targetTimeSet = OnTimeSetListener { view, hourOfDay, minute ->
-            hours?.setText(CommandInterpreter.SubIntegerConversionCheck(hourOfDay.toString()))
-            minutes?.setText(CommandInterpreter.SubIntegerConversionCheck(minute.toString()))
+            hours?.setText(Utils.subIntegerConversionCheck(hourOfDay.toString()))
+            minutes?.setText(Utils.subIntegerConversionCheck(minute.toString()))
         }
 
         val timeHour = if (currentProvider != null) currentProvider?.Hour else Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
@@ -146,13 +146,13 @@ class AlarmActivity : Activity() {
         txt.layoutParams = defaultParams
         txt.gravity = Gravity.CENTER
         /*
-        val Text = CommandInterpreter.SubIntegerConversionCheck(Integer.toString(AP.HourStart)) +
-                " : " + CommandInterpreter.SubIntegerConversionCheck(Integer.toString(AP.MinuteStart)) +
-                " -> " + CommandInterpreter.SubIntegerConversionCheck(Integer.toString(AP.Hour)) +
-                " : " + CommandInterpreter.SubIntegerConversionCheck(Integer.toString(AP.Minute))
+        val Text = Utils.SubIntegerConversionCheck(Integer.toString(AP.HourStart)) +
+                " : " + Utils.SubIntegerConversionCheck(Integer.toString(AP.MinuteStart)) +
+                " -> " + Utils.SubIntegerConversionCheck(Integer.toString(AP.Hour)) +
+                " : " + Utils.SubIntegerConversionCheck(Integer.toString(AP.Minute))
         */
-        txt.text = CommandInterpreter.SubIntegerConversionCheck(AP.Hour.toString()) +
-                " : " + CommandInterpreter.SubIntegerConversionCheck(AP.Minute.toString())
+        txt.text = Utils.subIntegerConversionCheck(AP.Hour.toString()) +
+                " : " + Utils.subIntegerConversionCheck(AP.Minute.toString())
         TR.addView(txt)
 
 
@@ -247,7 +247,7 @@ class AlarmActivity : Activity() {
             for (i in 0 until table!!.childCount) {
                 try {
                     val ATR = table!!.getChildAt(i) as AdvancedTableRow
-                    ATR.AP.saveAlarmRecord(DatabaseController.getDCObject(this).writableDatabase)
+                    ATR.AP.saveAlarmRecord(DatabaseController.getDCObject(this).writableDatabase, this)
                 } catch (Ex: Exception) {
                     // ignore
                 }
@@ -284,7 +284,7 @@ class AlarmActivity : Activity() {
                             tuesday!!.isChecked, wednesday!!.isChecked, thursday!!.isChecked,
                             friday!!.isChecked, saturday!!.isChecked, sunday!!.isChecked)
                 }
-                currentProvider!!.saveAlarmRecord(DatabaseController.getDCObject(this).writableDatabase)
+                currentProvider!!.saveAlarmRecord(DatabaseController.getDCObject(this).writableDatabase, this)
                 setContentView(R.layout.activity_alarm)
                 initView()
                 loadAlarms()

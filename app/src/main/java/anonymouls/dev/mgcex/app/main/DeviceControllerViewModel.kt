@@ -12,6 +12,7 @@ import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.savedValues.s
 import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.savedValues.savedHR
 import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.savedValues.savedStatus
 import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.savedValues.savedSteps
+import anonymouls.dev.mgcex.app.backend.CommandInterpreter
 import anonymouls.dev.mgcex.app.backend.InsertTask
 import anonymouls.dev.mgcex.databaseProvider.SleepRecordsTable
 import anonymouls.dev.mgcex.util.HRAnalyzer
@@ -71,6 +72,7 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
     //endregion
 
     private var firstLaunch = true
+    private var ci = CommandInterpreter.getInterpreter(activity)!!
 
     init {
         instance = this
@@ -171,9 +173,10 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
         })
 
 
-        if (Algorithm.StatusCode.value!!.code < Algorithm.StatusCodes.GattReady.code)
+        if (Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.GattReady.code
+                && ci.hRRealTimeControlSupport) _hrVisibility.postValue(View.VISIBLE)
+        else
             _hrVisibility.postValue(View.GONE)
-        else _hrVisibility.postValue(View.VISIBLE)
         if (savedCCals != -1) _lastCcalsIncomed.postValue(savedCCals)
         if (savedSteps != -1) _lastStepsIncomed.postValue(savedSteps)
         if (savedBattery != -1) _batteryHolder.postValue(savedBattery)

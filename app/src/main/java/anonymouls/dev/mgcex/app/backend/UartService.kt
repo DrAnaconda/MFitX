@@ -58,16 +58,20 @@ class UartService : Service() {
 
     private fun broadcastUpdate(action: String, characteristic: BluetoothGattCharacteristic) {
         val intent = Intent(action)
-        if (TX_CHAR_UUID == characteristic.uuid) {
-            intent.putExtra(EXTRA_DATA, characteristic.value)
-        }
+        intent.putExtra(EXTRA_DATA, characteristic.value)
+        intent.putExtra(EXTRA_CHARACTERISTIC, characteristic.uuid.toString())
         sendBroadcast(intent)
     }
 
     inner class LocalBinder : Binder()
 
+    init {
+        CommandInterpreter.getInterpreter(this)
+    }
+
     override fun onBind(intent: Intent): IBinder? {
         instance = this
+        CommandInterpreter.getInterpreter(this)
         Thread.currentThread().priority = Thread.NORM_PRIORITY
         Thread.currentThread().name = "UARTService"
         return mBinder
@@ -210,8 +214,6 @@ class UartService : Service() {
 
         var instance: UartService? = null
 
-        private val TAG = UartService::class.java.simpleName
-
         var mBluetoothManager: BluetoothManager? = null
         private var mBluetoothGatt: BluetoothGatt? = null
 
@@ -227,15 +229,18 @@ class UartService : Service() {
         const val ACTION_DATA_AVAILABLE = "ACTION_DATA_AVAILABLE"
         const val ACTION_GATT_INIT_FAILED = "GATT_INIT_FAILED"
         const val EXTRA_DATA = "EXTRA_DATA"
+        const val EXTRA_CHARACTERISTIC = "EXTRA_CHAR"
         const val DEVICE_DOES_NOT_SUPPORT_UART = "DEVICE_DOES_NOT_SUPPORT_UART"
 
-        val TX_POWER_UUID = UUID.fromString("00001804-0000-1000-8000-00805f9b34fb")
-        val TX_POWER_LEVEL_UUID = UUID.fromString("00002a07-0000-1000-8000-00805f9b34fb")
         val CCCD = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
         val FIRMWARE_REVISON_UUID = UUID.fromString("00002a26-0000-1000-8000-00805f9b34fb")
         val DIS_UUID = UUID.fromString("0000180a-0000-1000-8000-00805f9b34fb")
-        val RX_SERVICE_UUID = UUID.fromString("6e400001-b5a3-f393-e0a9-e50e24dcca9e")
-        val RX_CHAR_UUID = UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e")
-        val TX_CHAR_UUID = UUID.fromString("6e400003-b5a3-f393-e0a9-e50e24dcca9e")
+
+        var PowerServiceUUID = UUID.fromString("00001804-0000-1000-8000-00805f9b34fb")
+        var PowerTXUUID = UUID.fromString("00002a07-0000-1000-8000-00805f9b34fb")
+
+        var RX_SERVICE_UUID = UUID.fromString("6e400001-b5a3-f393-e0a9-e50e24dcca9e")
+        var RX_CHAR_UUID = UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e")
+        var TX_CHAR_UUID = UUID.fromString("6e400003-b5a3-f393-e0a9-e50e24dcca9e")
     }
 }

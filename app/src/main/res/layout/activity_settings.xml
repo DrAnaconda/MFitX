@@ -141,6 +141,7 @@
                 android:layout_marginStart="8dp"
                 android:layout_marginTop="8dp"
                 android:layout_marginEnd="8dp"
+                android:onClick="onClickHandler"
                 android:text="@string/disconnect_btn_text"
                 android:textSize="6pt"
                 app:layout_constraintEnd_toEndOf="parent"

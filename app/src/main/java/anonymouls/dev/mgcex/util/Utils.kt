@@ -157,4 +157,11 @@ object Utils {
             else -> (diff.toDouble() / 1000 / 60 / 60 / 24).roundToInt()
         }
     }
+
+    fun subIntegerConversionCheck(CheckIn: String): String {
+        return if (CheckIn.length != 2) {
+            "0" + CheckIn.toUpperCase(Locale.ROOT)
+        } else
+            CheckIn
+    }
 }

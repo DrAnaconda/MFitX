@@ -39,7 +39,6 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
         if (Time.time > Calendar.getInstance().time) return
         var ResultHR = HRValue
         if (ResultHR < 0) ResultHR = (ResultHR and 0xFF)
-        //if (DeviceControllerViewModel.instance?..IsAlarmWaiting) DeviceControllerViewModel.instance?..SelfPointer?.alarmTriggerDecider(ResultHR)
         if (lastSyncHR <= CustomDatabaseUtils.CalendarToLong(Time, true)) {
             DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(ResultHR); savedValues.savedHR = ResultHR
             lastSyncHR = CustomDatabaseUtils.CalendarToLong(Time, true)
@@ -56,8 +55,6 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
                 DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(ResultHR); savedValues.savedHR = ResultHR
                 lastSyncHR = CustomDatabaseUtils.CalendarToLong(Time, true)
             }
-
-            //if (DeviceControllerViewModel.instance?..IsAlarmWaiting) DeviceControllerViewModel.instance?..SelfPointer?.alarmTriggerDecider(ResultHR)
         } catch (Ex: Exception) {
 
         }

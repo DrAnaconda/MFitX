@@ -29,12 +29,11 @@ object AdvancedActivityTracker {
     }
 
     fun insertRecord(time: Calendar, deltaMin: Int, speedMin: Double, db: SQLiteDatabase): Long {
-        if (deltaMin < 5) return -1
-        return insertRecord(CustomDatabaseUtils.CalendarToLong(time, true), deltaMin, speedMin, db)
+        return insertRecord(CustomDatabaseUtils.CalendarToLong(time, true),
+                deltaMin, speedMin, db)
     }
 
     fun insertRecord(time: Long, deltaMin: Int, speedMin: Double, db: SQLiteDatabase): Long {
-        if (deltaMin < 5) return -1
         val content = ContentValues()
         content.put(TableColumns[2], deltaMin)
         content.put(TableColumns[3], speedMin)

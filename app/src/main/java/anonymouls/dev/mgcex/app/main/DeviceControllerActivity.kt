@@ -15,6 +15,7 @@ import android.view.View
 import android.view.Window
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.ViewModelProviders
 import anonymouls.dev.mgcex.app.AlarmActivity
@@ -65,7 +66,7 @@ class DeviceControllerActivity : AppCompatActivity() {
         if (Algorithm.IsAlarmingTriggered) {
             Algorithm.IsAlarmKilled = true
             Algorithm.IsAlarmWaiting = false
-            Algorithm.postCommand(CommandInterpreter.StopLongAlarm(), false)
+            CommandInterpreter.getInterpreter(this)!!.stopLongAlarm()
             val mNotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             mNotificationManager.cancel(21)
         }
@@ -134,8 +135,8 @@ class DeviceControllerActivity : AppCompatActivity() {
                 return
             }
             CommandCallbacks.SelfPointer = CommandCallbacks(this)
-            CommandController = CommandInterpreter()
-            CommandInterpreter.Callback = CommandCallbacks.SelfPointer
+            CommandController = CommandInterpreter.getInterpreter(this)!!
+            CommandController.callback = CommandCallbacks.SelfPointer
             if (Algorithm.NextSync != null)
                 DeviceControllerViewModel.instance?._currentStatus?.postValue(getString(R.string.status_connected_next_sync) + SimpleDateFormat("HH:mm", Locale.getDefault()).format(Algorithm.NextSync!!.time))
             initAlgo()
@@ -171,7 +172,9 @@ class DeviceControllerActivity : AppCompatActivity() {
     fun onClickHandler(view: View) {
         val ID = view.id
         when (ID) {
-            R.id.realtimeHRSync -> Algorithm.postCommand(CommandInterpreter.HRRealTimeControl((view as Switch).isChecked), false)
+            R.id.realtimeHRSync -> {
+                CommandController.hRRealTimeControl((view as Switch).isChecked)
+            }
             R.id.ExitBtnContainer -> {
                 Algorithm.IsActive = false
                 Algorithm.SelfPointer?.stopSelf()
@@ -202,9 +205,13 @@ class DeviceControllerActivity : AppCompatActivity() {
                 Algorithm.IsAlarmingTriggered = false
                 Algorithm.IsAlarmWaiting = false
                 Algorithm.IsAlarmKilled = true
-                view.background = getDrawable(R.drawable.custom_border)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    view.background = getDrawable(R.drawable.custom_border)
+                } else {
+                    view.background = ContextCompat.getDrawable(this, R.drawable.custom_border)
+                }
                 Algorithm.MainSyncPeriodSeconds = 310000
-                Algorithm.postCommand(CommandInterpreter.StopLongAlarm(), false)
+                CommandController.stopLongAlarm()
             } else {
                 val alarmIntent = Intent(baseContext, AlarmActivity::class.java)
                 alarmIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

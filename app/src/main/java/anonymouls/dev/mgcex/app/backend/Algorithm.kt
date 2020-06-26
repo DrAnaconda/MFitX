@@ -4,7 +4,6 @@ import android.app.IntentService
 import android.app.Service
 import android.content.*
 import android.content.pm.PackageManager
-import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.view.View
@@ -36,6 +35,7 @@ class Algorithm : IntentService("Syncer") {
     private var database: DatabaseController? = null
     private var prefs: SharedPreferences? = null
     private var workInProgress = false
+    private var ci: CommandInterpreter? = null
     var thread: Thread? = null
 
     private var serviceObject: IBinder? = null
@@ -71,6 +71,7 @@ class Algorithm : IntentService("Syncer") {
 
     fun init() {
         if (IsInit) return
+        ci = CommandInterpreter.getInterpreter(this)
         val dCAct = Intent(this, DeviceControllerActivity::class.java)
         dCAct.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         var service = Intent(this, UartService::class.java)
@@ -139,28 +140,21 @@ class Algorithm : IntentService("Syncer") {
     }
 
     fun postShortMessageDivider(Input: String) {
-        val Req = CommandInterpreter.BuildNotify(Input)
-        var Req1 = Arrays.copyOfRange(Req, 0, 20)
-        postCommand(Req1, false)
-        Thread.sleep(50)
-        Req1 = Arrays.copyOfRange(Req, 20, 40)
-        postCommand(Req1, false)
-        Thread.sleep(50)
-        Req1 = Arrays.copyOfRange(Req, 40, 46)
-        postCommand(Req1, false)
-        Thread.sleep(50)
+
     }
 
     private fun executeForceSync() {
         DeviceControllerViewModel.instance?.workInProgress?.postValue(View.VISIBLE)
         GlobalScope.launch(Dispatchers.IO) { database?.initRepairsAndSync(database!!.writableDatabase) }
-        postCommand(CommandInterpreter.SyncTime(Calendar.getInstance()), false)
+        ci?.requestBatteryStatus()
         customWait(1000)
-        postCommand(CommandInterpreter.getMainInfoRequest(), false)
+        ci?.syncTime(Calendar.getInstance())
         customWait(1000)
-        postCommand(CommandInterpreter.requestSleepHistory(getLastSleepSync()), false)
+        ci?.getMainInfoRequest()
         customWait(1000)
-        postCommand(CommandInterpreter.requestHRHistory(getLastHRSync()), false)
+        ci?.requestSleepHistory(getLastSleepSync())
+        customWait(1000)
+        ci?.requestHRHistory(getLastHRSync())
         customWait(1000)
         //if (IsAlarmingTriggered && !IsFromActivity) alarmTriggerDecider(0)
     }
@@ -237,14 +231,11 @@ class Algorithm : IntentService("Syncer") {
 //endregion
 
     fun forceSyncHR() {
-        postCommand(CommandInterpreter.HRRealTimeControl(true), false)
-        customWait(15000)
-        postCommand(CommandInterpreter.HRRealTimeControl(false), true)
-    }
-
-    inner class LocalBinder : Binder() {
-        internal val service: Algorithm
-            get() = this@Algorithm
+        if (ci != null && ci!!.hRRealTimeControlSupport) {
+            ci?.hRRealTimeControl(true)
+            customWait(15000)
+            ci?.hRRealTimeControl(false)
+        }
     }
 
     override fun onBind(intent: Intent): IBinder? {
@@ -289,13 +280,6 @@ class Algorithm : IntentService("Syncer") {
                     PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
             pm.setComponentEnabledSetting(ComponentName(context, NotificationService::class.java),
                     PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
-        }
-
-        fun postCommand(Request: ByteArray, IsForAlarm: Boolean) {
-            if ((IsForAlarm && AlarmFiredIterator % 50 == 0) || !IsForAlarm) {
-                val RThread = { UartService.instance!!.writeRXCharacteristic(Request) }
-                RThread.run { UartService.instance!!.writeRXCharacteristic(Request) }
-            }
         }
 
         private fun customWait(MiliSecs: Long) {

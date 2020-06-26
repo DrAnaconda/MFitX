@@ -3,7 +3,7 @@ package anonymouls.dev.mgcex.app.main
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
+import android.os.Build
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -15,20 +15,22 @@ import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.backend.Algorithm
 import anonymouls.dev.mgcex.app.backend.CommandInterpreter
 import anonymouls.dev.mgcex.app.backend.NotificationService
+import anonymouls.dev.mgcex.app.scanner.ScanActivity
 import anonymouls.dev.mgcex.databaseProvider.DatabaseController
 import anonymouls.dev.mgcex.databaseProvider.NotifyFilterTable
 import anonymouls.dev.mgcex.util.Analytics
 import anonymouls.dev.mgcex.util.Utils
-import okhttp3.internal.Util
 
 class SettingsActivity : Activity() {
     private var packagesList: TableLayout? = null
 
     private var dataView = false
+    private lateinit var commandController: CommandInterpreter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
+        commandController = CommandInterpreter.getInterpreter(this)!!
         initViews()
     }
 
@@ -85,16 +87,16 @@ class SettingsActivity : Activity() {
     }
 
     private fun sendEraseDatabaseCommand() {
-        if (Algorithm.StatusCode.value!!.code >= 3) {
-            Algorithm.postCommand(CommandInterpreter.EraseDatabase(), false)
+        if (Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.Connected.code) {
+            commandController.eraseDatabase()
         } else {
             showNotConnectedErrorToast()
         }
     }
 
     private fun sendResetCommand() {
-        if (Algorithm.StatusCode.value!!.code >= 3) {
-            Algorithm.postCommand(CommandInterpreter.RestoreToDefaults(), false)
+        if (Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.Connected.code) {
+            commandController.restoreToDefaults()
         } else {
             showNotConnectedErrorToast()
         }
@@ -104,10 +106,13 @@ class SettingsActivity : Activity() {
         val IsConnected = Utils.getSharedPrefs(this).getBoolean("IsConnected", false)
         if (IsConnected) {
             Utils.getSharedPrefs(this).edit().putBoolean("IsConnected", false).apply()
+            Utils.getSharedPrefs(this).edit().remove(bandIDConst).apply()
             Algorithm.IsActive = false
-            DeviceControllerActivity.instance!!.finish()
+            DeviceControllerActivity.instance?.finish()
             setContentView(R.layout.activity_scan)
             finish()
+            val intent = Intent(baseContext, ScanActivity::class.java)
+            startActivity(intent)
         }
     }
 
@@ -129,7 +134,11 @@ class SettingsActivity : Activity() {
             val iconApp = packageManager.getApplicationIcon(Content)
             appIcon.setImageDrawable(iconApp)
         } catch (ex: Exception) {
-            appIcon.setImageDrawable(getDrawable(android.R.drawable.ic_menu_help))
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                appIcon.setImageDrawable(getDrawable(android.R.drawable.ic_menu_help))
+            } else {
+                appIcon.setImageResource(android.R.drawable.ic_menu_help)
+            }
             drop = true
         }
 
@@ -191,7 +200,7 @@ class SettingsActivity : Activity() {
                 Utils.getSharedPrefs(this).edit().putBoolean("NotificationGranted", true).apply()
             }
             R.id.GyroSwitch -> {
-                CommandInterpreter.SetGyroAction(findViewById<Switch>(v.id).isChecked)
+                commandController.setGyroAction(findViewById<Switch>(v.id).isChecked)
                 Utils.getSharedPrefs(this).edit().putBoolean("Illumination", findViewById<Switch>(v.id).isChecked).apply()
             }
             R.id.PhoneSwitch -> Utils.getSharedPrefs(this).edit().putBoolean("ReceiveCalls", findViewById<Switch>(v.id).isChecked).apply()
@@ -241,5 +250,6 @@ class SettingsActivity : Activity() {
         const val repeatsNumbers = "repeatsNumber"
         const val stepsSize = "Step_Size"
         const val lightSleepIgnore = "LightIgnore"
+        const val bandIDConst = "BandID"
     }
 }

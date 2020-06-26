@@ -16,6 +16,7 @@ object AdsController {
     // Test : ca-app-pub-3940256099942544/1033173712 Big xren`
     private var savedContext: Context? = null
     private var adTimer = Timer()
+    private var adFree = true
 
     private fun adTimerTask(bigScreen: InterstitialAd) {
         if (bigScreen.isLoaded) {
@@ -27,6 +28,7 @@ object AdsController {
 
 
     fun initAdBanned(adObject: AdView, activity: Activity) {
+        if (adFree) return
         GlobalScope.launch { MobileAds.initialize(activity) }
         savedContext = activity
         //adObject.adListener = defaultListener
@@ -34,6 +36,7 @@ object AdsController {
     }
 
     fun showUltraRare(activity: Activity): InterstitialAd? {
+        if (adFree) return null
         if (Math.random().toInt() % 10 == 0) return null
         savedContext = activity
         //MobileAds.initialize(activity)

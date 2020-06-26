@@ -52,9 +52,11 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
         SleepRecordsTable.fixDurations(db)
     }
 
-    fun migrateToExternal(activity: Activity?) {
-        val newDatabaseDir = Environment.getExternalStorageDirectory().toString() + File.separator + "Android" + File.separator + "Data" + File.separator + "dev.anonymouls.MGCEX"
-        val newDatabaseName = Environment.getExternalStorageDirectory().toString() + File.separator + "Android" + File.separator + "Data" + File.separator + "dev.anonymouls.MGCEX" + File.separator + "MGCEX.db"
+    fun migrateToExternal(activity: Activity) {
+        val newDatabaseDir = Environment.getExternalStorageDirectory().toString() + File.separator + "Android" + File.separator + "Data" +
+                File.separator + activity.applicationContext.packageName
+        val newDatabaseName = Environment.getExternalStorageDirectory().toString() + File.separator + "Android" + File.separator + "Data" +
+                File.separator + activity.applicationContext.packageName + File.separator + "MGCEX.db"
         if (!File(newDatabaseName).exists()) {
             File(newDatabaseDir).mkdirs()
             File(newDatabaseDir).mkdir()

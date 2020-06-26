@@ -17,8 +17,9 @@ class PhoneStateListenerBroadcast : BroadcastReceiver() {
             val extras = intent.extras
             val State = extras!!.getString(TelephonyManager.EXTRA_STATE)
             var IncomingNumber: String = extras.get(TelephonyManager.EXTRA_INCOMING_NUMBER) as String // TODO upgrade in 29
+            val ci = CommandInterpreter.getInterpreter(context)
             when (State) {
-                "IDLE", "OFFHOOK" -> Algorithm.postCommand(CommandInterpreter.StopLongAlarm(), false)
+                "IDLE", "OFFHOOK" -> ci?.stopLongAlarm()
                 "RINGING" -> {
                     val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(IncomingNumber))
                     val cursor: Cursor?
@@ -32,7 +33,7 @@ class PhoneStateListenerBroadcast : BroadcastReceiver() {
                         // ignore
                     }
 
-                    Algorithm.postCommand(CommandInterpreter.BuildLongNotify(IncomingNumber), false)
+                    ci?.buildLongNotify(IncomingNumber)
                 }
             }
         }

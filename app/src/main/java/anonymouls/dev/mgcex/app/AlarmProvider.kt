@@ -1,8 +1,8 @@
 package anonymouls.dev.mgcex.app
 
+import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import anonymouls.dev.mgcex.app.backend.Algorithm
 import anonymouls.dev.mgcex.app.backend.CommandInterpreter
 import anonymouls.dev.mgcex.databaseProvider.AlarmsTable
 import java.util.*
@@ -29,14 +29,15 @@ class AlarmProvider(var Hour: Int, var Minute: Int, var DayMask: Int, ID: Long, 
         AlarmsTable.updateRecord(this, Operator)
     }
 
-    fun saveAlarmRecord(Operator: SQLiteDatabase): Long {
+    fun saveAlarmRecord(Operator: SQLiteDatabase, context: Context): Long {
         val DefID: Long = -1
         if (this.ID == DefID)
             performInsertOperation(Operator)
         else
             performUpdateInformation(Operator)
-        if (IsSyncable != lastSyncable)
-            Algorithm.postCommand(CommandInterpreter.SetAlarm(ID, IsEnabled, Hour, Minute, DayMask), false)
+        if (IsSyncable != lastSyncable) {
+            CommandInterpreter.getInterpreter(context)?.setAlarm(ID, IsEnabled, Hour, Minute, DayMask)
+        }
         return ID
     }
 

@@ -13,6 +13,7 @@ import kotlin.collections.ArrayDeque
 class UartServiceBroadcastInterpreter : BroadcastReceiver() {
 
     private var tsk = InsertTask()
+    private var isInited = false
 
     @ExperimentalStdlibApi
     override fun onReceive(context: Context, intent: Intent) {
@@ -22,7 +23,7 @@ class UartServiceBroadcastInterpreter : BroadcastReceiver() {
                 Algorithm.IsAlarmKilled = true
                 Algorithm.IsAlarmWaiting = false
                 Algorithm.IsAlarmingTriggered = false
-                Algorithm.postCommand(CommandInterpreter.StopLongAlarm(), false)
+                CommandInterpreter.getInterpreter(context)?.stopLongAlarm()
                 val mNotificationManager = Algorithm.SelfPointer?.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 mNotificationManager.cancel(21)
             }
@@ -44,9 +45,18 @@ class UartServiceBroadcastInterpreter : BroadcastReceiver() {
                 //Algorithm.LastStatus = "Status : Device lost. Trying to reconnect"
             }
             UartService.ACTION_DATA_AVAILABLE -> {
+                if (!isInited) {
+                    tsk.ci = CommandInterpreter.getInterpreter(context)
+                    isInited = true
+                }
+
                 if (Algorithm.StatusCode.value!!.code < Algorithm.StatusCodes.GattReady.code)
                     Algorithm.StatusCode.postValue(Algorithm.StatusCodes.GattReady)
-                tsk.dataToHandle.add(intent.getByteArrayExtra(UartService.EXTRA_DATA)!!)
+                tsk.dataToHandle.add(
+                        SimpleRecord(
+                                intent.getByteArrayExtra(UartService.EXTRA_DATA)!!,
+                                intent.getStringExtra(UartService.EXTRA_CHARACTERISTIC)!!
+                        ))
                 tsk.thread?.interrupt()
                 if (tsk.status == AsyncTask.Status.FINISHED) tsk = InsertTask()
                 else if (tsk.status != AsyncTask.Status.RUNNING) {
@@ -65,12 +75,15 @@ class UartServiceBroadcastInterpreter : BroadcastReceiver() {
 
 }
 
+class SimpleRecord(val Data: ByteArray, val characteristic: String)
+
 class InsertTask : AsyncTask<Void, Void, Void>() {
 
     @ExperimentalStdlibApi
-    val dataToHandle = ArrayDeque<ByteArray>()
+    val dataToHandle = ArrayDeque<SimpleRecord>()
     var thread: Thread? = null
     var timer: Timer = Timer("UIKostilSyncer")
+    var ci: CommandInterpreter? = null
 
     private var confirmA = false
     private var confirmB = false
@@ -96,7 +109,8 @@ class InsertTask : AsyncTask<Void, Void, Void>() {
             if (dataToHandle.size > 0) _insertedRunning.postValue(true)
             while (dataToHandle.size > 0) {
                 try {
-                    CommandInterpreter.CommandAction(dataToHandle.removeFirst())
+                    val sm = dataToHandle.removeFirst()
+                    ci?.commandAction(sm.Data, UUID.fromString(sm.characteristic))
                     confirmA = false; confirmB = false
                 } catch (ex: Exception) {
 

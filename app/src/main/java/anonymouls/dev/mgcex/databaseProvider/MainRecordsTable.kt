@@ -71,8 +71,7 @@ object MainRecordsTable {
     }
 
     fun insertRecordV2(TimeRecord: Calendar, Steps: Int, Calories: Int, Operator: SQLiteDatabase): Long {
-        if (CustomDatabaseUtils.CalendarToLong(TimeRecord, false) >
-                CustomDatabaseUtils.CalendarToLong(Calendar.getInstance(), true)) return -1
+        if (TimeRecord.time > Calendar.getInstance().time) return -1
         val Values = ContentValues()
         val recordDate = CustomDatabaseUtils.CalendarToLong(TimeRecord, true)
         Values.put(ColumnNames[1], recordDate)

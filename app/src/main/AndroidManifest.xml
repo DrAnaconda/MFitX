@@ -40,7 +40,7 @@
             android:theme="@style/AppBaseTheme.NoActionBar" />
 
         <activity
-            android:name="anonymouls.dev.mgcex.app.Scanner.ScanActivity"
+            android:name="anonymouls.dev.mgcex.app.scanner.ScanActivity"
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
