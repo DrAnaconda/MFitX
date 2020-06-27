@@ -1,8 +1,13 @@
-package anonymouls.dev.mgcex.app.Scanner
+package anonymouls.dev.mgcex.app.scanner
 
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
+import android.os.Build
+import androidx.annotation.RequiresApi
 
+@RequiresApi(Build.VERSION_CODES.LOLLIPOP)
 class ScannerCallback(private val ScannerActivity: ScanActivity) : ScanCallback() {
 
     override fun onScanResult(callbackType: Int, result: ScanResult) {
@@ -17,5 +22,11 @@ class ScannerCallback(private val ScannerActivity: ScanActivity) : ScanCallback(
                 ScannerActivity.runOnUiThread { ScannerActivity.mDeviceAdapter.update(Result.device) }
             }
         }
+    }
+}
+
+class DeprecatedScanner(private val ScannerActivity: ScanActivity) : BluetoothAdapter.LeScanCallback {
+    override fun onLeScan(device: BluetoothDevice?, rssi: Int, scanRecord: ByteArray?) {
+        ScannerActivity.runOnUiThread { ScannerActivity.mDeviceAdapter.update(device) }
     }
 }

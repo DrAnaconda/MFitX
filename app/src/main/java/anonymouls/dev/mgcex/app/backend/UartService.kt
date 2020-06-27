@@ -151,23 +151,28 @@ class UartService : Service() {
         mBluetoothGatt = null
     }
 
-    fun readCharacteristic(characteristic: BluetoothGattCharacteristic) {
+    fun readCharacteristic(service: UUID, txService: UUID) {
         if (mBluetoothAdapter == null || mBluetoothGatt == null) {
             return
         }
-        mBluetoothGatt!!.readCharacteristic(characteristic)
+        for (x in mBluetoothGatt!!.services) {
+            if (x.uuid == service) {
+                for (y in x.characteristics) {
+                    if (y.uuid == txService) {
+                        mBluetoothGatt!!.readCharacteristic(y)
+                        return
+                    }
+                }
+            }
+        }
     }
 
-    fun enableTXNotification() {
-        val RxService = mBluetoothGatt!!.getService(RX_SERVICE_UUID) ?: return
-        val TxChar = RxService.getCharacteristic(TX_CHAR_UUID)
-        if (TxChar == null) {
-            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_UART)
-            return
-        }
+    fun enableTXNotification(service: UUID, txService: UUID, txDescriptor: UUID) {
+        val RxService = mBluetoothGatt!!.getService(service) ?: return
+        val TxChar = RxService.getCharacteristic(txService)
         mBluetoothGatt!!.setCharacteristicNotification(TxChar, true)
 
-        val descriptor = TxChar.getDescriptor(CCCD)
+        val descriptor = TxChar.getDescriptor(txDescriptor)
         descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
         mBluetoothGatt!!.writeDescriptor(descriptor)
 
@@ -232,15 +237,13 @@ class UartService : Service() {
         const val EXTRA_CHARACTERISTIC = "EXTRA_CHAR"
         const val DEVICE_DOES_NOT_SUPPORT_UART = "DEVICE_DOES_NOT_SUPPORT_UART"
 
-        val CCCD = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
-        val FIRMWARE_REVISON_UUID = UUID.fromString("00002a26-0000-1000-8000-00805f9b34fb")
-        val DIS_UUID = UUID.fromString("0000180a-0000-1000-8000-00805f9b34fb")
-
         var PowerServiceUUID = UUID.fromString("00001804-0000-1000-8000-00805f9b34fb")
         var PowerTXUUID = UUID.fromString("00002a07-0000-1000-8000-00805f9b34fb")
+        var PowerDescriptor = UUID.randomUUID()
 
         var RX_SERVICE_UUID = UUID.fromString("6e400001-b5a3-f393-e0a9-e50e24dcca9e")
         var RX_CHAR_UUID = UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e")
         var TX_CHAR_UUID = UUID.fromString("6e400003-b5a3-f393-e0a9-e50e24dcca9e")
+        var TXServiceDesctiptor = UUID.randomUUID()
     }
 }

@@ -1,4 +1,4 @@
-package anonymouls.dev.mgcex.app.Scanner
+package anonymouls.dev.mgcex.app.scanner
 
 import android.Manifest
 import android.app.Activity
@@ -22,6 +22,7 @@ import android.widget.ProgressBar
 import android.widget.Toast
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
+import anonymouls.dev.mgcex.app.main.SettingsActivity
 import anonymouls.dev.mgcex.util.Analytics
 import anonymouls.dev.mgcex.util.Utils
 import java.util.*
@@ -34,6 +35,7 @@ class ScanActivity : Activity() {
     private var mIsScanning: Boolean = false
     private var mScanner: BluetoothLeScanner? = null
     private lateinit var LECallback: ScannerCallback
+    private lateinit var deprecatedScanner: DeprecatedScanner
 
 //region default android
 
@@ -72,11 +74,18 @@ class ScanActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_scan)
         if (Utils.isDeviceSupported(this)) {
-            LECallback = ScannerCallback(this)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                LECallback = ScannerCallback(this)
+            } else {
+                deprecatedScanner = DeprecatedScanner(this)
+            }
             Prefs = Utils.getSharedPrefs(this)
-            if (Prefs!!.contains("IsConnected") && Prefs!!.contains("BandAddress")) {
+            if (Prefs!!.contains("IsConnected") && Prefs!!.contains("BandAddress")
+                    && Prefs!!.contains(SettingsActivity.bandIDConst)) {
                 if (Prefs!!.getBoolean("IsConnected", false)) {
-                    openDeviceControlActivity(this.baseContext, Prefs!!.getString("BandAddress", null))
+                    openDeviceControlActivity(this.baseContext,
+                            Prefs!!.getString("BandAddress", null),
+                            Prefs!!.getString(SettingsActivity.bandIDConst, null))
                     this.finish()
                 } else
                     init()
@@ -121,7 +130,7 @@ class ScanActivity : Activity() {
                 stopScan(); return true
             }
             R.id.action_skip -> {
-                this.openDeviceControlActivity(this, null); return true
+                this.openDeviceControlActivity(this, null, null); return true
             }
         }
         return super.onOptionsItemSelected(item)
@@ -138,7 +147,7 @@ class ScanActivity : Activity() {
             val item = mDeviceAdapter.getItem(position)
             if (item != null) {
                 stopScan()
-                openDeviceControlActivity(baseContext, item.address)
+                openDeviceControlActivity(baseContext, item.address, item.name)
                 this.finish()
             }
         }
@@ -148,15 +157,19 @@ class ScanActivity : Activity() {
 
 //region Logic
 
-    private fun openDeviceControlActivity(view: Context, LockedAddress: String?) {
-        val intent = Intent(view, DeviceControllerActivity::class.java)
+    private fun openDeviceControlActivity(context: Context, LockedAddress: String?, DeviceName: String?) {
+        val intent = Intent(context, DeviceControllerActivity::class.java)
+
+        if (DeviceName != null) {
+            Utils.getSharedPrefs(this).edit().putString(SettingsActivity.bandIDConst, DeviceName).apply()
+        }
         if (LockedAddress != null) {
             intent.putExtra(DeviceControllerActivity.ExtraDevice, LockedAddress)
             val PEditor = Prefs!!.edit()
             PEditor.putBoolean("IsConnected", true)
             PEditor.putString("BandAddress", LockedAddress)
             PEditor.apply()
-        }
+        } else Utils.getSharedPrefs(this).edit().remove(SettingsActivity.bandIDConst).apply()
         startActivity(intent)
     }
 
@@ -188,11 +201,17 @@ class ScanActivity : Activity() {
 
     private fun startScan() {
         if (!checkLocationEnabled()) return
-        findViewById<ProgressBar>(R.id.scanInProgress).visibility = View.VISIBLE
         if (BManager != null && BManager!!.adapter.isEnabled) {
+            findViewById<ProgressBar>(R.id.scanInProgress).visibility = View.VISIBLE
             mBTAdapter = BManager!!.adapter
-            if (mScanner == null) mScanner = mBTAdapter!!.bluetoothLeScanner
-            mScanner!!.startScan(LECallback)
+            if (mScanner == null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    mScanner = mBTAdapter!!.bluetoothLeScanner
+                    mScanner!!.startScan(LECallback)
+                } else {
+                    mBTAdapter!!.startLeScan(deprecatedScanner)
+                }
+            }
             mIsScanning = true
             invalidateOptionsMenu()
         } else {
@@ -201,8 +220,15 @@ class ScanActivity : Activity() {
     }
 
     private fun stopScan() {
-        if (mBTAdapter != null) {
-            mScanner!!.stopScan(LECallback)
+        try {
+            if (mBTAdapter != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    mScanner!!.stopScan(LECallback)
+                }
+            } else {
+                mBTAdapter!!.stopLeScan(deprecatedScanner)
+            }
+        } catch (e: Exception) {
         }
         mIsScanning = false
         findViewById<ProgressBar>(R.id.scanInProgress).visibility = View.GONE

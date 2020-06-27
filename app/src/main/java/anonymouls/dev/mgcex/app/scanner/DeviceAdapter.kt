@@ -1,4 +1,4 @@
-package anonymouls.dev.mgcex.app.Scanner
+package anonymouls.dev.mgcex.app.scanner
 
 import android.bluetooth.BluetoothDevice
 import android.content.Context

@@ -2,15 +2,12 @@
 
 package anonymouls.dev.mgcex.app.backend
 
-import android.bluetooth.BluetoothGattCharacteristic
 import android.content.Context
 import android.widget.Toast
 import anonymouls.dev.mgcex.app.main.SettingsActivity
 import anonymouls.dev.mgcex.util.Utils
 import java.nio.ByteBuffer
 import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.math.pow
 
 
 abstract class CommandInterpreter {
@@ -97,6 +94,7 @@ abstract class CommandInterpreter {
     abstract fun setAlarm(AlarmID: Long, IsEnabled: Boolean, Hour: Int, Minute: Int, Days: Int)
     abstract fun fireNotification(Input: String)
     abstract fun requestBatteryStatus()
+    abstract fun requestManualHRMeasure()
 }
 
 class MGCOOL4CommandInterpreter : CommandInterpreter() {
@@ -120,6 +118,7 @@ class MGCOOL4CommandInterpreter : CommandInterpreter() {
         private const val UARTRXServiceUUIDString = "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
         private const val UARTRXUUIDString = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
         private const val UARTTXUUIDString = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
+        private const val UARTDescriptor = "00002902-0000-1000-8000-00805f9b34fb"
     }
 
     init {
@@ -128,6 +127,7 @@ class MGCOOL4CommandInterpreter : CommandInterpreter() {
         UartService.RX_CHAR_UUID = UUID.fromString(UARTRXUUIDString)
         UartService.TX_CHAR_UUID = UUID.fromString(UARTTXUUIDString)
         UartService.RX_SERVICE_UUID = UUID.fromString(UARTRXServiceUUIDString)
+        UartService.TXServiceDesctiptor = UUID.fromString(UARTDescriptor)
     }
 
     override fun getMainInfoRequest() {
@@ -342,6 +342,10 @@ class MGCOOL4CommandInterpreter : CommandInterpreter() {
         return
     }
 
+    override fun requestManualHRMeasure() {
+        return // not supported
+    }
+
 
 }
 
@@ -349,55 +353,45 @@ class LM517CommandInterpreter : CommandInterpreter() {
     companion object {
         const val CodeName = "LM716"
 
-        private const val syncTimeCommandHeader = "CD000912010100"
+        private const val syncTimeCommandHeader = "CD00091201010004"
         private const val longAlarmHeader = "CD0014120111000F"
         private const val notifyHeader = "CD00291201120024010000"
 
         private const val UARTServiceUUIDString = "6e400001-b5a3-f393-e0a9-e50e24dcca9d"
         private const val UARTRXUUIDString = "6e400002-b5a3-f393-e0a9-e50e24dcca9d"
         private const val UARTTXUUIDString = "6e400003-b5a3-f393-e0a9-e50e24dcca9d"
-        private const val PowerServiceString = "0000180f-0000-1000-8000-008005f9b34fb"
-        private const val PowerTXString = "00002a19-0000-10000-8000-008005f9b34fb"
+        private const val UARTDescriptor = "00002902-0000-1000-8000-00805f9b34fb" // 00002902-0000-1000-8000-00805f9b34fb
+        private const val PowerServiceString = "0000180f-0000-1000-8000-00805f9b34fb"
+        private const val PowerTXString = "00002a19-0000-1000-8000-00805f9b34fb"
+        private const val PowerTX2String = "00002a19-0000-0000-8000-00805f9b34fb"
+        private const val PowerDescriptor = "00002902-0000-1000-8000-00805f9b34fb"
     }
 
     init {
         UartService.RX_SERVICE_UUID = UUID.fromString(UARTServiceUUIDString)
         UartService.RX_CHAR_UUID = UUID.fromString(UARTRXUUIDString)
         UartService.TX_CHAR_UUID = UUID.fromString(UARTTXUUIDString)
+        UartService.TXServiceDesctiptor = UUID.fromString(UARTDescriptor)
         UartService.PowerServiceUUID = UUID.fromString(PowerServiceString)
         UartService.PowerTXUUID = UUID.fromString(PowerTXString)
+        UartService.PowerDescriptor = UUID.fromString(PowerDescriptor)
     }
 
     //region Helpers
-
-    private fun timePartToBits(Target: Int, dividerFactor: Int = 32): ArrayList<Boolean> {
-        val result = ArrayList<Boolean>()
-        var target = Target
-        var divider = dividerFactor
-        while (true) {
-            if (target % divider == 0) result.add(true) else result.add(false)
-            target %= divider
-            if (divider <= 1) break
-            divider /= 2
-        }
-        return result
-    }
-
-    private fun concatBits(param: ArrayList<Boolean>): String {
-        var int = 0
-        for (x in param.indices) {
-            if (param[x]) {
-                int += x.toDouble().pow(2).toInt()
-            }
-        }
-        return Integer.toHexString(int)
-    }
-
-    private fun decryptDays(offset: Int, targetCalendar: Calendar?): Calendar {
-        var result = targetCalendar ?: Calendar.getInstance()
+    // TODO Maybe this function is wrong
+    private fun createSpecialCalendar(): Calendar {
+        val result = Calendar.getInstance()
         result.set(Calendar.MONTH, 11)
         result.set(Calendar.DAY_OF_MONTH, 8)
         result.set(Calendar.YEAR, 1991)
+        result.set(Calendar.HOUR, 0)
+        result.set(Calendar.MINUTE, 0)
+        result.set(Calendar.SECOND, 0)
+        return result
+    }
+
+    private fun decryptDays(offset: Int, targetCalendar: Calendar?): Calendar {
+        val result = targetCalendar ?: createSpecialCalendar()
         result.add(Calendar.DAY_OF_YEAR, offset)
         return result
     }
@@ -437,24 +431,20 @@ class LM517CommandInterpreter : CommandInterpreter() {
     //endregion
 
     override fun syncTime(SyncTime: Calendar?) {
-        return // TODO : NEED MORE SAMPLES
         val targetTime = SyncTime ?: Calendar.getInstance()
-        var mainNumber = targetTime.get(Calendar.DAY_OF_YEAR)
+        var mainNumber = (targetTime.get(Calendar.YEAR) - 2000) shl 26
+        mainNumber = mainNumber or (targetTime.get(Calendar.MONTH) + 1 shl 22)
+        var dayOfMonth = targetTime.get(Calendar.DAY_OF_MONTH) * 2
         var time = targetTime.get(Calendar.HOUR_OF_DAY)
         if (time >= 16) {
-            mainNumber += 1
+            dayOfMonth += 1
             time -= 16
         }
-
-        val parts = timePartToBits(time, 8)
-        parts.addAll(timePartToBits(targetTime.get(Calendar.MINUTE)))
-        parts.addAll(timePartToBits(targetTime.get(Calendar.SECOND)))
-
-        // TODO Investigate year + month setting. Not working fix needed
-        val hoursByte = syncTimeCommandHeader + "0451" +
-                Utils.subIntegerConversionCheck(Integer.toHexString(mainNumber)) +
-                Utils.subIntegerConversionCheck(concatBits(parts))
-        postCommand(hexStringToByteArray(hoursByte))
+        mainNumber = mainNumber or (dayOfMonth shl 16)
+        mainNumber = mainNumber or (time shl 12)
+        mainNumber = mainNumber or (targetTime.get(Calendar.MINUTE) shl 6)
+        mainNumber = mainNumber or (targetTime.get(Calendar.SECOND))
+        postCommand(hexStringToByteArray(syncTimeCommandHeader + Integer.toHexString(mainNumber.toInt())))
     }
 
     override fun eraseDatabase() {
@@ -471,7 +461,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
     }
 
     override fun setGyroAction(IsEnabled: Boolean) {
-        TODO("Not yet implemented")
+        //TODO("Not yet implemented")
     }
 
     private fun buildNotify(Message: String): ByteArray {
@@ -490,7 +480,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
             UUID.fromString(UARTTXUUIDString) -> {
                 commandsEntryPoint(Input)
             }
-            UUID.fromString(PowerTXString) -> {
+            UUID.fromString(PowerTX2String), UUID.fromString(PowerTXString) -> {
                 this.callback?.BatteryInfo(Input[Input.size - 1].toInt())
             }
         }
@@ -506,15 +496,17 @@ class LM517CommandInterpreter : CommandInterpreter() {
     }
 
     override fun requestHRHistory(FromDate: Calendar?) {
-        postCommand(hexStringToByteArray("CD0006120118000101"))
+        // TODO TEST this.
+        //postCommand(hexStringToByteArray("dc00051501001001".toUpperCase())) No data?
+        requestManualHRMeasure() // for tests
     }
 
     override fun hRRealTimeControl(Enable: Boolean) {
-        return
+        return // NOT SUPPORTED
     }
 
     override fun setAlarm(AlarmID: Long, IsEnabled: Boolean, Hour: Int, Minute: Int, Days: Int) {
-        TODO("Not yet implemented")
+        //TODO("Not yet implemented")
     }
 
     override fun fireNotification(Input: String) {
@@ -531,9 +523,10 @@ class LM517CommandInterpreter : CommandInterpreter() {
     }
 
     override fun requestBatteryStatus() {
-        UartService.instance?.readCharacteristic(
-                BluetoothGattCharacteristic(UUID.fromString(PowerTXString),
-                        BluetoothGattCharacteristic.PROPERTY_READ,
-                        BluetoothGattCharacteristic.PERMISSION_READ))
+        UartService.instance?.readCharacteristic(UartService.PowerServiceUUID, UartService.PowerTXUUID)
+    }
+
+    override fun requestManualHRMeasure() {
+        postCommand(hexStringToByteArray("CD0006120118000101"))
     }
 }

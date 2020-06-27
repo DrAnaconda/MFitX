@@ -159,7 +159,7 @@ object Utils {
     }
 
     fun subIntegerConversionCheck(CheckIn: String): String {
-        return if (CheckIn.length != 2) {
+        return if (CheckIn.length % 2 != 0) {
             "0" + CheckIn.toUpperCase(Locale.ROOT)
         } else
             CheckIn

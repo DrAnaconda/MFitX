@@ -65,7 +65,8 @@ class UartServiceBroadcastInterpreter : BroadcastReceiver() {
             }
             UartService.ACTION_GATT_SERVICES_DISCOVERED -> {
                 Algorithm.StatusCode.postValue(Algorithm.StatusCodes.GattReady)
-                UartService.instance?.enableTXNotification()
+                UartService.instance?.enableTXNotification(UartService.RX_SERVICE_UUID, UartService.TX_CHAR_UUID, UartService.TXServiceDesctiptor)
+                //UartService.instance?.enableTXNotification(UartService.PowerServiceUUID, UartService.PowerTXUUID, UartService.PowerDescriptor)
                 Algorithm.SelfPointer?.thread?.interrupt()
             }
 // gatt init failed ?
