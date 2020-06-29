@@ -35,9 +35,6 @@ object Utils {
             Manifest.permission.READ_CONTACTS, Manifest.permission.READ_PHONE_NUMBERS, Manifest.permission.WAKE_LOCK,
             Manifest.permission.READ_PHONE_STATE)//, Manifest.permission.RECEIVE_BOOT_COMPLETED)
 
-    private val hexArray = "0123456789ABCDEF".toCharArray()
-
-
     fun getSharedPrefs(context: Context?): SharedPreferences {
         if (SharedPrefs == null && context != null) {
             SharedPrefs = context.getSharedPreferences("MainPrefs", Context.MODE_PRIVATE)
@@ -163,5 +160,27 @@ object Utils {
             "0" + CheckIn.toUpperCase(Locale.ROOT)
         } else
             CheckIn
+    }
+
+    fun byteArrayToHexString(array: ByteArray): String {
+        var result = ""
+        for (x in array) {
+            result += Integer.toHexString(x.toUByte().toInt()) + ':'
+        }
+        return result
+    }
+
+    fun isTimeInInterval(start: String, end: String, target: String): Boolean {
+        val hourStart = start.split(':')[0].toInt();
+        val minStart = start.split(':')[1].toInt()
+        val hourEnd = end.split(':')[0].toInt();
+        val minEnd = end.split(':')[1].toInt()
+        val targetHour = target.split(':')[0].toInt();
+        val targetMin = target.split(':')[1].toInt()
+        if (targetHour in (hourStart + 1) until hourEnd) return true
+        if (targetHour == hourStart || targetHour == hourEnd) {
+            if (targetMin in minStart..minEnd) return true
+        }
+        return false
     }
 }

@@ -33,7 +33,7 @@ class UartServiceBroadcastInterpreter : BroadcastReceiver() {
                 val Title = extras?.get("title") as String
                 val Text = extras.get("text") as String
                 val Message = Title + "\n" + Text
-                Algorithm.SelfPointer?.postShortMessageDivider(Message)
+                Algorithm.SelfPointer?.ci?.fireNotification(Message)
             }
             UartService.ACTION_GATT_CONNECTED -> {
                 Algorithm.StatusCode.postValue(Algorithm.StatusCodes.Connected)
@@ -66,7 +66,7 @@ class UartServiceBroadcastInterpreter : BroadcastReceiver() {
             UartService.ACTION_GATT_SERVICES_DISCOVERED -> {
                 Algorithm.StatusCode.postValue(Algorithm.StatusCodes.GattReady)
                 UartService.instance?.enableTXNotification(UartService.RX_SERVICE_UUID, UartService.TX_CHAR_UUID, UartService.TXServiceDesctiptor)
-                //UartService.instance?.enableTXNotification(UartService.PowerServiceUUID, UartService.PowerTXUUID, UartService.PowerDescriptor)
+                UartService.instance?.enableTXNotification(UartService.PowerServiceUUID, UartService.PowerTXUUID, UartService.PowerDescriptor)
                 Algorithm.SelfPointer?.thread?.interrupt()
             }
 // gatt init failed ?
@@ -99,7 +99,7 @@ class InsertTask : AsyncTask<Void, Void, Void>() {
             }
         }
         timer = Timer()
-        timer.schedule(timertask, 5000, 5000)
+        timer.schedule(timertask, 5000, 500)
     }
 
     @ExperimentalStdlibApi

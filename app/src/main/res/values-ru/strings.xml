@@ -38,7 +38,7 @@
     <string name="status_connected_next_sync">"Статус: Подключен. Следущая синхронизация "</string>
     <string name="disconnect_btn_text">Отключить</string>
     <string name="current_device_default_text">Текущее устройство:</string>
-    <string name="step_size_centimeters">Размер шага (сантиметры)</string>
+    <string name="step_size_centimeters">Размер шага (метры)</string>
     <string name="connection_not_established">Соединение не установлено</string>
     <string name="title_activity_report_activity">Статистика</string>
     <string name="overall_stats">Общее</string>
@@ -57,7 +57,7 @@
     <string name="avg_HR">&#160;Средняя ЧСС:&#160;</string>
     <string name="max_HR">Макс. ЧСС:&#160;</string>
     <string name="anomalies">Аномалий:&#160;</string>
-    <string name="step_size_n_centimeters">Размер шага\\n(сантиметры)</string>
+    <string name="step_size_n_centimeters">Размер шага\n(метры)</string>
     <string name="no_activity_data">Нет данных о активности</string>
     <string name="no_hearth_rate_data">Нет данных о ЧСС</string>
     <string name="status_engaging">Статус: Bluetooth включен. Старт...</string>

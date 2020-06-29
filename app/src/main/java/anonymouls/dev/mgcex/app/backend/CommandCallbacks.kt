@@ -62,13 +62,13 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
 
     override fun MainHistoryRecord(Time: Calendar, Steps: Int, Calories: Int) {
         if (Time.time > Calendar.getInstance().time) return
-        if (Steps <= 0 || Calories <= 0) return
+        if (Steps < 0 || Calories < 0) return
         try {
             if (MainRecordsTable.insertRecordV2(Time, Steps, Calories, database) > 0) {
                 val current = CustomDatabaseUtils.CalendarToLong(Time, true)
                 if (current > lastSyncMain) {
-                    DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(Calories); savedValues.savedCCals = Calories
-                    DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(Steps); savedValues.savedSteps = Steps
+                    DeviceControllerViewModel.instance?._lastCcalsIncomed?.postValue(Calories); savedValues.savedCCals = Calories
+                    DeviceControllerViewModel.instance?._lastStepsIncomed?.postValue(Steps); savedValues.savedSteps = Steps
                     lastSyncMain = CustomDatabaseUtils.CalendarToLong(Time, true)
                 }
             }

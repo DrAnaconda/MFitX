@@ -43,6 +43,8 @@ abstract class CommandInterpreter {
     protected fun hexStringToByteArray(s: String): ByteArray {
         var s = s
         s = s.toUpperCase(Locale.ROOT)
+        s = s.replace(":", "")
+        s = s.trim()
         val len = s.length
         val data = ByteArray(len / 2)
         var i = 0
@@ -61,6 +63,20 @@ abstract class CommandInterpreter {
         } else {
             Utils.subIntegerConversionCheck(Integer.toHexString(Value))
         }
+    }
+
+    protected fun byteArrayToInt(b: ByteArray, offset: Int, count: Int): Int {
+        var value = 0
+        var shift = (count - 1) * 8
+        for (i in 0..3) {
+            if (i > count || shift < 0) break
+            if (shift > 0)
+                value += ((b[i + offset].toInt() and 0xFF) shl shift)
+            else
+                value += b[i + offset].toInt() and 0xFF
+            shift -= 8
+        }
+        return value.toInt()
     }
 
     fun messageToHexValue(Message: String, limiter: Int): String {
@@ -94,7 +110,7 @@ abstract class CommandInterpreter {
     abstract fun setAlarm(AlarmID: Long, IsEnabled: Boolean, Hour: Int, Minute: Int, Days: Int)
     abstract fun fireNotification(Input: String)
     abstract fun requestBatteryStatus()
-    abstract fun requestManualHRMeasure()
+    abstract fun requestManualHRMeasure(cancel: Boolean)
 }
 
 class MGCOOL4CommandInterpreter : CommandInterpreter() {
@@ -342,7 +358,7 @@ class MGCOOL4CommandInterpreter : CommandInterpreter() {
         return
     }
 
-    override fun requestManualHRMeasure() {
+    override fun requestManualHRMeasure(cancel: Boolean) {
         return // not supported
     }
 
@@ -367,6 +383,8 @@ class LM517CommandInterpreter : CommandInterpreter() {
         private const val PowerDescriptor = "00002902-0000-1000-8000-00805f9b34fb"
     }
 
+    private var cancelTimer: Timer? = null
+
     init {
         UartService.RX_SERVICE_UUID = UUID.fromString(UARTServiceUUIDString)
         UartService.RX_CHAR_UUID = UUID.fromString(UARTRXUUIDString)
@@ -375,29 +393,30 @@ class LM517CommandInterpreter : CommandInterpreter() {
         UartService.PowerServiceUUID = UUID.fromString(PowerServiceString)
         UartService.PowerTXUUID = UUID.fromString(PowerTXString)
         UartService.PowerDescriptor = UUID.fromString(PowerDescriptor)
+        this.hRRealTimeControlSupport = false
     }
 
     //region Helpers
-    // TODO Maybe this function is wrong
+
     private fun createSpecialCalendar(): Calendar {
         val result = Calendar.getInstance()
-        result.set(Calendar.MONTH, 11)
+        result.set(Calendar.MONTH, 10)
         result.set(Calendar.DAY_OF_MONTH, 8)
         result.set(Calendar.YEAR, 1991)
-        result.set(Calendar.HOUR, 0)
+        result.set(Calendar.HOUR_OF_DAY, 0)
         result.set(Calendar.MINUTE, 0)
         result.set(Calendar.SECOND, 0)
         return result
     }
 
-    private fun decryptDays(offset: Int, targetCalendar: Calendar?): Calendar {
+    private fun decryptDays(offset: Short, targetCalendar: Calendar?): Calendar {
         val result = targetCalendar ?: createSpecialCalendar()
-        result.add(Calendar.DAY_OF_YEAR, offset)
+        result.add(Calendar.DAY_OF_YEAR, offset.toInt())
         return result
     }
 
     private fun decryptTime(offset: Int, targetCalendar: Calendar): Calendar {
-        targetCalendar.set(Calendar.HOUR, 0)
+        targetCalendar.set(Calendar.HOUR_OF_DAY, 0)
         targetCalendar.set(Calendar.MINUTE, 0)
         targetCalendar.set(Calendar.SECOND, 0)
         targetCalendar.add(Calendar.SECOND, offset)
@@ -410,20 +429,40 @@ class LM517CommandInterpreter : CommandInterpreter() {
 
     private fun hrRecordProceeder(Input: ByteArray) {
         // WARNING. Shit like pressure and ox% is ignoring
+        if (Input.size != 20) return
+        cancelTimer?.cancel(); cancelTimer?.purge()
         var buffer = ByteBuffer.wrap(Input, 8, 2)
-        var recordTime = decryptDays(buffer.int, null)
-        buffer = ByteBuffer.wrap(Input, 13, 3)
-        recordTime = decryptTime(buffer.int, recordTime)
-        val hrValue = Input.get(Input.size - 1)
+        var recordTime = decryptDays(buffer.short, null)
+        buffer = ByteBuffer.wrap(Input, 13, 4)
+        recordTime = decryptTime(byteArrayToInt(buffer.array(), 13, 3), recordTime)
+        val hrValue = Input[Input.size - 1]
         callback?.HRHistoryRecord(recordTime, hrValue.toInt())
     }
 
+    private fun mainRecordProceeder(Input: ByteArray) {
+        if (Input.size != 20) return
+        var buffer = ByteBuffer.wrap(Input, 8, 2)
+        val recordTime = decryptDays(buffer.short, null)
+        recordTime.set(Calendar.HOUR_OF_DAY, Calendar.getInstance().get(Calendar.HOUR_OF_DAY))
+        recordTime.set(Calendar.MINUTE, Calendar.getInstance().get(Calendar.MINUTE))
+        recordTime.set(Calendar.SECOND, Calendar.getInstance().get(Calendar.SECOND))
+
+        buffer = ByteBuffer.wrap(Input, 12, 2)
+        val steps = buffer.short.toInt()
+
+        buffer = ByteBuffer.wrap(Input, 18, 2)
+        val calories = buffer.short.toInt()
+        this.callback?.MainHistoryRecord(recordTime, steps, calories)
+    }
+
     private fun commandsEntryPoint(Input: ByteArray) {
-        if (Input[0].toInt() != 205) return
-        if (Input[1].toInt() != 0) return
-        if (Input[2].toInt() != 21) return
-        when (Input[4].toInt()) {
-            14 -> hrRecordProceeder(Input)
+        val test = Utils.byteArrayToHexString(Input)
+        if (Input[0].toUByte() != 205.toUByte()) return
+        if (Input[1].toUByte() != 0.toUByte()) return
+        //if (Input[2].toUByte() != 21.toUByte()) return
+        when (Input[5].toUByte()) {
+            (14).toUByte() -> hrRecordProceeder(Input)
+            (12).toUByte() -> mainRecordProceeder(Input)
         }
         // TODO
     }
@@ -461,7 +500,10 @@ class LM517CommandInterpreter : CommandInterpreter() {
     }
 
     override fun setGyroAction(IsEnabled: Boolean) {
-        //TODO("Not yet implemented")
+        var request = "CD:00:0A:12:01:09:00:05"
+        request += if (IsEnabled) "0101" else "0001"
+        request += Utils.subIntegerConversionCheck(Integer.toHexString(1048580))
+        postCommand(hexStringToByteArray(request))
     }
 
     private fun buildNotify(Message: String): ByteArray {
@@ -488,7 +530,9 @@ class LM517CommandInterpreter : CommandInterpreter() {
     }
 
     override fun getMainInfoRequest() {
-        //TODO("Not yet implemented")
+        postCommand(hexStringToByteArray("cd:00:06:12:01:15:00:01:01"))
+        Thread.sleep(1000)
+        postCommand(hexStringToByteArray("cd:00:06:15:01:06:00:01:01"))
     }
 
     override fun requestSleepHistory(FromDate: Calendar) {
@@ -496,9 +540,8 @@ class LM517CommandInterpreter : CommandInterpreter() {
     }
 
     override fun requestHRHistory(FromDate: Calendar?) {
-        // TODO TEST this.
-        //postCommand(hexStringToByteArray("dc00051501001001".toUpperCase())) No data?
-        requestManualHRMeasure() // for tests
+        postCommand(hexStringToByteArray("CD:00:06:15:01:06:00:01:01"))
+        // Warning! This device will send data ONCE and delete this record from device.
     }
 
     override fun hRRealTimeControl(Enable: Boolean) {
@@ -526,7 +569,15 @@ class LM517CommandInterpreter : CommandInterpreter() {
         UartService.instance?.readCharacteristic(UartService.PowerServiceUUID, UartService.PowerTXUUID)
     }
 
-    override fun requestManualHRMeasure() {
-        postCommand(hexStringToByteArray("CD0006120118000101"))
+    override fun requestManualHRMeasure(cancel: Boolean) {
+        var request = "CD00061201180001"
+        request += if (cancel) "00" else "01"
+        postCommand(hexStringToByteArray(request))
+        val taskForce = object : TimerTask() {
+            override fun run() {
+                requestManualHRMeasure(true); getMainInfoRequest()
+            }
+        }
+        cancelTimer = Timer(); cancelTimer?.schedule(taskForce, 60000)
     }
 }

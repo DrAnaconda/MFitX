@@ -103,34 +103,28 @@ class UartService : Service() {
     }
 
     fun connect(address: String?): Boolean {
-        if (mConnectionState == STATE_CONNECTING || mConnectionState == STATE_CONNECTED)
-            return false
-        if (mBluetoothManager != null) mBluetoothAdapter = mBluetoothManager!!.adapter
-        if (mBluetoothAdapter == null || address == null) {
-            return false
-        }
         if (mBluetoothDeviceAddress != null && address == mBluetoothDeviceAddress
                 && mBluetoothGatt != null) {
 
-            if (mBluetoothGatt!!.connect()) {
+            return if (mBluetoothGatt!!.connect()) {
                 mConnectionState = STATE_CONNECTING
-                return true
+                true
             } else {
-                return false
+                false
             }
         }
 
         val device = mBluetoothAdapter!!.getRemoteDevice(address) ?: return false
 
         mBluetoothGatt = device.connectGatt(this, true, mGattCallback)
-        if (mBluetoothGatt != null) {
+        return if (mBluetoothGatt != null) {
             mBluetoothDeviceAddress = address
-            mConnectionState = STATE_CONNECTING
+            mConnectionState = STATE_CONNECTED
             mBluetoothGatt!!.discoverServices()
-            return true
+            true
         } else {
             broadcastUpdate(ACTION_GATT_INIT_FAILED)
-            return false
+            false
         }
     }
 

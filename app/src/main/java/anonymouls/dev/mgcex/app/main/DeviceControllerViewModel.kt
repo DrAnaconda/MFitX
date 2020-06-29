@@ -121,7 +121,7 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
                 _hrVisibility.postValue(View.GONE)
                 workInProgress.postValue(View.VISIBLE)
             } else {
-                _hrVisibility.postValue(View.VISIBLE)
+                if (ci.hRRealTimeControlSupport) _hrVisibility.postValue(View.VISIBLE); else _hrVisibility.postValue(View.GONE)
                 if (firstLaunch) {
                     firstLaunch = false
                     GlobalScope.launch(Dispatchers.IO) { Algorithm.SelfPointer?.forceSyncHR() }
@@ -174,7 +174,8 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
 
 
         if (Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.GattReady.code
-                && ci.hRRealTimeControlSupport) _hrVisibility.postValue(View.VISIBLE)
+                && ci.hRRealTimeControlSupport)
+            _hrVisibility.postValue(View.VISIBLE)
         else
             _hrVisibility.postValue(View.GONE)
         if (savedCCals != -1) _lastCcalsIncomed.postValue(savedCCals)

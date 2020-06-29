@@ -1,6 +1,7 @@
 package anonymouls.dev.mgcex.app.main
 
 import android.app.Activity
+import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -20,7 +21,9 @@ import anonymouls.dev.mgcex.databaseProvider.DatabaseController
 import anonymouls.dev.mgcex.databaseProvider.NotifyFilterTable
 import anonymouls.dev.mgcex.util.Analytics
 import anonymouls.dev.mgcex.util.Utils
+import java.util.*
 
+// TODO Fix time selector for idiots
 class SettingsActivity : Activity() {
     private var packagesList: TableLayout? = null
 
@@ -34,14 +37,15 @@ class SettingsActivity : Activity() {
         initViews()
     }
 
-
-    private fun createTextWatcher(param: String, dataType: Int): TextWatcher {
+    // TODO kostil?
+    private fun <T> createTextWatcher(param: String, dataType: T): TextWatcher {
         return object : TextWatcher {
             override fun afterTextChanged(p0: Editable?) {
                 if (p0.toString().isEmpty()) return
                 when (dataType) {
-                    0 -> Utils.getSharedPrefs(this@SettingsActivity).edit().putFloat(param, p0.toString().replace(',', '.').toFloat()).apply()
-                    1 -> Utils.getSharedPrefs(this@SettingsActivity).edit().putInt(param, p0.toString().toInt()).apply()
+                    is Float -> Utils.getSharedPrefs(this@SettingsActivity).edit().putFloat(param, p0.toString().replace(',', '.').toFloat()).apply()
+                    is Int -> Utils.getSharedPrefs(this@SettingsActivity).edit().putInt(param, p0.toString().toInt()).apply()
+                    is String -> Utils.getSharedPrefs(this@SettingsActivity).edit().putString(param, p0.toString()).apply()
                 }
             }
 
@@ -50,21 +54,59 @@ class SettingsActivity : Activity() {
         }
     }
 
+    //region Init Views
+
+    private fun initHRMonitoringBlock() {
+        if (!commandController.hRRealTimeControlSupport) {
+            findViewById<LinearLayout>(R.id.HRMonitoringSettings).visibility = View.VISIBLE
+            findViewById<Switch>(R.id.enableHRMonitoring).isChecked =
+                    Utils.getSharedPrefs(this).getBoolean(HRMonitoringSettings.hrMonitoringEnabled, false)
+
+            if (findViewById<Switch>(R.id.enableHRMonitoring).isChecked) {
+                findViewById<LinearLayout>(R.id.HRMonitoringSettingsBlock).visibility = View.VISIBLE
+                findViewById<EditText>(R.id.HRMonitoringInterval).setText(
+                        Utils.getSharedPrefs(this).getInt(HRMonitoringSettings.hrMeasureInterval, 5).toString())
+                findViewById<EditText>(R.id.HRMonitoringStart).setText(
+                        Utils.getSharedPrefs(this).getString(HRMonitoringSettings.hrMeasureStart, "00:00").toString())
+                findViewById<EditText>(R.id.HRMonitoringEnd).setText(
+                        Utils.getSharedPrefs(this).getString(HRMonitoringSettings.hrMeasureEnd, "00:00").toString())
+            } else {
+                Utils.getSharedPrefs(this).edit().remove(HRMonitoringSettings.hrMeasureInterval).apply()
+                Utils.getSharedPrefs(this).edit().remove(HRMonitoringSettings.hrMeasureStart).apply()
+                Utils.getSharedPrefs(this).edit().remove(HRMonitoringSettings.hrMeasureEnd).apply()
+                Utils.getSharedPrefs(this).edit().remove(HRMonitoringSettings.hrMonitoringEnabled).apply()
+                findViewById<LinearLayout>(R.id.HRMonitoringSettingsBlock).visibility = View.GONE
+            }
+        }
+    }
+
     private fun initTextBoxes() {
-        findViewById<EditText>(R.id.stepSize).addTextChangedListener(createTextWatcher(stepsSize, 0))
+        findViewById<EditText>(R.id.stepSize).addTextChangedListener(createTextWatcher<Float>(stepsSize, 0.6f))
         findViewById<EditText>(R.id.stepSize).setText(Utils.getSharedPrefs(this).getFloat(stepsSize, 0.66f).toString().replace('.', ','))
 
-        findViewById<EditText>(R.id.secondsRepeatsText).addTextChangedListener(createTextWatcher(secondsNotify, 1))
+        findViewById<EditText>(R.id.secondsRepeatsText).addTextChangedListener(createTextWatcher<Int>(secondsNotify, 1))
         findViewById<EditText>(R.id.secondsRepeatsText).setText(Utils.getSharedPrefs(this).getInt(secondsNotify, 5).toString())
 
-        findViewById<EditText>(R.id.numberRepeatsTextBox).addTextChangedListener(createTextWatcher(repeatsNumbers, 1))
+        findViewById<EditText>(R.id.numberRepeatsTextBox).addTextChangedListener(createTextWatcher<Int>(repeatsNumbers, 1))
         findViewById<EditText>(R.id.numberRepeatsTextBox).setText(Utils.getSharedPrefs(this).getInt(repeatsNumbers, 3).toString())
+
+        findViewById<EditText>(R.id.HRMonitoringInterval).addTextChangedListener(createTextWatcher<Int>(HRMonitoringSettings.hrMeasureInterval, 5))
+        findViewById<EditText>(R.id.HRMonitoringInterval).setText(Utils.getSharedPrefs(this).getInt(HRMonitoringSettings.hrMeasureInterval, 5).toString())
+
+        findViewById<EditText>(R.id.HRMonitoringStart).addTextChangedListener(createTextWatcher(HRMonitoringSettings.hrMeasureStart, "11"))
+        findViewById<EditText>(R.id.HRMonitoringStart).setText(Utils.getSharedPrefs(this).getString(HRMonitoringSettings.hrMeasureStart, "00:00").toString())
+
+        findViewById<EditText>(R.id.HRMonitoringEnd).addTextChangedListener(createTextWatcher(HRMonitoringSettings.hrMeasureEnd, "11"))
+        findViewById<EditText>(R.id.HRMonitoringEnd).setText(Utils.getSharedPrefs(this).getString(HRMonitoringSettings.hrMeasureEnd, "00:00").toString())
+
+        findViewById<EditText>(R.id.mainSyncInterval).addTextChangedListener(createTextWatcher<Int>(mainSyncMinutes, 1))
+        findViewById<EditText>(R.id.mainSyncInterval).setText(Utils.getSharedPrefs(this).getInt(mainSyncMinutes, 5).toString())
     }
 
     private fun initViews() {
         if (!dataView) {
             initTextBoxes()
-
+            initHRMonitoringBlock()
             findViewById<Switch>(R.id.NotificationsSwitch).isChecked = Utils.getSharedPrefs(this).getBoolean("NotificationGranted", false)
             findViewById<Switch>(R.id.NotificationsSwitch).isChecked = Algorithm.isNotifyServiceAlive(this)
             findViewById<Switch>(R.id.PhoneSwitch).isChecked = Utils.getSharedPrefs(this).getBoolean("ReceiveCalls", true)
@@ -82,38 +124,12 @@ class SettingsActivity : Activity() {
         }
     }
 
+    //endregion
+
+    //region Utility
+
     private fun showNotConnectedErrorToast() {
         Toast.makeText(this, getString(R.string.connection_not_established), Toast.LENGTH_LONG).show()
-    }
-
-    private fun sendEraseDatabaseCommand() {
-        if (Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.Connected.code) {
-            commandController.eraseDatabase()
-        } else {
-            showNotConnectedErrorToast()
-        }
-    }
-
-    private fun sendResetCommand() {
-        if (Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.Connected.code) {
-            commandController.restoreToDefaults()
-        } else {
-            showNotConnectedErrorToast()
-        }
-    }
-
-    private fun deAuthDevice() {
-        val IsConnected = Utils.getSharedPrefs(this).getBoolean("IsConnected", false)
-        if (IsConnected) {
-            Utils.getSharedPrefs(this).edit().putBoolean("IsConnected", false).apply()
-            Utils.getSharedPrefs(this).edit().remove(bandIDConst).apply()
-            Algorithm.IsActive = false
-            DeviceControllerActivity.instance?.finish()
-            setContentView(R.layout.activity_scan)
-            finish()
-            val intent = Intent(baseContext, ScanActivity::class.java)
-            startActivity(intent)
-        }
     }
 
     private fun addToTable(Content: String, IsEnabled: Boolean) {
@@ -185,6 +201,57 @@ class SettingsActivity : Activity() {
         }
     }
 
+    private fun createTimePicker(param: String, textObject: EditText) {
+        val targetTimeSet = TimePickerDialog.OnTimeSetListener { _, hourOfDay, minute ->
+            var result = "${Utils.subIntegerConversionCheck(hourOfDay.toString())}:${Utils.subIntegerConversionCheck(minute.toString())}"
+            textObject.setText(result)
+            Utils.getSharedPrefs(this).edit().putString(param, result).apply()
+        }
+
+        val timeHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        val timeMinute = Calendar.getInstance().get(Calendar.MINUTE)
+        val tp = TimePickerDialog(this, targetTimeSet, timeHour, timeMinute, true)
+        tp.show()
+    }
+
+    //endregion
+
+    //region Device Handling
+
+    private fun sendEraseDatabaseCommand() {
+        if (Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.Connected.code) {
+            commandController.eraseDatabase()
+        } else {
+            showNotConnectedErrorToast()
+        }
+    }
+
+    private fun sendResetCommand() {
+        if (Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.Connected.code) {
+            commandController.restoreToDefaults()
+        } else {
+            showNotConnectedErrorToast()
+        }
+    }
+
+    private fun deAuthDevice() {
+        val IsConnected = Utils.getSharedPrefs(this).getBoolean("IsConnected", false)
+        if (IsConnected) {
+            Utils.getSharedPrefs(this).edit().putBoolean("IsConnected", false).apply()
+            Utils.getSharedPrefs(this).edit().remove(bandIDConst).apply()
+            Algorithm.IsActive = false
+            DeviceControllerActivity.instance?.finish()
+            setContentView(R.layout.activity_scan)
+            finish()
+            val intent = Intent(baseContext, ScanActivity::class.java)
+            startActivity(intent)
+        }
+    }
+
+    // endregion
+
+    //region Android Logic
+
     fun onClickHandler(v: View) {
         when (v.id) {
             R.id.LoadPackListBtn -> {
@@ -209,6 +276,14 @@ class SettingsActivity : Activity() {
             R.id.breakConnectionBtn -> deAuthDevice()
             R.id.analyticsOn -> Utils.SharedPrefs?.edit()?.putBoolean(Analytics.HelpData, findViewById<Switch>(R.id.analyticsOn).isChecked)?.apply()
             R.id.ignoreLightSleepData -> Utils.getSharedPrefs(this).edit().putBoolean(lightSleepIgnore, findViewById<Switch>(v.id).isChecked).apply()
+            R.id.enableHRMonitoring -> {
+                Utils.getSharedPrefs(this).edit()
+                        .putBoolean(HRMonitoringSettings.hrMonitoringEnabled, findViewById<Switch>(R.id.enableHRMonitoring).isChecked)
+                        .apply()
+                initHRMonitoringBlock()
+            }
+            R.id.HRMonitoringStart -> createTimePicker(HRMonitoringSettings.hrMeasureStart, v as EditText)
+            R.id.HRMonitoringEnd -> createTimePicker(HRMonitoringSettings.hrMeasureEnd, v as EditText)
         }
     }
 
@@ -242,6 +317,7 @@ class SettingsActivity : Activity() {
         return super.onOptionsItemSelected(item)
     }
 
+    //endregion
 
     private inner class CustomTableRow(context: Context, var Package: String, var IsEnabled: Switch) : TableRow(context)
 
@@ -251,5 +327,13 @@ class SettingsActivity : Activity() {
         const val stepsSize = "Step_Size"
         const val lightSleepIgnore = "LightIgnore"
         const val bandIDConst = "BandID"
+        const val mainSyncMinutes = "AutoSyncInterval"
+
+        object HRMonitoringSettings {
+            const val hrMonitoringEnabled = "HRMonitoringEnabled"
+            const val hrMeasureInterval = "HRMeasureInterval"
+            const val hrMeasureStart = "HRMonitoringStart"
+            const val hrMeasureEnd = "HRMonitoringEnd"
+        }
     }
 }
