@@ -33,8 +33,8 @@
             android:paddingTop="8dp"
             android:paddingRight="8dp"
             android:paddingBottom="8dp"
-            app:layout_constraintStart_toEndOf="@+id/SleepContainer"
-            app:layout_constraintTop_toBottomOf="@+id/SyncNowContainer">
+            ads:layout_constraintStart_toEndOf="@+id/ExitBtnContainer"
+            ads:layout_constraintTop_toBottomOf="@+id/BatteryContainer">
 
 
             <ImageView
@@ -93,6 +93,7 @@
         <LinearLayout
             android:id="@+id/SleepContainer"
             android:layout_width="wrap_content"
+            android:visibility="gone"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_marginTop="8dp"
@@ -175,6 +176,7 @@
 
         <LinearLayout
             android:id="@+id/AlarmContainer"
+            android:visibility="gone"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
@@ -490,15 +492,15 @@
         <Switch
             android:id="@+id/realtimeHRSync"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:layout_marginStart="8dp"
             android:layout_marginTop="8dp"
             android:onClick="onClickHandler"
             android:text="@string/sync_heart_rate_in_real_time"
             android:visibility="@{viewmodel.hrVisibility}"
-            app:layout_constraintEnd_toEndOf="@+id/ExitBtnContainer"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/SleepContainer" />
+            ads:layout_constraintTop_toBottomOf="@+id/ReportContainer"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
 
         <LinearLayout
             android:id="@+id/deviceControllerAdsHolder"

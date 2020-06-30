@@ -65,10 +65,6 @@ class UartService : Service() {
 
     inner class LocalBinder : Binder()
 
-    init {
-        CommandInterpreter.getInterpreter(this)
-    }
-
     override fun onBind(intent: Intent): IBinder? {
         instance = this
         CommandInterpreter.getInterpreter(this)
@@ -92,6 +88,7 @@ class UartService : Service() {
         instance = this
         Thread.currentThread().priority = Thread.NORM_PRIORITY
         Thread.currentThread().name = "UARTService"
+        startService(Intent(this, Algorithm::class.java)) // TODO Move to another
         timer.schedule(object : TimerTask() {
             override fun run() {
                 if (Algorithm.SelfPointer == null) {
@@ -120,7 +117,7 @@ class UartService : Service() {
         return if (mBluetoothGatt != null) {
             mBluetoothDeviceAddress = address
             mConnectionState = STATE_CONNECTED
-            mBluetoothGatt!!.discoverServices()
+            //mBluetoothGatt!!.discoverServices()
             true
         } else {
             broadcastUpdate(ACTION_GATT_INIT_FAILED)
@@ -197,6 +194,7 @@ class UartService : Service() {
             mConnectionState = STATE_DISCOVERING
             if (mBluetoothGatt != null) mBluetoothGatt!!.discoverServices()
         } else {
+            Algorithm.StatusCode.postValue(Algorithm.StatusCodes.Disconnected)
             connect(Algorithm.LockedAddress)
         }
     }

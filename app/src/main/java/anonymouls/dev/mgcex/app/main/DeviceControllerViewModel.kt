@@ -16,9 +16,6 @@ import anonymouls.dev.mgcex.app.backend.CommandInterpreter
 import anonymouls.dev.mgcex.app.backend.InsertTask
 import anonymouls.dev.mgcex.databaseProvider.SleepRecordsTable
 import anonymouls.dev.mgcex.util.HRAnalyzer
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 
 
 class MyViewModelFactory(private val activity: AppCompatActivity) : ViewModelProvider.Factory {
@@ -72,7 +69,7 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
     //endregion
 
     private var firstLaunch = true
-    private var ci = CommandInterpreter.getInterpreter(activity)!!
+    private var ci = CommandInterpreter.getInterpreter(activity)
 
     init {
         instance = this
@@ -124,7 +121,6 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
                 if (ci.hRRealTimeControlSupport) _hrVisibility.postValue(View.VISIBLE); else _hrVisibility.postValue(View.GONE)
                 if (firstLaunch) {
                     firstLaunch = false
-                    GlobalScope.launch(Dispatchers.IO) { Algorithm.SelfPointer?.forceSyncHR() }
                 }
                 updateStatus("")
             }

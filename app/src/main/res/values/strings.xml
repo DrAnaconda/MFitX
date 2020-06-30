@@ -25,7 +25,7 @@
     <string name="delete">Delete</string>
     <string name="filters">Filters</string>
     <string name="receive_phone_call">Receive Calls?</string>
-    <string name="enable_auto_illumination">Auto Light?</string>
+    <string name="enable_auto_illumination">Wrist autolight</string>
     <string name="restore_to_defaults_str">Restore to defaults</string>
     <string name="erase_data_on_band_str">Erase data on band</string>
     <string name="sync_heart_rate_in_real_time">Sync Heart Rate In Real Time</string>
@@ -144,4 +144,9 @@
     <string name="until">until</string>
     <string name="from">From</string>
     <string name="synchronization_every">Synchronization every</string>
+    <string name="enable_vibration">Enable vibration</string>
+    <string name="idle_reminder">Idle reminder</string>
+    <string name="device_not_supported">This device is not supported</string>
+    <string name="target_steps_count">Target steps count:</string>
+    <string name="steps_count_min">Steps count min 500</string>
 </resources>

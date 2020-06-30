@@ -1,7 +1,6 @@
 package anonymouls.dev.mgcex.app.backend
 
 import android.app.IntentService
-import android.app.Service
 import android.content.*
 import android.content.pm.PackageManager
 import android.os.Build
@@ -84,6 +83,8 @@ class Algorithm : IntentService("Syncer") {
     private fun executeForceSync() {
         DeviceControllerViewModel.instance?.workInProgress?.postValue(View.VISIBLE)
         GlobalScope.launch(Dispatchers.IO) { database.initRepairsAndSync(database.writableDatabase) }
+        ci.requestSettings()
+        customWait(1000)
         ci.requestBatteryStatus()
         customWait(1000)
         ci.syncTime(Calendar.getInstance())
@@ -98,7 +99,7 @@ class Algorithm : IntentService("Syncer") {
         //if (IsAlarmingTriggered && !IsFromActivity) alarmTriggerDecider(0)
     }
 
-    fun forceSyncHR() {
+    private fun forceSyncHR() {
         ci.hRRealTimeControl(true)
         ci.requestManualHRMeasure(false)
         customWait(10000)
@@ -170,7 +171,7 @@ class Algorithm : IntentService("Syncer") {
         if (UartService.instance!!.mConnectionState < UartService.STATE_DISCOVERED) {
             UartService.instance!!.retryDiscovering()
             try {
-                Thread.sleep(2000)
+                Thread.sleep(5000)
             } catch (e: InterruptedException) {
             }
         } else {
@@ -212,14 +213,11 @@ class Algorithm : IntentService("Syncer") {
         return super.stopService(name)
     }
 
-    override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        return super.onStartCommand(intent, Service.START_FLAG_RETRY, startId)
-    }
-
     fun init() {
         if (IsInit) return
+        this.startService(Intent(this, UartService::class.java))
         isFirstTime = true
-        ci = CommandInterpreter.getInterpreter(this)!!
+        ci = CommandInterpreter.getInterpreter(this)
         prefs = Utils.getSharedPrefs(this)
         database = DatabaseController.getDCObject(this)
 
@@ -326,4 +324,4 @@ class Algorithm : IntentService("Syncer") {
 // TODO Battery health tracker
 // TODO Manual hearth value request
 // TODO LM: Sleep Data
-// TODO LM: Other settings (vibro, dnd, alarms, steps target, long sitting)
+// TODO LM: Other settings (dnd, alarms)

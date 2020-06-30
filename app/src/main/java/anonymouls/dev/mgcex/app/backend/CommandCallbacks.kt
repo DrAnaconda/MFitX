@@ -12,7 +12,7 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
     private var lastSyncMain: Long = -1
     private var lastSyncHR: Long = -1
 
-    override fun MainInfo(Steps: Int, Calories: Int) {
+    override fun mainInfo(Steps: Int, Calories: Int) {
         try {
             lastSyncMain = CustomDatabaseUtils.CalendarToLong(Calendar.getInstance(), true)
             DeviceControllerViewModel.instance?._lastStepsIncomed?.postValue(Steps); savedValues.savedSteps = Steps
@@ -23,7 +23,7 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
         }
     }
 
-    override fun BatteryInfo(Charge: Int) {
+    override fun batteryInfo(Charge: Int) {
         try {
             if (Charge > 5) {
                 DeviceControllerViewModel.instance?._batteryHolder?.postValue(Charge)
@@ -35,7 +35,7 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
         }
     }
 
-    override fun HRIncome(Time: Calendar, HRValue: Int) {
+    override fun hrIncome(Time: Calendar, HRValue: Int) {
         if (Time.time > Calendar.getInstance().time) return
         var ResultHR = HRValue
         if (ResultHR < 0) ResultHR = (ResultHR and 0xFF)
@@ -45,7 +45,7 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
         }
     }
 
-    override fun HRHistoryRecord(Time: Calendar, HRValue: Int) {
+    override fun hrHistoryRecord(Time: Calendar, HRValue: Int) {
         if (Time.time > Calendar.getInstance().time) return
         try {
             var ResultHR = HRValue
@@ -60,7 +60,7 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
         }
     }
 
-    override fun MainHistoryRecord(Time: Calendar, Steps: Int, Calories: Int) {
+    override fun mainHistoryRecord(Time: Calendar, Steps: Int, Calories: Int) {
         if (Time.time > Calendar.getInstance().time) return
         if (Steps < 0 || Calories < 0) return
         try {
@@ -78,7 +78,7 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
 
     }
 
-    override fun SleepHistoryRecord(Time: Calendar, Duration: Int, Type: Int) {
+    override fun sleepHistoryRecord(Time: Calendar, Duration: Int, Type: Int) {
         if (Time.time > Calendar.getInstance().time) return
         try {
             var newDuration = Duration

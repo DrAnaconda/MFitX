@@ -49,7 +49,8 @@ class DeviceControllerActivity : AppCompatActivity() {
         if (!((UartService.mBluetoothManager != null) and UartService.mBluetoothManager!!.adapter.isEnabled)) {
             Algorithm.StatusCode.postValue(Algorithm.StatusCodes.BluetoothDisabled)
         }
-        startService(Intent(this, Algorithm::class.java))
+        //startService(Intent(this, Algorithm::class.java)) // TODO Move to another
+        startService(Intent(this, UartService::class.java))
     }
 
     private fun initBindings() {
@@ -66,7 +67,7 @@ class DeviceControllerActivity : AppCompatActivity() {
         if (Algorithm.IsAlarmingTriggered) {
             Algorithm.IsAlarmKilled = true
             Algorithm.IsAlarmWaiting = false
-            CommandInterpreter.getInterpreter(this)!!.stopLongAlarm()
+            CommandInterpreter.getInterpreter(this).stopLongAlarm()
             val mNotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             mNotificationManager.cancel(21)
         }
@@ -135,7 +136,7 @@ class DeviceControllerActivity : AppCompatActivity() {
                 return
             }
             CommandCallbacks.SelfPointer = CommandCallbacks(this)
-            CommandController = CommandInterpreter.getInterpreter(this)!!
+            CommandController = CommandInterpreter.getInterpreter(this)
             CommandController.callback = CommandCallbacks.SelfPointer
             if (Algorithm.NextSync != null)
                 DeviceControllerViewModel.instance?._currentStatus?.postValue(getString(R.string.status_connected_next_sync) + SimpleDateFormat("HH:mm", Locale.getDefault()).format(Algorithm.NextSync!!.time))

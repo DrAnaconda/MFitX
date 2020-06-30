@@ -21,7 +21,7 @@
     <string name="delete">Удалить</string>
     <string name="filters">Фильтры</string>
     <string name="receive_phone_call">Принимать звонки?</string>
-    <string name="enable_auto_illumination">Авто-подсветка?</string>
+    <string name="enable_auto_illumination">Авто-подсветка</string>
     <string name="restore_to_defaults_str">Сбросить на заводские установки</string>
     <string name="erase_data_on_band_str">Очистить данные на браслете</string>
     <string name="sync_heart_rate_in_real_time">Синхронизация ЧСС в реальном времени</string>
@@ -129,4 +129,12 @@
     <string name="current_progress_date">Текущий прогресс:</string>
     <string name="sleep_data_analyzer">Идет анализ данных сна...</string>
     <string name="activity_data_analyzer">Идет анализ данных активности...</string>
+    <string name="ignore_light_sleep_phase">Игнорировать статистику сна</string>
+    <string name="hearth_rate_monitoring">Мониторинг ЧСС</string>
+    <string name="enable_hr_auto_collecting">Включить мониторинг</string>
+    <string name="collect_every">Собирать каждые</string>
+    <string name="minutes">минут</string>
+    <string name="until">до</string>
+    <string name="from">От</string>
+    <string name="synchronization_every">Синхронизация каждые</string>
 </resources>
