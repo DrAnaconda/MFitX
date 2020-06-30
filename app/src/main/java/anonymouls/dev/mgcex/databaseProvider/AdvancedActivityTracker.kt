@@ -29,7 +29,7 @@ object AdvancedActivityTracker {
     }
 
     fun insertRecord(time: Calendar, deltaMin: Int, speedMin: Double, db: SQLiteDatabase): Long {
-        return insertRecord(CustomDatabaseUtils.CalendarToLong(time, true),
+        return insertRecord(CustomDatabaseUtils.calendarToLong(time, true),
                 deltaMin, speedMin, db)
     }
 
@@ -53,22 +53,22 @@ object AdvancedActivityTracker {
         val curs = db.query(TableName, TableColumns, null, null, null, null, "DATE DESC")
         if (curs.count > 0) {
             curs.moveToFirst()
-            var lockedTime = CustomDatabaseUtils.LongToCalendar(curs.getLong(1), true)
+            var lockedTime = CustomDatabaseUtils.longToCalendar(curs.getLong(1), true)
             for (x in 0 until curs.count - 1) {
                 curs.moveToNext()
-                val trueDelta = abs(Utils.getDeltaCalendar(CustomDatabaseUtils.LongToCalendar(curs.getLong(1), true),
+                val trueDelta = abs(Utils.getDeltaCalendar(CustomDatabaseUtils.longToCalendar(curs.getLong(1), true),
                         lockedTime, Calendar.MINUTE)) + 1
                 val steps = curs.getDouble(3) * curs.getInt(2)
                 val trueDeltaSteps = if (trueDelta > 0) steps / trueDelta else 0.0
                 val content = ContentValues()
                 val testB = curs.getLong(1)
-                val test = abs(CustomDatabaseUtils.CalendarToLong(lockedTime, true)
+                val test = abs(CustomDatabaseUtils.calendarToLong(lockedTime, true)
                         - curs.getLong(1))
                 content.put(TableColumns[2], trueDelta)
                 content.put(TableColumns[3], trueDeltaSteps)
                 db.update(TableName, content, "DATE = ?",
-                        arrayOf(CustomDatabaseUtils.CalendarToLong(lockedTime, true).toString()))
-                lockedTime = CustomDatabaseUtils.LongToCalendar(curs.getLong(1), true)
+                        arrayOf(CustomDatabaseUtils.calendarToLong(lockedTime, true).toString()))
+                lockedTime = CustomDatabaseUtils.longToCalendar(curs.getLong(1), true)
             }
         }
         curs.close()
@@ -80,8 +80,8 @@ object AdvancedActivityTracker {
     }
 
     fun optimizeBySleepRange(from: Calendar, to: Calendar, db: SQLiteDatabase) {
-        optimizeBySleepRange(CustomDatabaseUtils.CalendarToLong(from, true),
-                CustomDatabaseUtils.CalendarToLong(to, true), db)
+        optimizeBySleepRange(CustomDatabaseUtils.calendarToLong(from, true),
+                CustomDatabaseUtils.calendarToLong(to, true), db)
     }
 }
 

@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import java.lang.Math.random
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.collections.ArrayList
 
 class DataViewModel : ViewModel() {
 
@@ -70,9 +71,9 @@ class DataViewModel : ViewModel() {
 
     private fun setOffset() {
         staticOffset = when (scale) {
-            DataView.Scalings.Day -> CustomDatabaseUtils.CalculateOffsetValue(5, Calendar.MINUTE, false)
-            DataView.Scalings.Week -> CustomDatabaseUtils.CalculateOffsetValue(7, Calendar.DAY_OF_MONTH, false)
-            DataView.Scalings.Month -> CustomDatabaseUtils.CalculateOffsetValue(1, Calendar.MONTH, false)
+            DataView.Scalings.Day -> CustomDatabaseUtils.calculateOffsetValue(5, Calendar.MINUTE, false)
+            DataView.Scalings.Week -> CustomDatabaseUtils.calculateOffsetValue(7, Calendar.DAY_OF_MONTH, false)
+            DataView.Scalings.Month -> CustomDatabaseUtils.calculateOffsetValue(1, Calendar.MONTH, false)
         }
     }
 
@@ -80,8 +81,8 @@ class DataViewModel : ViewModel() {
         startValue = currentLock
         while (currentLock < toLong) {
             _currentProgress.postValue(activity.getString(R.string.current_progress_date) + " " +
-                    convertDateWithScaling(CustomDatabaseUtils.LongToCalendar(currentLock, true), scale) + " — " +
-                    convertDateWithScaling(CustomDatabaseUtils.LongToCalendar(currentLock + staticOffset, true), scale) + " (" + calculatePercentage(currentLock, toLong) + "%)")
+                    convertDateWithScaling(CustomDatabaseUtils.longToCalendar(currentLock, true), scale) + " — " +
+                    convertDateWithScaling(CustomDatabaseUtils.longToCalendar(currentLock + staticOffset, true), scale) + " (" + calculatePercentage(currentLock, toLong) + "%)")
 
             if (cancelled) {
                 emit(null); return@flow
@@ -90,21 +91,27 @@ class DataViewModel : ViewModel() {
             when (dataType) {
                 DataView.DataTypes.HR -> {
                     results = if (grouping)
-                        HRRecordsTable.extractFuncOnInterval(currentLock, CustomDatabaseUtils.SumLongs(currentLock, staticOffset + 1, false), database)
+                        HRRecordsTable.extractFuncOnInterval(currentLock, CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false), database)
                     else
-                        HRRecordsTable.extractRecords(currentLock, CustomDatabaseUtils.SumLongs(currentLock, staticOffset + 1, false), database)
+                        HRRecordsTable.extractRecords(currentLock, CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false), database)
                 }
                 DataView.DataTypes.Calories -> {
                     results = if (grouping)
-                        MainRecordsTable.extractFuncOnIntervalCalories(currentLock, CustomDatabaseUtils.SumLongs(currentLock, staticOffset + 1, false), database)
+                        MainRecordsTable.extractFuncOnIntervalCalories(currentLock, CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false), database)
                     else
-                        MainRecordsTable.extractRecords(currentLock, CustomDatabaseUtils.SumLongs(currentLock, staticOffset + 1, false), database)
+                        MainRecordsTable.extractRecords(currentLock,
+                                CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false),
+                                database, scale)
                 }
                 DataView.DataTypes.Steps -> {
                     results = if (grouping)
-                        MainRecordsTable.extractFuncOnIntervalSteps(currentLock, CustomDatabaseUtils.SumLongs(currentLock, staticOffset + 1, false), database)
+                        MainRecordsTable.extractFuncOnIntervalSteps(currentLock,
+                                CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false),
+                                database)
                     else
-                        MainRecordsTable.extractRecords(currentLock, CustomDatabaseUtils.SumLongs(currentLock, staticOffset + 1, false), database)
+                        MainRecordsTable.extractRecords(currentLock,
+                                CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false),
+                                database, scale)
                 }
             }
             try {
@@ -120,7 +127,7 @@ class DataViewModel : ViewModel() {
                 return@flow
             } finally {
                 results?.close()
-                currentLock = CustomDatabaseUtils.SumLongs(currentLock, staticOffset, false)
+                currentLock = CustomDatabaseUtils.sumLongs(currentLock, staticOffset, false)
             }
         }
         emit(null)
@@ -131,19 +138,25 @@ class DataViewModel : ViewModel() {
                         scale: DataView.Scalings, DataType: DataView.DataTypes) {
         this.cancelled = false
         this.database = DatabaseController.getDCObject(context).readableDatabase
-        this.fromLong = CustomDatabaseUtils.CalendarToLong(From, true)
-        this.toLong = CustomDatabaseUtils.CalendarToLong(To, true)
+        this.fromLong = CustomDatabaseUtils.calendarToLong(From, true)
+        this.toLong = CustomDatabaseUtils.calendarToLong(To, true)
         currentLock = this.fromLong
         this.dataType = DataType
         this.scale = scale
         grouping = scale != DataView.Scalings.Day
         _loading.value = View.VISIBLE
         setOffset()
+        val hashCodes = ArrayList<String>()
         val inputQuene: Queue<Record> = LinkedList<Record>()
         viewModelScope.launch(Dispatchers.IO) {
             fetchDataStageB(context).collect {
                 if (it != null) {
-                    inputQuene.add(it); _result.postValue(inputQuene); }
+                    if (!hashCodes.contains(it.toString())) {
+                        hashCodes.add(it.toString())
+                        inputQuene.add(it)
+                        _result.postValue(inputQuene)
+                    }
+                }
                 else
                     _loading.postValue(View.GONE)
             }
@@ -159,26 +172,26 @@ class Record(Result: Cursor?, var recordDate: Long, isGrouping: Boolean, private
     var minValue: Int = -1
     var maxValue: Int = -1
 
-    val dateString: String
+    private val dateString: String
         get() {
             return when (scale) {
-                DataView.Scalings.Day -> SimpleDateFormat("LLLL d HH:mm", Locale.getDefault()).format(CustomDatabaseUtils.LongToCalendar(recordDate, true).time)
-                DataView.Scalings.Week -> SimpleDateFormat("LLLL W yyyy", Locale.getDefault()).format(CustomDatabaseUtils.LongToCalendar(recordDate, true).time)
-                DataView.Scalings.Month -> SimpleDateFormat("LLLL yyyy", Locale.getDefault()).format(CustomDatabaseUtils.LongToCalendar(recordDate, true).time)
+                DataView.Scalings.Day -> SimpleDateFormat("LLLL d HH:mm", Locale.getDefault()).format(CustomDatabaseUtils.longToCalendar(recordDate, true).time)
+                DataView.Scalings.Week -> SimpleDateFormat("LLLL W yyyy", Locale.getDefault()).format(CustomDatabaseUtils.longToCalendar(recordDate, true).time)
+                DataView.Scalings.Month -> SimpleDateFormat("LLLL yyyy", Locale.getDefault()).format(CustomDatabaseUtils.longToCalendar(recordDate, true).time)
             }
         }
 
 
     init {
         if (Result != null && recordDate > 0) {
-            whenCalendar = CustomDatabaseUtils.LongToCalendar(recordDate, true)
+            whenCalendar = CustomDatabaseUtils.longToCalendar(recordDate, true)
             if (isGrouping) {
                 mainValue = Result.getInt(0)//AVG
                 minValue = Result.getInt(1)//MIN
                 maxValue = Result.getInt(2)//MAX
             } else {
                 recordDate = Result.getLong(0)
-                whenCalendar = CustomDatabaseUtils.LongToCalendar(recordDate, true)
+                whenCalendar = CustomDatabaseUtils.longToCalendar(recordDate, true)
                 mainValue = Result.getInt(1)
             }
         }
@@ -196,6 +209,9 @@ class Record(Result: Cursor?, var recordDate: Long, isGrouping: Boolean, private
         return result
     }
 
+    override fun toString(): String {
+        return dateString + mainValue.toString()
+    }
 
     companion object {
         fun getTestRecord(): Record {
@@ -206,45 +222,3 @@ class Record(Result: Cursor?, var recordDate: Long, isGrouping: Boolean, private
         }
     }
 }
-
-/* REMOVED NOT OPTIMAL
-class DataAdapter() : ListAdapter<Record, DataAdapter.RecordItemHolder>(Companion) {
-
-    companion object : DiffUtil.ItemCallback<Record>() {
-        override fun areItemsTheSame(oldItem: Record, newItem: Record): Boolean = oldItem === newItem
-        override fun areContentsTheSame(oldItem: Record, newItem: Record): Boolean = oldItem.recordDate == newItem.recordDate
-    }
-
-    class RecordItemHolder(var binding: TableItemBinding) : RecyclerView.ViewHolder(binding.root){   }
-
-    private var _itemCount = 0
-
-    override fun onCurrentListChanged(previousList: MutableList<Record>, currentList: MutableList<Record>) {
-        super.onCurrentListChanged(previousList, currentList)
-        _itemCount = currentList.size
-    }
-    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
-        super.onAttachedToRecyclerView(recyclerView)
-    }
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecordItemHolder {
-        val layoutInflater = LayoutInflater.from(parent.context)
-        val binding = TableItemBinding.inflate(layoutInflater)
-        return RecordItemHolder(binding)
-    }
-
-    override fun onBindViewHolder(holder: RecordItemHolder, position: Int) {
-        try {
-            val currentItem = getItem(position)
-            holder.binding.record = currentItem
-            holder.binding.executePendingBindings()
-        }catch (ex: Exception){
-
-        }
-    }
-
-    override fun getItemCount(): Int {
-        return _itemCount
-    }
-}
- */

@@ -37,7 +37,7 @@ object SleepSessionsTable {
     }
 
     fun insertRecord(RecordTime: Calendar, Operator: SQLiteDatabase): Long {
-        return insertRecord(CustomDatabaseUtils.CalendarToLong(RecordTime, true), Operator)
+        return insertRecord(CustomDatabaseUtils.calendarToLong(RecordTime, true), Operator)
     }
 
     fun findAssigment(recTarget: Long, db: SQLiteDatabase): Long {

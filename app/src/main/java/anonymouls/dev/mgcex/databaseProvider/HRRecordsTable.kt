@@ -30,7 +30,7 @@ object HRRecordsTable {
 //region data insertion and updating
 
     private fun isAlreadyExistsV2(Target: Calendar, Operator: SQLiteDatabase): Long? {
-        val DT = CustomDatabaseUtils.CalendarToLong(Target, true)
+        val DT = CustomDatabaseUtils.calendarToLong(Target, true)
         val data = Operator.query(TableName, arrayOf(ColumnsNames[0]),
                 ColumnsNames[1] + " = ?", arrayOf(DT.toString()), null, null, null, "1")
         data.moveToFirst()
@@ -50,7 +50,7 @@ object HRRecordsTable {
 
     fun insertRecord(RecordTime: Calendar, HRValue: Int, Operator: SQLiteDatabase): Long {
         val values = ContentValues()
-        values.put(ColumnsNames[1], CustomDatabaseUtils.CalendarToLong(RecordTime, true))
+        values.put(ColumnsNames[1], CustomDatabaseUtils.calendarToLong(RecordTime, true))
         values.put(ColumnsNames[2], HRValue)
         val checkID = isAlreadyExistsV2(RecordTime, Operator)
         if (checkID == null)
@@ -64,9 +64,9 @@ object HRRecordsTable {
 
     fun updateAnalyticalViaMainInfo(deltaMin: Int, stepsMin: Double, from: Long,
                                     db: SQLiteDatabase) {
-        val calendarTo = CustomDatabaseUtils.LongToCalendar(from, true)
+        val calendarTo = CustomDatabaseUtils.longToCalendar(from, true)
         calendarTo.add(Calendar.MINUTE, deltaMin)
-        val to = CustomDatabaseUtils.CalendarToLong(calendarTo, true) + 1
+        val to = CustomDatabaseUtils.calendarToLong(calendarTo, true) + 1
         val arctificalCoeff = 1 + (deltaMin - 5) * ((3 - 1) / (60 - 5))
         val mutatedSteps = stepsMin * arctificalCoeff
         val content = ContentValues()
@@ -76,8 +76,8 @@ object HRRecordsTable {
     }
 
     fun updateAnalyticalViaSleepInterval(From: Calendar, To: Calendar, isDeep: Boolean, Operator: SQLiteDatabase) {
-        val from = CustomDatabaseUtils.CalendarToLong(From, true)
-        val to = CustomDatabaseUtils.CalendarToLong(To, true)
+        val from = CustomDatabaseUtils.calendarToLong(From, true)
+        val to = CustomDatabaseUtils.calendarToLong(To, true)
         val values = ContentValues()
         if (isDeep)
             values.put(ColumnsNames[3], AnalyticTypes.Sleeping.type)
@@ -127,8 +127,8 @@ object HRRecordsTable {
             from = 0
             to = Long.MAX_VALUE
         } else {
-            from = CustomDatabaseUtils.CalendarToLong(From, true)
-            to = CustomDatabaseUtils.CalendarToLong(To, true)
+            from = CustomDatabaseUtils.calendarToLong(From, true)
+            to = CustomDatabaseUtils.calendarToLong(To, true)
         }
         val curs = Operator.query(TableName,
                 arrayOf(CustomDatabaseUtils.niceSQLFunctionBuilder("COUNT", "*"), //0
@@ -149,8 +149,8 @@ object HRRecordsTable {
             from = 0
             to = Long.MAX_VALUE
         } else {
-            from = CustomDatabaseUtils.CalendarToLong(From, true)
-            to = CustomDatabaseUtils.CalendarToLong(To, true)
+            from = CustomDatabaseUtils.calendarToLong(From, true)
+            to = CustomDatabaseUtils.calendarToLong(To, true)
         }
         //val lowerDelta = avgHR-(avgHR*0.2f)
         val upperDelta = avgHR + (avgHR * 0.2f)

@@ -29,7 +29,7 @@ object SleepRecordsTable {
         }
         curs.close()
         val result = Calendar.getInstance(); result.add(Calendar.MONTH, -6)
-        return CustomDatabaseUtils.CalendarToLong(result, true)
+        return CustomDatabaseUtils.calendarToLong(result, true)
     }
 
     private fun assignSSID(recordDate: Long, Duration: Int, Type: Int, Operator: SQLiteDatabase): Long {
@@ -52,17 +52,17 @@ object SleepRecordsTable {
     fun insertRecord(RecordTime: Calendar, SSID: Long, Duration: Int, Type: Int, Operator: SQLiteDatabase): Long {
         val Values = ContentValues()
         var SSID = SSID
-        val recordDate = CustomDatabaseUtils.CalendarToLong(RecordTime, true)
+        val recordDate = CustomDatabaseUtils.calendarToLong(RecordTime, true)
         Values.put(ColumnNames[1], recordDate)
         if (SSID < 0) {
-            SSID = assignSSID(CustomDatabaseUtils.CalendarToLong(RecordTime, true), Duration, Type, Operator)
+            SSID = assignSSID(CustomDatabaseUtils.calendarToLong(RecordTime, true), Duration, Type, Operator)
         }
         Values.put(ColumnNames[2], SSID)
         Values.put(ColumnNames[3], Duration)
         Values.put(ColumnNames[4], Type)
         RecordTime.add(Calendar.MINUTE, Duration)
         HRRecordsTable.updateAnalyticalViaSleepInterval(
-                CustomDatabaseUtils.LongToCalendar(recordDate, true),
+                CustomDatabaseUtils.longToCalendar(recordDate, true),
                 RecordTime, Type == 2, Operator)
         return try {
             val curs = Operator.query(TableName, arrayOf(ColumnNames[1]), ColumnNames[1] + " = ?",
@@ -94,7 +94,7 @@ object SleepRecordsTable {
     }
 
     class SleepRecord(var RTime: Long, var Duration: Int, var TypeRecord: Int) {
-        enum class RecordTypes(val code: Int) { Deep(2), LightOrOverall(1) }
+        enum class RecordTypes(val code: Int) { Deep(2), LightOrOverall(1), Awake(3) }
 
     }
 

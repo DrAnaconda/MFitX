@@ -26,7 +26,7 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
     }
 
     private fun fixTableByDate(db: SQLiteDatabase, table: String) {
-        val now = CustomDatabaseUtils.CalendarToLong(Calendar.getInstance(), true)
+        val now = CustomDatabaseUtils.calendarToLong(Calendar.getInstance(), true)
         var curs = db.query(table, arrayOf(CustomDatabaseUtils.niceSQLFunctionBuilder("COUNT", "*")), " DATE > ?",
                 arrayOf(now.toString()), null, null, null, null)
         curs.moveToFirst()

@@ -27,8 +27,10 @@ class Algorithm : IntentService("Syncer") {
 
     private lateinit var database: DatabaseController
     private lateinit var prefs: SharedPreferences
+    private var hrMonitoringTimer: Timer? = null
     lateinit var ci: CommandInterpreter
     private var workInProgress = false
+    private var isFirstTime = true
     var thread: Thread? = null
 
     private var serviceObject: IBinder? = null
@@ -73,7 +75,7 @@ class Algorithm : IntentService("Syncer") {
 
     private fun getLastSleepSync(): Calendar {
         return if (database != null)
-            CustomDatabaseUtils.LongToCalendar(SleepRecordsTable.getLastSync(database.readableDatabase), true)
+            CustomDatabaseUtils.longToCalendar(SleepRecordsTable.getLastSync(database.readableDatabase), true)
         else {
             val result = Calendar.getInstance(); result.add(Calendar.MONTH, -6); return result
         }
@@ -95,7 +97,7 @@ class Algorithm : IntentService("Syncer") {
         customWait(1000)
         ci.requestHRHistory(getLastHRSync())
         customWait(1000)
-        manualHRHack()
+        if (isFirstTime) forceSyncHR()
         //if (IsAlarmingTriggered && !IsFromActivity) alarmTriggerDecider(0)
     }
 
@@ -132,6 +134,7 @@ class Algorithm : IntentService("Syncer") {
                         && prefs.contains(SettingsActivity.Companion.HRMonitoringSettings.hrMeasureInterval))
                 || ci.hRRealTimeControlSupport) {
             forceSyncHR()
+            manualHRHack()
         }
         NextSync = Calendar.getInstance()
         NextSync!!.add(Calendar.MILLISECOND, MainSyncPeriodSeconds)
@@ -259,14 +262,15 @@ class Algorithm : IntentService("Syncer") {
         targetString += Utils.subIntegerConversionCheck(Calendar.getInstance().get(Calendar.MINUTE).toString())
         val isActive = if (startString == endString) true; else Utils.isTimeInInterval(startString!!, endString!!, targetString)
         if (isActive && prefs.getBoolean(SettingsActivity.Companion.HRMonitoringSettings.hrMonitoringEnabled, false)) {
-            val interval = prefs.getInt(SettingsActivity.Companion.HRMonitoringSettings.hrMeasureInterval, 5)
-            val taskForce = object : TimerTask() {
-                override fun run() {
-                    ci.requestManualHRMeasure(false)
-                }
-            }
-            val timer = Timer(); timer.schedule(taskForce, interval.toLong())
+            ci.requestManualHRMeasure(false)
         }
+        val interval = prefs.getInt(SettingsActivity.Companion.HRMonitoringSettings.hrMeasureInterval, 5)
+        val taskForce = object : TimerTask() {
+            override fun run() {
+                manualHRHack()
+            }
+        }
+        hrMonitoringTimer = Timer(); hrMonitoringTimer?.schedule(taskForce, interval.toLong() * 60 * 1000)
     }
 
     companion object {
@@ -289,7 +293,7 @@ class Algorithm : IntentService("Syncer") {
 
         var IsActive = true
         private var IsInit = false
-        private var isFirstTime = true
+
 
         private var PhoneListener: PhoneStateListenerBroadcast? = null
         private var SBIReceiver: UartServiceBroadcastInterpreter? = null
@@ -318,10 +322,9 @@ class Algorithm : IntentService("Syncer") {
 
 }
 
-// TODO Found active status at sleep intervals. Integrate data visualization
+// TODO Integrate data sleep visualization
 // TODO Integrate 3d party services
-// TODO Power save algo
-// TODO Battery health tracker
+// TODO Battery health tracker + Power save algo
 // TODO Manual hearth value request
-// TODO LM: Sleep Data
+// TODO LM: Sleep Data (tests needed)
 // TODO LM: Other settings (dnd, alarms)

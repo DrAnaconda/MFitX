@@ -40,6 +40,7 @@ class ScanActivity : Activity() {
 //region default android
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
+        if (data == null || resultCode != RESULT_CANCELED) return
         super.onActivityResult(requestCode, resultCode, data)
         when (requestCode) {
             Utils.BluetoothEnableRequestCode -> {

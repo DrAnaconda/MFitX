@@ -1,6 +1,7 @@
 package anonymouls.dev.mgcex.app.backend
 
 import anonymouls.dev.mgcex.app.main.SettingsActivity
+import anonymouls.dev.mgcex.databaseProvider.SleepRecordsTable
 import anonymouls.dev.mgcex.util.Utils
 import java.nio.ByteBuffer
 import java.util.*
@@ -114,12 +115,30 @@ class LM517CommandInterpreter : CommandInterpreter() {
                 .putInt(SettingsActivity.targetSteps, steps.toInt()).apply()
     }
 
+    private fun sleepDataProceeder(Input: ByteArray) {
+        if (Input[2].toUByte() != (13).toUByte() || Input.size != 16) return
+
+        var buffer = ByteBuffer.wrap(Input, 8, 2)
+        val recordTime = decryptDays(buffer.short, null)
+        buffer = ByteBuffer.wrap(Input, 12, 2)
+        recordTime.set(Calendar.HOUR_OF_DAY, 23); recordTime.set(Calendar.MINUTE, 30) // Sleep Tracking starts here
+        recordTime.add(Calendar.MINUTE, buffer.short.toInt())
+        val castedCode = when (Input[Input.size - 1].toUByte()) {
+            (2).toUByte() -> SleepRecordsTable.SleepRecord.RecordTypes.Awake.code
+            (1).toUByte() -> SleepRecordsTable.SleepRecord.RecordTypes.Deep.code
+            (3).toUByte() -> SleepRecordsTable.SleepRecord.RecordTypes.LightOrOverall.code
+            else -> -1
+        }
+        this.callback?.sleepHistoryRecord(recordTime, 8, castedCode)
+        // this shit calculaes every 8 minutes. Kostil or no?
+    }
+
     private fun commandsEntryPoint(Input: ByteArray) {
-        val test = Utils.byteArrayToHexString(Input)
         if (Input[0].toUByte() != 205.toUByte()) return
         if (Input[1].toUByte() != 0.toUByte()) return
         //if (Input[2].toUByte() != 21.toUByte()) return
         when (Input[5].toUByte()) {
+            (3).toUByte() -> sleepDataProceeder(Input)
             (2).toUByte() -> stepsSettingProceeder(Input)
             (14).toUByte() -> hrRecordProceeder(Input)
             (12).toUByte() -> mainRecordProceeder(Input)
@@ -167,7 +186,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
     }
 
     private fun buildNotify(Message: String): ByteArray {
-        // TODO Investigate Types
+        // TODO Investigate Types. Not working, complicated.
         // 2 nd package up to 20 bytes
         // 3 rd up to 3?
         var request = notifyHeader + Message.length + "010000"
@@ -197,7 +216,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
     }
 
     override fun requestSleepHistory(FromDate: Calendar) {
-        //TODO("Not yet implemented")
+        postCommand(hexStringToByteArray("cd:00:06:15:01:0d:00:01:01"))
     }
 
     override fun requestHRHistory(FromDate: Calendar?) {
@@ -245,7 +264,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
                 requestManualHRMeasure(true); getMainInfoRequest()
             }
         }
-        cancelTimer = Timer(); cancelTimer?.schedule(taskForce, 60000)
+        cancelTimer = Timer(); cancelTimer?.schedule(taskForce, 90000)
     }
 
     override fun setVibrationSetting(enabled: Boolean) {

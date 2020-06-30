@@ -5,26 +5,26 @@ import java.util.*
 
 object CustomDatabaseUtils {
 
-    private fun CheckForLength(Target: Calendar, FieldID: Int): String {
+    private fun checkForLength(Target: Calendar, FieldID: Int): String {
         val ArrayCompensation = if (FieldID != Calendar.MONTH) 0 else 1
         val Result = Integer.toString(Target.get(FieldID) + ArrayCompensation)
         return if (Target.get(FieldID) + ArrayCompensation < 10) "0$Result" else Result
 
     }
 
-    fun CalendarToLong(Target: Calendar, IsTimeDetailsNeeded: Boolean): Long {
+    fun calendarToLong(Target: Calendar, IsTimeDetailsNeeded: Boolean): Long {
         var Buff = ""
         Buff += Integer.toString(Target.get(Calendar.YEAR))
-        Buff += CheckForLength(Target, Calendar.MONTH)
-        Buff += CheckForLength(Target, Calendar.DAY_OF_MONTH)
+        Buff += checkForLength(Target, Calendar.MONTH)
+        Buff += checkForLength(Target, Calendar.DAY_OF_MONTH)
         if (IsTimeDetailsNeeded) {
-            Buff += CheckForLength(Target, Calendar.HOUR_OF_DAY)
-            Buff += CheckForLength(Target, Calendar.MINUTE)
+            Buff += checkForLength(Target, Calendar.HOUR_OF_DAY)
+            Buff += checkForLength(Target, Calendar.MINUTE)
         }
         return java.lang.Long.parseLong(Buff)
     }
 
-    fun LongToCalendar(Target: Long, IsTimeDetailsNeeded: Boolean): Calendar {
+    fun longToCalendar(Target: Long, IsTimeDetailsNeeded: Boolean): Calendar {
         val Result = Calendar.getInstance()
         val LongTarget = java.lang.Long.toString(Target).toCharArray()
         val Year = Integer.parseInt(String(LongTarget, 0, 4))
@@ -41,20 +41,18 @@ object CustomDatabaseUtils {
         return Result
     }
 
-    fun CalculateOffsetValue(StandardValue: Long, FieldType: Int, IsShort: Boolean): Long {
-        val Result: Long
-        when (FieldType) {
-            Calendar.YEAR -> Result = if (IsShort) StandardValue * 10000 else StandardValue * 100000000
-            Calendar.MONTH -> Result = if (IsShort) StandardValue * 100 else StandardValue * 1000000
-            Calendar.DAY_OF_MONTH -> Result = if (IsShort) StandardValue else StandardValue * 10000
-            Calendar.HOUR_OF_DAY -> Result = StandardValue * 100
-            Calendar.MINUTE -> Result = StandardValue
-            else -> Result = -1
+    fun calculateOffsetValue(StandardValue: Long, FieldType: Int, IsShort: Boolean): Long {
+        return when (FieldType) {
+            Calendar.YEAR -> if (IsShort) StandardValue * 10000 else StandardValue * 100000000
+            Calendar.MONTH -> if (IsShort) StandardValue * 100 else StandardValue * 1000000
+            Calendar.DAY_OF_MONTH -> if (IsShort) StandardValue else StandardValue * 10000
+            Calendar.HOUR_OF_DAY -> StandardValue * 100
+            Calendar.MINUTE -> StandardValue
+            else -> -1
         }
-        return Result
     }
 
-    fun SumLongs(A: Long, B: Long, IsShort: Boolean): Long {
+    fun sumLongs(A: Long, B: Long, IsShort: Boolean): Long {
         val Sum = A + B
         val SumStr = java.lang.Long.toString(Sum)
         var Year = Integer.parseInt(SumStr.substring(0, 4))
@@ -95,7 +93,7 @@ object CustomDatabaseUtils {
             Buff.add(Calendar.MONTH, -5)
             return Buff
         }
-        val result = LongToCalendar(record.getLong(1), IsShort)
+        val result = longToCalendar(record.getLong(1), IsShort)
         record.close()
         return result
 

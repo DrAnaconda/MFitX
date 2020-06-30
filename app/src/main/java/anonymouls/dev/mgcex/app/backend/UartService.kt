@@ -88,7 +88,6 @@ class UartService : Service() {
         instance = this
         Thread.currentThread().priority = Thread.NORM_PRIORITY
         Thread.currentThread().name = "UARTService"
-        startService(Intent(this, Algorithm::class.java)) // TODO Move to another
         timer.schedule(object : TimerTask() {
             override fun run() {
                 if (Algorithm.SelfPointer == null) {

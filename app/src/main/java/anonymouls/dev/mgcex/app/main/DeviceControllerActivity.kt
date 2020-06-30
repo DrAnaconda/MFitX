@@ -49,7 +49,7 @@ class DeviceControllerActivity : AppCompatActivity() {
         if (!((UartService.mBluetoothManager != null) and UartService.mBluetoothManager!!.adapter.isEnabled)) {
             Algorithm.StatusCode.postValue(Algorithm.StatusCodes.BluetoothDisabled)
         }
-        //startService(Intent(this, Algorithm::class.java)) // TODO Move to another
+        startService(Intent(this, Algorithm::class.java)) // TODO Move to another
         startService(Intent(this, UartService::class.java))
     }
 
@@ -196,7 +196,7 @@ class DeviceControllerActivity : AppCompatActivity() {
             }
             R.id.HRContainer -> launchDataGraph("HR")
             R.id.StepsContainer -> launchDataGraph("STEPS")
-            R.id.CaloriesContainer -> launchDataGraph("CALORIES")
+            //R.id.CaloriesContainer -> launchDataGraph("CALORIES") TODO haxui nada?
             R.id.SettingContainer -> {
                 val Sets = Intent(baseContext, SettingsActivity::class.java)
                 Sets.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
