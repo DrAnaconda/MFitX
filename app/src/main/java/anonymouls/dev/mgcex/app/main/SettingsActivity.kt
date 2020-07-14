@@ -29,6 +29,7 @@ class SettingsActivity : Activity() {
     private var packagesList: TableLayout? = null
 
     private var dataView = false
+    private var demoMode = Utils.getSharedPrefs(this).contains(bandAddress)
     private lateinit var commandController: CommandInterpreter
     private lateinit var prefs: SharedPreferences
 
@@ -85,25 +86,31 @@ class SettingsActivity : Activity() {
     }
 
     private fun dynamicContentInit() {
-        if (commandController.stepsTargetSettingSupport)
+        if (commandController.stepsTargetSettingSupport && prefs.contains(bandAddress))
             findViewById<LinearLayout>(R.id.stepsTargetContainer).visibility = View.VISIBLE
         else
             findViewById<LinearLayout>(R.id.stepsTargetContainer).visibility = View.GONE
 
-        if (commandController.sittingReminderSupport)
+        if (commandController.sittingReminderSupport && prefs.contains(bandAddress))
             findViewById<Switch>(R.id.sittingReminderSwitch).visibility = View.VISIBLE
         else
             findViewById<Switch>(R.id.sittingReminderSwitch).visibility = View.GONE
 
-        if (commandController.vibrationSupport)
+        if (commandController.vibrationSupport && prefs.contains(bandAddress))
             findViewById<Switch>(R.id.vibrationSwitch).visibility = View.VISIBLE
         else
             findViewById<Switch>(R.id.vibrationSwitch).visibility = View.GONE
+
+        if (demoMode) {
+            findViewById<Switch>(R.id.NotificationsSwitch).visibility = View.GONE
+            findViewById<Switch>(R.id.PhoneSwitch).visibility = View.GONE
+            findViewById<Switch>(R.id.GyroSwitch).visibility = View.GONE
+        }
     }
 
     private fun initSwitches() {
         findViewById<Switch>(R.id.NotificationsSwitch).isChecked = prefs.getBoolean("NotificationGranted", false)
-        //findViewById<Switch>(R.id.NotificationsSwitch).isChecked = Algorithm.isNotifyServiceAlive(this)
+        findViewById<Switch>(R.id.NotificationsSwitch).isChecked = Algorithm.isNotifyServiceAlive(this)
         findViewById<Switch>(R.id.PhoneSwitch).isChecked = prefs.getBoolean(receiveCallsSetting, true)
         findViewById<Switch>(R.id.GyroSwitch).isChecked = prefs.getBoolean(illuminationSetting, false)
         findViewById<Switch>(R.id.vibrationSwitch).isChecked = prefs.getBoolean(vibrationSetting, false)
@@ -378,6 +385,7 @@ class SettingsActivity : Activity() {
         const val targetSteps = "TargetStepsSetting"
         const val longSittingSetting = "LongSittingReminder"
         const val vibrationSetting = "VibrationSetting"
+        const val bandAddress = "BandAddress"
 
         object HRMonitoringSettings {
             const val hrMonitoringEnabled = "HRMonitoringEnabled"

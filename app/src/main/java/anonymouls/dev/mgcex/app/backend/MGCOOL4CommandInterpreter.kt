@@ -36,7 +36,8 @@ class MGCOOL4CommandInterpreter : CommandInterpreter() {
         UartService.TX_CHAR_UUID = UUID.fromString(UARTTXUUIDString)
         UartService.RX_SERVICE_UUID = UUID.fromString(UARTRXServiceUUIDString)
         UartService.TXServiceDesctiptor = UUID.fromString(UARTDescriptor)
-        Utils.getSharedPrefs(Algorithm.SelfPointer!!.baseContext).edit().remove(SettingsActivity.targetSteps).apply()
+        if (Algorithm.SelfPointer != null)
+            Utils.getSharedPrefs(Algorithm.SelfPointer!!.baseContext).edit().remove(SettingsActivity.targetSteps).apply()
     }
 
     override fun getMainInfoRequest() {
@@ -236,13 +237,13 @@ class MGCOOL4CommandInterpreter : CommandInterpreter() {
         val Req = buildNotify(Input)
         var Req1 = Arrays.copyOfRange(Req, 0, 20)
         postCommand(Req1)
-        Thread.sleep(50)
+        Utils.safeThreadSleep(50, false)
         Req1 = Arrays.copyOfRange(Req, 20, 40)
         postCommand(Req1)
-        Thread.sleep(50)
+        Utils.safeThreadSleep(50, false)
         Req1 = Arrays.copyOfRange(Req, 40, 46)
         postCommand(Req1)
-        Thread.sleep(50)
+        Utils.safeThreadSleep(50, false)
     }
 
     override fun requestBatteryStatus() {

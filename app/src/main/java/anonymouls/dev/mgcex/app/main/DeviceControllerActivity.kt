@@ -49,8 +49,8 @@ class DeviceControllerActivity : AppCompatActivity() {
         if (!((UartService.mBluetoothManager != null) and UartService.mBluetoothManager!!.adapter.isEnabled)) {
             Algorithm.StatusCode.postValue(Algorithm.StatusCodes.BluetoothDisabled)
         }
-        startService(Intent(this, Algorithm::class.java)) // TODO Move to another
-        startService(Intent(this, UartService::class.java))
+        //Utils.serviceStartForegroundMultiAPI(Intent(this, UartService::class.java), this)
+        Utils.serviceStartForegroundMultiAPI(Intent(this, Algorithm::class.java), this)// TODO Move to another?
     }
 
     private fun initBindings() {
@@ -129,7 +129,7 @@ class DeviceControllerActivity : AppCompatActivity() {
         Analytics.getInstance(this)?.sendCustomEvent(FirebaseAnalytics.Event.APP_OPEN, null)
 //        AdsController.initAdBanned(ad, this)TODO
         if (Utils.isDeviceSupported(this)) {
-            if (!Utils.getSharedPrefs(this).contains("BandAddress")) {
+            if (!Utils.getSharedPrefs(this).contains(SettingsActivity.bandAddress)) {
                 DeviceControllerViewModel.instance?._currentStatus?.postValue(getString(R.string.demo_mode))
                 findViewById<ProgressBar>(R.id.syncInProgress).visibility = View.GONE
                 demoMode = true
@@ -180,9 +180,9 @@ class DeviceControllerActivity : AppCompatActivity() {
                 Algorithm.IsActive = false
                 Algorithm.SelfPointer?.stopSelf()
                 UartService.instance?.disconnect()
-                UartService.instance?.stopSelf()
+                //UartService.instance?.stopSelf()
                 stopService(Intent(this, Algorithm::class.java))
-                stopService(Intent(this, UartService::class.java))
+                //stopService(Intent(this, UartService::class.java))
                 finish()
                 exitProcess(0)
             }
@@ -322,11 +322,7 @@ class DeviceControllerActivity : AppCompatActivity() {
         fun makeGattUpdateIntentFilter(): IntentFilter {
             val intentFilter = IntentFilter()
             intentFilter.addAction(Algorithm.StatusAction)
-            intentFilter.addAction(UartService.ACTION_GATT_CONNECTED)
-            intentFilter.addAction(UartService.ACTION_GATT_DISCONNECTED)
-            intentFilter.addAction(UartService.ACTION_GATT_SERVICES_DISCOVERED)
             intentFilter.addAction(UartService.ACTION_DATA_AVAILABLE)
-            intentFilter.addAction(UartService.DEVICE_DOES_NOT_SUPPORT_UART)
             intentFilter.addAction(NotificationService.NotifyAction)
             intentFilter.addAction("AlarmAction")
             return intentFilter

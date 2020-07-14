@@ -1,6 +1,5 @@
 package anonymouls.dev.mgcex.app.backend
 
-import android.bluetooth.BluetoothAdapter.STATE_CONNECTED
 import android.content.ContentResolver
 import android.content.Intent
 import android.content.SharedPreferences
@@ -66,8 +65,8 @@ class NotificationService : NotificationListenerService() {
         } catch (ex: NullPointerException) {
 
         }
-        if (UartService.instance != null && (UartService.instance!!.mConnectionState >= STATE_CONNECTED
-                        || Algorithm.StatusCode.value!!.code >= 3)) {
+        if (UartService.instance != null &&
+                Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.Connected.code) {
             if (title != null)
                 PendingList.add(CustomNotification(pack, title, text, sbn))
             else
@@ -134,7 +133,8 @@ class NotificationService : NotificationListenerService() {
                 msgrcv.putExtra("app", appText)
                 msgrcv.putExtra("title", titleText)
                 msgrcv.putExtra("text", contentText)
-                if (UartService.instance != null && UartService.instance!!.mConnectionState >= STATE_CONNECTED)
+                if (UartService.instance != null
+                        && Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.GattReady.code)
                     sendBroadcast(msgrcv)
             }
         }
@@ -172,11 +172,11 @@ class NotificationService : NotificationListenerService() {
                             CN.sendToDevice()
                             if (CN.repeats >= sharedPrefs!!.getInt(SettingsActivity.repeatsNumbers, 3))
                                 PendingList.remove(CN)
-                            Thread.sleep(3000)
+                            Utils.safeThreadSleep(3000, false)
                         }
                     } else PendingList.clear()
 
-                    Thread.sleep((sharedPrefs!!.getInt(SettingsActivity.secondsNotify, 5) * 1000).toLong())
+                    Utils.safeThreadSleep((sharedPrefs!!.getInt(SettingsActivity.secondsNotify, 5) * 1000).toLong(), false)
                 }
                 return true
             }

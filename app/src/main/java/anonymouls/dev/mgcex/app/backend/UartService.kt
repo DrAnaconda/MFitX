@@ -4,37 +4,46 @@ import android.app.Service
 import android.bluetooth.*
 import android.content.Context
 import android.content.Intent
-import android.os.Binder
-import android.os.IBinder
+import android.os.Build
 import java.util.*
 
-class UartService : Service() {
-    var mBluetoothAdapter: BluetoothAdapter? = null
-    var mConnectionState = STATE_DISCONNECTED
+class UartService(private val context: Context) {
 
+    private var mBluetoothAdapter: BluetoothAdapter =
+            (context.getSystemService(Service.BLUETOOTH_SERVICE) as BluetoothManager).adapter
     private var mBluetoothDeviceAddress: String? = null
-    private var timer: Timer = Timer(false)
+    private var discoveringPending = false
 
     private val mGattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
-            val intentAction: String
             if (newState == BluetoothProfile.STATE_CONNECTED) {
-                intentAction = ACTION_GATT_CONNECTED
-                mConnectionState = STATE_CONNECTED
-                broadcastUpdate(intentAction)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+                    gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
+                gatt.discoverServices()
+                if (Algorithm.StatusCode.value!!.code < Algorithm.StatusCodes.GattConnected.code)
+                    Algorithm.updateStatusCode(Algorithm.StatusCodes.GattConnected)
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                intentAction = ACTION_GATT_DISCONNECTED
-                mConnectionState = STATE_DISCONNECTED
                 mBluetoothGatt = null
-                broadcastUpdate(intentAction)
+                Algorithm.updateStatusCode(Algorithm.StatusCodes.Disconnected)
+                for (i in 0 until 3) {
+                    Algorithm.SelfPointer?.thread?.interrupt()
+                }
             }
         }
 
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                mConnectionState = STATE_DISCOVERED
-                broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+                    gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_LOW_POWER)
+                instance?.enableTXNotification(RX_SERVICE_UUID, TX_CHAR_UUID, TXServiceDesctiptor)
+                instance?.enableTXNotification(PowerServiceUUID, PowerTXUUID, PowerDescriptor)
+                Algorithm.updateStatusCode(Algorithm.StatusCodes.GattReady)
+            } else {
+                gatt.discoverServices()
+                Algorithm.updateStatusCode(Algorithm.StatusCodes.GattConnected)
+                Algorithm.SelfPointer?.thread?.interrupt()
             }
+            discoveringPending = false
         }
 
         override fun onCharacteristicRead(gatt: BluetoothGatt,
@@ -49,77 +58,37 @@ class UartService : Service() {
             broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic)
         }
     }
-    private val mBinder = LocalBinder()
-
-    private fun broadcastUpdate(action: String) {
-        val intent = Intent(action)
-        sendBroadcast(intent)
-    }
 
     private fun broadcastUpdate(action: String, characteristic: BluetoothGattCharacteristic) {
         val intent = Intent(action)
         intent.putExtra(EXTRA_DATA, characteristic.value)
         intent.putExtra(EXTRA_CHARACTERISTIC, characteristic.uuid.toString())
-        sendBroadcast(intent)
-    }
-
-    inner class LocalBinder : Binder()
-
-    override fun onBind(intent: Intent): IBinder? {
-        instance = this
-        CommandInterpreter.getInterpreter(this)
-        Thread.currentThread().priority = Thread.NORM_PRIORITY
-        Thread.currentThread().name = "UARTService"
-        return mBinder
-    }
-
-    override fun onUnbind(intent: Intent): Boolean {
-        close()
-        return super.onUnbind(intent)
-    }
-
-    override fun stopService(name: Intent?): Boolean {
-        disconnect()
-        close()
-        return super.stopService(name)
-    }
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        instance = this
-        Thread.currentThread().priority = Thread.NORM_PRIORITY
-        Thread.currentThread().name = "UARTService"
-        timer.schedule(object : TimerTask() {
-            override fun run() {
-                if (Algorithm.SelfPointer == null) {
-                    startService(Intent(instance, Algorithm::class.java))
-                }
-            }
-        }, 60000, 15000)
-        return super.onStartCommand(intent, flags, startId)
+        context.sendBroadcast(intent)
     }
 
     fun connect(address: String?): Boolean {
-        if (mBluetoothDeviceAddress != null && address == mBluetoothDeviceAddress
+        if (mBluetoothDeviceAddress != null
+                && address == mBluetoothDeviceAddress
                 && mBluetoothGatt != null) {
 
             return if (mBluetoothGatt!!.connect()) {
-                mConnectionState = STATE_CONNECTING
+                Algorithm.updateStatusCode(Algorithm.StatusCodes.GattConnected)
                 true
             } else {
                 false
             }
         }
 
-        val device = mBluetoothAdapter!!.getRemoteDevice(address) ?: return false
+        val device = mBluetoothAdapter.getRemoteDevice(address) ?: return false
 
-        mBluetoothGatt = device.connectGatt(this, true, mGattCallback)
+        mBluetoothGatt = device.connectGatt(context, false, mGattCallback)
         return if (mBluetoothGatt != null) {
             mBluetoothDeviceAddress = address
-            mConnectionState = STATE_CONNECTED
-            //mBluetoothGatt!!.discoverServices()
+            //retryDiscovering()
+            if (Algorithm.StatusCode.value!!.code < Algorithm.StatusCodes.GattConnecting.code)
+                Algorithm.updateStatusCode(Algorithm.StatusCodes.GattConnecting)
             true
         } else {
-            broadcastUpdate(ACTION_GATT_INIT_FAILED)
             false
         }
     }
@@ -128,8 +97,9 @@ class UartService : Service() {
         if (mBluetoothAdapter == null || mBluetoothGatt == null) {
             return
         }
-        mBluetoothGatt!!.disconnect()
-        // mBluetoothGatt.close();
+        mBluetoothGatt?.disconnect()
+        mBluetoothGatt?.close()
+        Algorithm.StatusCode.postValue(Algorithm.StatusCodes.Disconnected)
     }
 
     private fun close() {
@@ -142,18 +112,23 @@ class UartService : Service() {
     }
 
     fun readCharacteristic(service: UUID, txService: UUID) {
-        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
-            return
-        }
-        for (x in mBluetoothGatt!!.services) {
-            if (x.uuid == service) {
-                for (y in x.characteristics) {
-                    if (y.uuid == txService) {
-                        mBluetoothGatt!!.readCharacteristic(y)
-                        return
+        try { // retry algo
+            for (i in 0 until 3) {
+                if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+                    return
+                }
+                for (x in mBluetoothGatt!!.services) {
+                    if (x.uuid == service) {
+                        for (y in x.characteristics) {
+                            if (y.uuid == txService) {
+                                mBluetoothGatt!!.readCharacteristic(y)
+                                return
+                            }
+                        }
                     }
                 }
             }
+        } catch (e: Exception) {
         }
     }
 
@@ -173,37 +148,11 @@ class UartService : Service() {
             // here possible error
             return false
         }
-        val RxService = mBluetoothGatt!!.getService(RX_SERVICE_UUID)
+        val RxService = mBluetoothGatt!!.getService(RX_SERVICE_UUID) ?: return false
         // here possible error
-        if (RxService == null) {
-            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_UART)
-            return false
-        }
-        val RxChar = RxService.getCharacteristic(RX_CHAR_UUID)
-        if (RxChar == null) {
-            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_UART)
-            return false
-        }
+        val RxChar = RxService.getCharacteristic(RX_CHAR_UUID) ?: return false
         RxChar.value = value
         return mBluetoothGatt!!.writeCharacteristic(RxChar)
-    }
-
-    fun retryDiscovering() {
-        if (mConnectionState == STATE_CONNECTED) {
-            mConnectionState = STATE_DISCOVERING
-            if (mBluetoothGatt != null) mBluetoothGatt!!.discoverServices()
-        } else {
-            Algorithm.StatusCode.postValue(Algorithm.StatusCodes.Disconnected)
-            connect(Algorithm.LockedAddress)
-        }
-    }
-
-    override fun onCreate() {
-        instance = this
-        mBluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        mBluetoothAdapter = mBluetoothManager!!.adapter
-        mBluetoothDeviceAddress = Algorithm.LockedAddress
-        this.startService(Intent(this, UartService::class.java))
     }
 
     companion object {
@@ -213,20 +162,9 @@ class UartService : Service() {
         var mBluetoothManager: BluetoothManager? = null
         private var mBluetoothGatt: BluetoothGatt? = null
 
-        const val STATE_DISCONNECTED = 0
-        const val STATE_CONNECTING = 1
-        const val STATE_CONNECTED = 2
-        const val STATE_DISCOVERING = 3
-        const val STATE_DISCOVERED = 4
-
-        const val ACTION_GATT_CONNECTED = "ACTION_GATT_CONNECTED"
-        const val ACTION_GATT_DISCONNECTED = "ACTION_GATT_DISCONNECTED"
-        const val ACTION_GATT_SERVICES_DISCOVERED = "ACTION_GATT_SERVICES_DISCOVERED"
         const val ACTION_DATA_AVAILABLE = "ACTION_DATA_AVAILABLE"
-        const val ACTION_GATT_INIT_FAILED = "GATT_INIT_FAILED"
         const val EXTRA_DATA = "EXTRA_DATA"
         const val EXTRA_CHARACTERISTIC = "EXTRA_CHAR"
-        const val DEVICE_DOES_NOT_SUPPORT_UART = "DEVICE_DOES_NOT_SUPPORT_UART"
 
         var PowerServiceUUID = UUID.fromString("00001804-0000-1000-8000-00805f9b34fb")
         var PowerTXUUID = UUID.fromString("00002a07-0000-1000-8000-00805f9b34fb")

@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.AsyncTask
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import anonymouls.dev.mgcex.util.Utils
 import java.util.*
 import kotlin.collections.ArrayDeque
 
@@ -23,7 +24,7 @@ class UartServiceBroadcastInterpreter : BroadcastReceiver() {
                 Algorithm.IsAlarmKilled = true
                 Algorithm.IsAlarmWaiting = false
                 Algorithm.IsAlarmingTriggered = false
-                CommandInterpreter.getInterpreter(context)?.stopLongAlarm()
+                CommandInterpreter.getInterpreter(context).stopLongAlarm()
                 val mNotificationManager = Algorithm.SelfPointer?.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 mNotificationManager.cancel(21)
             }
@@ -34,15 +35,6 @@ class UartServiceBroadcastInterpreter : BroadcastReceiver() {
                 val Text = extras.get("text") as String
                 val Message = Title + "\n" + Text
                 Algorithm.SelfPointer?.ci?.fireNotification(Message)
-            }
-            UartService.ACTION_GATT_CONNECTED -> {
-                Algorithm.StatusCode.postValue(Algorithm.StatusCodes.Connected)
-                UartService.instance?.retryDiscovering()
-                //Algorithm.LastStatus =  "Status : Connected"
-            }
-            UartService.ACTION_GATT_DISCONNECTED -> {
-                Algorithm.StatusCode.postValue(Algorithm.StatusCodes.Disconnected)
-                //Algorithm.LastStatus = "Status : Device lost. Trying to reconnect"
             }
             UartService.ACTION_DATA_AVAILABLE -> {
                 if (!isInited) {
@@ -63,12 +55,6 @@ class UartServiceBroadcastInterpreter : BroadcastReceiver() {
                     tsk.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
                 }
             }
-            UartService.ACTION_GATT_SERVICES_DISCOVERED -> {
-                Algorithm.StatusCode.postValue(Algorithm.StatusCodes.GattReady)
-                UartService.instance?.enableTXNotification(UartService.RX_SERVICE_UUID, UartService.TX_CHAR_UUID, UartService.TXServiceDesctiptor)
-                UartService.instance?.enableTXNotification(UartService.PowerServiceUUID, UartService.PowerTXUUID, UartService.PowerDescriptor)
-                Algorithm.SelfPointer?.thread?.interrupt()
-            }
 // gatt init failed ?
         }
     }
@@ -83,24 +69,7 @@ class InsertTask : AsyncTask<Void, Void, Void>() {
     @ExperimentalStdlibApi
     val dataToHandle = ArrayDeque<SimpleRecord>()
     var thread: Thread? = null
-    var timer: Timer = Timer("UIKostilSyncer")
     var ci: CommandInterpreter? = null
-
-    private var confirmA = false
-    private var confirmB = false
-
-    override fun onPreExecute() {
-        super.onPreExecute()
-        val timertask: TimerTask = object : TimerTask() {
-            override fun run() {
-                if (confirmA && confirmB)
-                    _insertedRunning.postValue(false)
-                if (confirmA && !confirmB) confirmB = true
-            }
-        }
-        timer = Timer()
-        timer.schedule(timertask, 5000, 500)
-    }
 
     @ExperimentalStdlibApi
     override fun doInBackground(vararg params: Void?): Void? {
@@ -112,18 +81,18 @@ class InsertTask : AsyncTask<Void, Void, Void>() {
                 try {
                     val sm = dataToHandle.removeFirst()
                     ci?.commandAction(sm.Data, UUID.fromString(sm.characteristic))
-                    confirmA = false; confirmB = false
+                    if (dataToHandle.size > 313)
+                        _insertedRunning.postValue(true)
+                    else
+                        _insertedRunning.postValue(false)
+
                 } catch (ex: Exception) {
 
                 }
                 if (dataToHandle.size > 2500) dataToHandle.clear()
             }
-            try {
-                confirmA = true
-                Thread.sleep(Long.MAX_VALUE)
-            } catch (e: InterruptedException) {
-                thread?.isInterrupted
-            }
+            _insertedRunning.postValue(false)
+            Utils.safeThreadSleep(Long.MAX_VALUE, false)
         }
     }
 

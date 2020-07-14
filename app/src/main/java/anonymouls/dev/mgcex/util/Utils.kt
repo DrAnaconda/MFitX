@@ -183,4 +183,20 @@ object Utils {
         }
         return false
     }
+
+    fun serviceStartForegroundMultiAPI(service: Intent, context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(service)
+        } else {
+            context.startService(service)
+        }
+    }
+
+    fun safeThreadSleep(milis: Long, rethrow: Boolean) {
+        try {
+            Thread.sleep(milis)
+        } catch (e: InterruptedException) {
+            if (rethrow) throw e
+        }
+    }
 }

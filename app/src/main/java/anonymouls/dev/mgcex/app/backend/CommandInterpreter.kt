@@ -45,6 +45,7 @@ abstract class CommandInterpreter {
                     }
                 }
             }
+            if (ActiveInterpreter == null) ActiveInterpreter = MGCOOL4CommandInterpreter()
             return ActiveInterpreter!!
         }
     }
@@ -88,15 +89,17 @@ abstract class CommandInterpreter {
         return value.toInt()
     }
 
-    fun messageToHexValue(Message: String, limiter: Int): String {
+    fun messageToHexValue(Message: String, limiter: Int, fillFreeSpace: Boolean = true): String {
         var result = ""
         for (x in 0 until limiter) {
             if (x < Message.length) {
                 if (Message[x].toInt() > 0)
-                    result += Utils.subIntegerConversionCheck(Integer.toHexString(Message[x].toInt()))
+                    result += Utils.subIntegerConversionCheck(Integer.toHexString(Message[x].toInt())) + ':'
                 else
-                    result += Utils.subIntegerConversionCheck(Integer.toHexString(Message[x].toInt() and 0xFF))
-            } else result += "00"
+                    result += Utils.subIntegerConversionCheck(Integer.toHexString(Message[x].toInt() and 0xFF)) + ':'
+            } else {
+                if (fillFreeSpace) result += "00:"; else return result
+            }
         }
         return result
     }

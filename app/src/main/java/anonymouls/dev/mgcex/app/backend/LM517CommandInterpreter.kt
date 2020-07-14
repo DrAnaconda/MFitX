@@ -12,7 +12,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
 
         private const val syncTimeCommandHeader = "CD00091201010004"
         private const val longAlarmHeader = "CD0014120111000F"
-        private const val notifyHeader = "CD002912011200"
+        private const val notifyHeader = "CD009e12011200"//CD001212011200"
 
         private const val UARTServiceUUIDString = "6e400001-b5a3-f393-e0a9-e50e24dcca9d"
         private const val UARTRXUUIDString = "6e400002-b5a3-f393-e0a9-e50e24dcca9d"
@@ -42,10 +42,11 @@ class LM517CommandInterpreter : CommandInterpreter() {
 
     //region Helpers
 
-    private fun createSpecialCalendar(): Calendar {
+    private fun createSpecialCalendar(isHR: Boolean = false): Calendar {
         val result = Calendar.getInstance()
         result.set(Calendar.MONTH, 10)
-        result.set(Calendar.DAY_OF_MONTH, 8)
+        if (!isHR) result.set(Calendar.DAY_OF_MONTH, 8) else result.set(Calendar.DAY_OF_MONTH, 6)
+        // TODO wtf? now is always 6, previously was 8
         result.set(Calendar.YEAR, 1991)
         result.set(Calendar.HOUR_OF_DAY, 0)
         result.set(Calendar.MINUTE, 0)
@@ -53,8 +54,8 @@ class LM517CommandInterpreter : CommandInterpreter() {
         return result
     }
 
-    private fun decryptDays(offset: Short, targetCalendar: Calendar?): Calendar {
-        val result = targetCalendar ?: createSpecialCalendar()
+    private fun decryptDays(offset: Short, targetCalendar: Calendar?, isHR: Boolean = false): Calendar {
+        val result = targetCalendar ?: createSpecialCalendar(isHR)
         result.add(Calendar.DAY_OF_YEAR, offset.toInt())
         return result
     }
@@ -84,7 +85,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
         if (Input.size != 20) return
         cancelTimer?.cancel(); cancelTimer?.purge()
         var buffer = ByteBuffer.wrap(Input, 8, 2)
-        var recordTime = decryptDays(buffer.short, null)
+        var recordTime = decryptDays(buffer.short, null, true)
         buffer = ByteBuffer.wrap(Input, 13, 4)
         recordTime = decryptTime(byteArrayToInt(buffer.array(), 13, 3), recordTime)
         val hrValue = Input[Input.size - 1]
@@ -94,7 +95,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
     private fun mainRecordProceeder(Input: ByteArray) {
         if (Input.size != 20) return
         var buffer = ByteBuffer.wrap(Input, 8, 2)
-        val recordTime = decryptDays(buffer.short, null)
+        val recordTime = decryptDays(buffer.short, null, true)
         recordTime.set(Calendar.HOUR_OF_DAY, Calendar.getInstance().get(Calendar.HOUR_OF_DAY))
         recordTime.set(Calendar.MINUTE, Calendar.getInstance().get(Calendar.MINUTE))
         recordTime.set(Calendar.SECOND, Calendar.getInstance().get(Calendar.SECOND))
@@ -185,16 +186,14 @@ class LM517CommandInterpreter : CommandInterpreter() {
         postCommand(hexStringToByteArray(request))
     }
 
-    private fun buildNotify(Message: String): ByteArray {
-        // TODO Investigate Types. Not working, complicated.
-        // 2 nd package up to 20 bytes
-        // 3 rd up to 3?
-        var request = notifyHeader + Message.length + "010000"
-        return hexStringToByteArray(request + messageToHexValue(Message, 32))
-    }
-
     override fun buildLongNotify(Message: String) {
-        postCommand(hexStringToByteArray(longAlarmHeader + "0100" + messageToHexValue(Message, 10)))
+        val request = hexStringToByteArray(longAlarmHeader + "0100")
+        val arr = hexStringToByteArray(messageToHexValue(Message, 13).replace("00", "FF"))
+        var req1 = arr.copyOfRange(0, 10)
+        req1 = request.plus(req1)
+        postCommand(req1)
+        req1 = arr.copyOfRange(10, 13)
+        postCommand(req1)
     }
 
     override fun commandAction(Input: ByteArray, characteristic: UUID) {
@@ -211,7 +210,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
 
     override fun getMainInfoRequest() {
         postCommand(hexStringToByteArray("cd:00:06:12:01:15:00:01:01"))
-        Thread.sleep(1000)
+        Utils.safeThreadSleep(1000, false)
         postCommand(hexStringToByteArray("cd:00:06:15:01:06:00:01:01"))
     }
 
@@ -234,21 +233,26 @@ class LM517CommandInterpreter : CommandInterpreter() {
 
     override fun fireNotification(Input: String) {
         // TODO Dead fixes needed
-        val Req = buildNotify(Input)
-        var Req1 = Req.copyOfRange(0, 20)
+        var arr = hexStringToByteArray(messageToHexValue(Input, 151, false).replace("00", "FF"))
+        var request = ""
+        var offset = 10
+        var Req1 = if (offset >= arr.size) {
+            request = notifyHeader + Utils.subIntegerConversionCheck(Integer.toHexString(Input.length + 2)) + "010000"
+            hexStringToByteArray(request).plus(arr.copyOfRange(0, 10))
+        } else {
+            request = notifyHeader + Utils.subIntegerConversionCheck(Integer.toHexString(Input.length)) + "010000"
+            offset = 9; hexStringToByteArray(request).plus(arr.copyOfRange(0, 9))
+        }
         postCommand(Req1)
-        var offset = 21
-        do {
-            Req1 = cutArray(Req, offset)
-            Thread.sleep(50)
+        while (offset < arr.size) {
+            if (arr.size > offset + 20)
+                Req1 = arr.copyOfRange(offset, offset + 20)
+            else
+                Req1 = arr.copyOfRange(offset, arr.size - 1)
+            Utils.safeThreadSleep(50, false)
             postCommand(Req1)
             offset += 20
-        } while (Req1.size == 20)
-
-        Thread.sleep(50)
-        Req1 = Req.copyOfRange(40, Req.size - 1) // TODO CHECK
-        postCommand(Req1)
-        Thread.sleep(50)
+        }
     }
 
     override fun requestBatteryStatus() {
@@ -283,9 +287,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
     }
 
     override fun requestSettings() {
-//        buildLongNotify("+380505384503")
-//        stopLongAlarm()
-//        fireNotification("Hello.Hello?Hello!HIIIII")
+        // TODO fireNotification("2108:Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!H")
 
 
         postCommand(hexStringToByteArray("CD:00:05:1A:01:02:00:00"))

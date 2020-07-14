@@ -90,7 +90,6 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
                 newStatus += statusParts[x]; if (x != statusParts.size - 1) newStatus += '\n' else break
             }
             savedStatus = newStatus
-            if (statusParts.size == 1 && !force) workInProgress.postValue(View.GONE) else workInProgress.postValue(View.VISIBLE)
             _currentStatus.postValue(savedStatus)
         }
     }
@@ -118,10 +117,11 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
                 _hrVisibility.postValue(View.GONE)
                 workInProgress.postValue(View.VISIBLE)
             } else {
-                if (ci.hRRealTimeControlSupport) _hrVisibility.postValue(View.VISIBLE); else _hrVisibility.postValue(View.GONE)
-                if (firstLaunch) {
-                    firstLaunch = false
-                }
+                if (ci.hRRealTimeControlSupport)
+                    _hrVisibility.postValue(View.VISIBLE)
+                else
+                    _hrVisibility.postValue(View.GONE)
+                if (firstLaunch) firstLaunch = false
                 updateStatus("")
             }
         })
@@ -137,6 +137,7 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
         })
         InsertTask.insertedRunning.observe(activity, Observer {
             createObserverForString(activity.getString(R.string.downloading_data_status), it)
+            if (it) workInProgress.postValue(View.VISIBLE) else workInProgress.postValue(View.GONE)
         })
 
         currentBattery.observe(activity, Observer {

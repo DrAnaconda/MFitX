@@ -39,9 +39,8 @@ class ScanActivity : Activity() {
 
 //region default android
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
-        if (data == null || resultCode != RESULT_CANCELED) return
-        super.onActivityResult(requestCode, resultCode, data)
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (data == null || resultCode == RESULT_CANCELED) return
         when (requestCode) {
             Utils.BluetoothEnableRequestCode -> {
                 if (resultCode == RESULT_OK)
@@ -81,11 +80,11 @@ class ScanActivity : Activity() {
                 deprecatedScanner = DeprecatedScanner(this)
             }
             Prefs = Utils.getSharedPrefs(this)
-            if (Prefs!!.contains("IsConnected") && Prefs!!.contains("BandAddress")
+            if (Prefs!!.contains("IsConnected") && Prefs!!.contains(SettingsActivity.bandAddress)
                     && Prefs!!.contains(SettingsActivity.bandIDConst)) {
                 if (Prefs!!.getBoolean("IsConnected", false)) {
                     openDeviceControlActivity(this.baseContext,
-                            Prefs!!.getString("BandAddress", null),
+                            Prefs!!.getString(SettingsActivity.bandAddress, null),
                             Prefs!!.getString(SettingsActivity.bandIDConst, null))
                     this.finish()
                 } else
@@ -168,7 +167,7 @@ class ScanActivity : Activity() {
             intent.putExtra(DeviceControllerActivity.ExtraDevice, LockedAddress)
             val PEditor = Prefs!!.edit()
             PEditor.putBoolean("IsConnected", true)
-            PEditor.putString("BandAddress", LockedAddress)
+            PEditor.putString(SettingsActivity.bandAddress, LockedAddress)
             PEditor.apply()
         } else Utils.getSharedPrefs(this).edit().remove(SettingsActivity.bandIDConst).apply()
         startActivity(intent)
