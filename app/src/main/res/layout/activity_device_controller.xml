@@ -372,10 +372,10 @@
                 android:clickable="false"
                 android:enabled="false"
                 android:gravity="center_horizontal"
-                android:text="@{Integer.toString(viewmodel.currentHR)}"
+                android:text="@{Integer.toString(viewmodel.currentHR.hr)}"
                 android:textColor="#FF000000"
                 android:textSize="20sp"
-                android:visibility="@{(viewmodel.currentHR >= 0) ? View.VISIBLE : View.INVISIBLE}"
+                android:visibility="@{(viewmodel.currentHR.hr >= 0) ? View.VISIBLE : View.INVISIBLE}"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="parent" />
         </LinearLayout>

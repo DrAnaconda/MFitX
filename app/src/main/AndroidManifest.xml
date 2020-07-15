@@ -4,9 +4,13 @@
     package="anonymouls.dev.mgcex.app">
 
     <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission
         android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
@@ -37,7 +41,7 @@
         <activity
             android:name="anonymouls.dev.mgcex.app.data.MultitaskActivity"
             android:label="@string/title_activity_report_activity"
-            android:theme="@style/AppBaseTheme.NoActionBar" />
+            android:theme="@style/Theme.AppCompat.DayNight" />
 
         <activity
             android:name="anonymouls.dev.mgcex.app.scanner.ScanActivity"
@@ -63,6 +67,7 @@
         <activity
             android:name="anonymouls.dev.mgcex.app.main.SettingsActivity"
             android:label="@string/title_activity_settings"
+            android:theme="@style/Theme.AppCompat.DayNight"
             android:windowSoftInputMode="stateHidden" />
         <activity
             android:name="anonymouls.dev.mgcex.app.AlarmActivity"
@@ -87,9 +92,6 @@
             </intent-filter>
         </service>
 
-        <service
-            android:name="anonymouls.dev.mgcex.app.backend.UartService"
-            android:enabled="true" />
         <service
             android:name="anonymouls.dev.mgcex.app.backend.Algorithm"
             android:enabled="true" />

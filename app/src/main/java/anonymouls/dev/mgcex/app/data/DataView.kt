@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.ViewModelProviders
 import anonymouls.dev.mgcex.app.R
+import anonymouls.dev.mgcex.app.backend.CommandInterpreter
 import anonymouls.dev.mgcex.app.databinding.ActivityDataViewBinding
 import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
 import anonymouls.dev.mgcex.util.AdsController
@@ -32,7 +33,8 @@ class DataView : AppCompatActivity() {
         ViewModelProviders.of(this).get(DataViewModel::class.java)
     }
 
-    private var requestBtn: MenuItem? = null
+    private lateinit var requestBtn: MenuItem
+    private lateinit var manualHRRequestBtn: MenuItem
     private var dataIntent: String? = null
 
     private var scale = Scalings.Day
@@ -149,6 +151,16 @@ class DataView : AppCompatActivity() {
 
     fun onCancelClick(v: View?) {
         customViewModel.cancelled = true
+        if (customViewModel.manualHRRequesting)
+            customViewModel.fetchCurrentHR(this, true)
+    }
+
+    private fun requestCurrentHR() {
+        if (this.customViewModel.loading.value!! == View.VISIBLE) {
+            Toast.makeText(this, getString(R.string.wait_untill_complete), Toast.LENGTH_LONG).show()
+        } else {
+            this.customViewModel.fetchCurrentHR(this)
+        }
     }
 
 
@@ -175,6 +187,8 @@ class DataView : AppCompatActivity() {
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         requestBtn = menu.findItem(R.id.RequestHistory)
+        manualHRRequestBtn = menu.findItem(R.id.manualRequestHR)
+        manualHRRequestBtn.isVisible = !CommandInterpreter.getInterpreter(this).hRRealTimeControlSupport
         return super.onPrepareOptionsMenu(menu)
     }
 
@@ -186,6 +200,7 @@ class DataView : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.RequestHistory -> stageA()
+            R.id.manualRequestHR -> requestCurrentHR()
         }
         return super.onOptionsItemSelected(item)
     }
@@ -218,5 +233,4 @@ class DataView : AppCompatActivity() {
     }
 }
 
-// TODO Today IS NOT prev day+today, check it
-// TODO Mutable<Record> is not cool, need upgrade to <Mutable<RecordList>> or something? Quene?
+// TODO More speed?

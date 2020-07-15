@@ -21,9 +21,9 @@
             android:id="@+id/constraintLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:visibility="@{viewmodel.infoBlockVisible}"
             android:onClick="onCancelClick"
             android:orientation="horizontal"
-            android:visibility="@{viewmodel.loading}"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
@@ -37,6 +37,7 @@
                 android:foregroundGravity="center"
                 android:indeterminateDrawable="@drawable/indeterminate_drawable"
                 android:indeterminateDuration="15"
+                android:visibility="@{viewmodel.loading}"
                 android:indeterminateTint="#ff0000"
                 android:progressDrawable="@drawable/indeterminate_drawable"
                 app:layout_constraintBottom_toBottomOf="parent"

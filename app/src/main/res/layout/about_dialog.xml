@@ -3,7 +3,7 @@
     android:orientation="vertical"
     android:layout_height="wrap_content"
     android:layout_width="wrap_content"
-    android:background="#FFFFFF">
+    android:theme="@style/Theme.AppCompat.DayNight">
 
 
     <TextView
@@ -28,7 +28,6 @@
         android:linksClickable="true"
         android:autoLink="all"
         android:layout_marginBottom="2pt"
-        android:textColor="#0000EE"
         android:textSize="8pt" />
 
     <TextView
@@ -39,7 +38,7 @@
         android:layout_margin="2pt"
         android:gravity="center"
         android:text="@string/about_application_page"
-        android:textColor="#0000EE"
+
         android:textSize="8pt" />
 
     <TextView
@@ -50,7 +49,6 @@
         android:layout_margin="2pt"
         android:gravity="center"
         android:text="@string/privacy_policy"
-        android:textColor="#0000EE"
         android:textSize="8pt" />
 
     <View
@@ -63,15 +61,15 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="center"
-        android:orientation="horizontal" >
+        android:orientation="horizontal">
 
-        <Button
+        <TextView
+            android:layout_margin="6pt"
+            android:gravity="center"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:id="@+id/infoDialogClose"
-            android:background="@android:color/white"
             android:text="@string/ok"
-            android:textColor="#5DBCD2"
             android:textStyle="bold" />
     </LinearLayout>
 

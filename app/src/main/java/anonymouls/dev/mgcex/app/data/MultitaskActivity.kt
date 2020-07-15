@@ -88,7 +88,7 @@ class MultitaskActivity : Activity() {
         val data = initDataBlock(from, to)
         Analytics.getInstance(this)?.sendHRData(data.MinHR, data.AvgHR, data.MaxHR)
 
-        val SDF = SimpleDateFormat("d LLL", Locale.getDefault())
+        val SDF = SimpleDateFormat(Utils.SDFPatterns.OverallStats.pattern, Locale.getDefault())
         from.add(Calendar.DAY_OF_MONTH, -7)
         createTextView(getString(R.string.last_week_stats) + SDF.format(from.time) + " — " + SDF.format(to.time) + " )", true)
         initDataBlock(from, to)

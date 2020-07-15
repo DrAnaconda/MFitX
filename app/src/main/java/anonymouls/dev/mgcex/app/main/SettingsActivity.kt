@@ -1,6 +1,5 @@
 package anonymouls.dev.mgcex.app.main
 
-import android.app.Activity
 import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
@@ -13,6 +12,7 @@ import android.view.Gravity
 import android.view.MenuItem
 import android.view.View
 import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.backend.Algorithm
 import anonymouls.dev.mgcex.app.backend.CommandInterpreter
@@ -25,11 +25,11 @@ import anonymouls.dev.mgcex.util.Utils
 import java.util.*
 
 // TODO Fix time selector for idiots
-class SettingsActivity : Activity() {
+class SettingsActivity : AppCompatActivity() {
     private var packagesList: TableLayout? = null
 
     private var dataView = false
-    private var demoMode = Utils.getSharedPrefs(this).contains(bandAddress)
+    private var demoMode = !Utils.getSharedPrefs(this).contains(bandAddress)
     private lateinit var commandController: CommandInterpreter
     private lateinit var prefs: SharedPreferences
 
@@ -105,6 +105,7 @@ class SettingsActivity : Activity() {
             findViewById<Switch>(R.id.NotificationsSwitch).visibility = View.GONE
             findViewById<Switch>(R.id.PhoneSwitch).visibility = View.GONE
             findViewById<Switch>(R.id.GyroSwitch).visibility = View.GONE
+            findViewById<View>(R.id.LoadPackListBtn).visibility = View.GONE
         }
     }
 
@@ -124,7 +125,7 @@ class SettingsActivity : Activity() {
             dynamicContentInit()
             initSwitches()
             if (prefs.contains("IsConnected") && prefs.getBoolean("IsConnected", false)) {
-                findViewById<TextView>(R.id.currentConnectionText).text = getString(R.string.current_connection) + prefs.getString("BandAddress", null)
+                findViewById<TextView>(R.id.currentConnectionText).text = getString(R.string.current_connection) + prefs.getString(bandAddress, null)
                 findViewById<Button>(R.id.breakConnectionBtn).visibility = View.VISIBLE
             } else {
                 findViewById<TextView>(R.id.currentConnectionText).text = getString(R.string.connection_not_established)
@@ -313,7 +314,8 @@ class SettingsActivity : Activity() {
                 commandController.setGyroAction(state)
                 prefs.edit().putBoolean(illuminationSetting, state).apply()
             }
-            R.id.PhoneSwitch -> prefs.edit().putBoolean(receiveCallsSetting, state).apply()
+            R.id.PhoneSwitch -> {
+                prefs.edit().putBoolean(receiveCallsSetting, state).apply(); Utils.requestPermissionsAdvanced(this); }
             R.id.RestoreToDefaultsBtn -> sendResetCommand()
             R.id.EraseDataOnRDeviceBtn -> sendEraseDatabaseCommand()
             R.id.breakConnectionBtn -> deAuthDevice()

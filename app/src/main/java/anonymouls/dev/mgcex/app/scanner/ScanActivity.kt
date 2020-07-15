@@ -175,7 +175,11 @@ class ScanActivity : Activity() {
 
     private fun checkLocationEnabled(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (this.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            if (this.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                Utils.requestPermissionsAdvanced(this)
+                return false
+            }
+            if (this.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 Utils.requestPermissionsAdvanced(this)
                 return false
             }
@@ -203,6 +207,7 @@ class ScanActivity : Activity() {
         if (!checkLocationEnabled()) return
         if (BManager != null && BManager!!.adapter.isEnabled) {
             findViewById<ProgressBar>(R.id.scanInProgress).visibility = View.VISIBLE
+            mScanner = null
             mBTAdapter = BManager!!.adapter
             if (mScanner == null) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -223,6 +228,7 @@ class ScanActivity : Activity() {
         try {
             if (mBTAdapter != null) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    mScanner!!.flushPendingScanResults(LECallback)
                     mScanner!!.stopScan(LECallback)
                 }
             } else {

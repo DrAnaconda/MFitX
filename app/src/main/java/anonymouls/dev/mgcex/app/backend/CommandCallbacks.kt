@@ -40,7 +40,8 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
         var ResultHR = HRValue
         if (ResultHR < 0) ResultHR = (ResultHR and 0xFF)
         if (lastSyncHR <= CustomDatabaseUtils.calendarToLong(Time, true)) {
-            DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(ResultHR); savedValues.savedHR = ResultHR
+            val record = HRRecord(Time, ResultHR)
+            DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(record); savedValues.savedHR = record
             lastSyncHR = CustomDatabaseUtils.calendarToLong(Time, true)
         }
     }
@@ -52,7 +53,8 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
             if (ResultHR < 0) ResultHR = (ResultHR and 0xFF)
             HRRecordsTable.insertRecord(Time, ResultHR, database)
             if (lastSyncHR < CustomDatabaseUtils.calendarToLong(Time, true)) {
-                DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(ResultHR); savedValues.savedHR = ResultHR
+                val record = HRRecord(Time, ResultHR)
+                DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(record); savedValues.savedHR = record
                 lastSyncHR = CustomDatabaseUtils.calendarToLong(Time, true)
             }
         } catch (Ex: Exception) {
@@ -98,7 +100,7 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
 
             var savedCCals = -1
             var savedSteps = -1
-            var savedHR = -1
+            var savedHR: HRRecord = HRRecord(Calendar.getInstance(), -20)
             var savedBattery = -1
             var savedStatus = ""
         }

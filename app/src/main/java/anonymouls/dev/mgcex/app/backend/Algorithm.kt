@@ -32,6 +32,8 @@ class Algorithm : IntentService("Syncer") {
     private var workInProgress = false
     private var isFirstTime = true
     private var connectionTries = 0
+    var bluetoothRejected = false
+    var bluetoothRequested = false
     var thread: Thread? = null
 
     private var serviceObject: IBinder? = null
@@ -75,6 +77,7 @@ class Algorithm : IntentService("Syncer") {
     }
 
     private fun executeForceSync() {
+        bluetoothRequested = false; bluetoothRejected = false
         DeviceControllerViewModel.instance?.workInProgress?.postValue(View.VISIBLE)
         GlobalScope.launch(Dispatchers.IO) { database.initRepairsAndSync(database.writableDatabase) }
         ci.requestSettings()
@@ -136,7 +139,8 @@ class Algorithm : IntentService("Syncer") {
         }
         NextSync = Calendar.getInstance()
         NextSync!!.add(Calendar.MILLISECOND, MainSyncPeriodSeconds)
-        currentAlgoStatus.postValue(getString(R.string.next_sync_status) + SimpleDateFormat("HH:mm", Locale.getDefault()).format(NextSync!!.time))
+        currentAlgoStatus.postValue(getString(R.string.next_sync_status) +
+                SimpleDateFormat(Utils.SDFPatterns.TimeOnly.pattern, Locale.getDefault()).format(NextSync!!.time))
         workInProgress = false
         isFirstTime = false
         MainSyncPeriodSeconds = prefs.getInt(SettingsActivity.mainSyncMinutes, 5) * 60 * 1000
@@ -146,14 +150,24 @@ class Algorithm : IntentService("Syncer") {
 
     private fun bluetoothDisabledAlgo() {
         isFirstTime = true
-        if (DeviceControllerActivity.instance != null) {
+
+        if (Utils.bluetoothEngaging(this))
+            StatusCode.postValue(StatusCodes.Disconnected)
+        else {
+            StatusCode.postValue(StatusCodes.BluetoothDisabled)
+        }
+
+        if (DeviceControllerActivity.instance != null && !bluetoothRejected && !bluetoothRequested) {
             Utils.requestEnableBluetooth(DeviceControllerActivity.instance!!)
+            bluetoothRequested = true
             if (Utils.bluetoothEngaging(DeviceControllerActivity.instance!!)) {
                 StatusCode.postValue(StatusCodes.Disconnected)
                 currentAlgoStatus.postValue(getString(R.string.status_engaging))
-            } else {
-                currentAlgoStatus.postValue(getString(R.string.offline_mode))
             }
+        } else if (bluetoothRejected) {
+            workInProgress = false
+            StatusCode.postValue(StatusCodes.BluetoothDisabled)
+            currentAlgoStatus.postValue(getString(R.string.BluetoothRequiredMsg))
         }
     }
 
@@ -320,7 +334,9 @@ class Algorithm : IntentService("Syncer") {
 
 }
 
-// TODO Speed up activities transitions or upgrade to fragments
+// TODO CRITICAL. Looper is slow, some operations is slow
+// TODO Filter loading, icons slow downs app - investigate
+// TODO Speed up activities transitions or upgrade to fragments.
 // TODO Incapsulate UARTService
 // TODO Integrate data sleep visualization
 // TODO Integrate 3d party services

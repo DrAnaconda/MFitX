@@ -45,8 +45,8 @@ class LM517CommandInterpreter : CommandInterpreter() {
     private fun createSpecialCalendar(isHR: Boolean = false): Calendar {
         val result = Calendar.getInstance()
         result.set(Calendar.MONTH, 10)
-        if (!isHR) result.set(Calendar.DAY_OF_MONTH, 8) else result.set(Calendar.DAY_OF_MONTH, 6)
-        // TODO wtf? now is always 6, previously was 8
+        if (!isHR) result.set(Calendar.DAY_OF_MONTH, 5) else result.set(Calendar.DAY_OF_MONTH, 6)
+        // TODO wtf? now is always 6, previously was 8, for night -3
         result.set(Calendar.YEAR, 1991)
         result.set(Calendar.HOUR_OF_DAY, 0)
         result.set(Calendar.MINUTE, 0)
@@ -122,7 +122,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
         var buffer = ByteBuffer.wrap(Input, 8, 2)
         val recordTime = decryptDays(buffer.short, null)
         buffer = ByteBuffer.wrap(Input, 12, 2)
-        recordTime.set(Calendar.HOUR_OF_DAY, 23); recordTime.set(Calendar.MINUTE, 30) // Sleep Tracking starts here
+        recordTime.set(Calendar.HOUR_OF_DAY, 22); recordTime.set(Calendar.MINUTE, 0) // Sleep Tracking starts here
         recordTime.add(Calendar.MINUTE, buffer.short.toInt())
         val castedCode = when (Input[Input.size - 1].toUByte()) {
             (2).toUByte() -> SleepRecordsTable.SleepRecord.RecordTypes.Awake.code
@@ -135,6 +135,8 @@ class LM517CommandInterpreter : CommandInterpreter() {
     }
 
     private fun commandsEntryPoint(Input: ByteArray) {
+        var testval = (-120).toUByte()
+        testval = (19).toUByte()
         if (Input[0].toUByte() != 205.toUByte()) return
         if (Input[1].toUByte() != 0.toUByte()) return
         //if (Input[2].toUByte() != 21.toUByte()) return
@@ -193,7 +195,9 @@ class LM517CommandInterpreter : CommandInterpreter() {
         req1 = request.plus(req1)
         postCommand(req1)
         req1 = arr.copyOfRange(10, 13)
+        Utils.safeThreadSleep(500, false)
         postCommand(req1)
+        val test = (6).toUByte()
     }
 
     override fun commandAction(Input: ByteArray, characteristic: UUID) {
@@ -215,7 +219,10 @@ class LM517CommandInterpreter : CommandInterpreter() {
     }
 
     override fun requestSleepHistory(FromDate: Calendar) {
-        postCommand(hexStringToByteArray("cd:00:06:15:01:0d:00:01:01"))
+        // nice device in monitoring mode it is suicide to request data
+        // LM715 have monitor period from 10PM to 9AM
+        if (Calendar.getInstance().get(Calendar.HOUR_OF_DAY) in 10..21)
+            postCommand(hexStringToByteArray("cd:00:06:15:01:0d:00:01:01"))
     }
 
     override fun requestHRHistory(FromDate: Calendar?) {
@@ -233,14 +240,14 @@ class LM517CommandInterpreter : CommandInterpreter() {
 
     override fun fireNotification(Input: String) {
         // TODO Dead fixes needed
-        var arr = hexStringToByteArray(messageToHexValue(Input, 151, false).replace("00", "FF"))
-        var request = ""
+        var arr = hexStringToByteArray(messageToHexValue(Input, 165, false).replace("00", "FF"))
+        var request = "CD00" + Utils.subIntegerConversionCheck(Integer.toHexString(arr.size + 8)) + "12011200"
         var offset = 10
-        var Req1 = if (offset >= arr.size) {
-            request = notifyHeader + Utils.subIntegerConversionCheck(Integer.toHexString(Input.length + 2)) + "010000"
+        var Req1 = if (offset > arr.size) {
+            request += Utils.subIntegerConversionCheck(Integer.toHexString(Input.length + 2)) + "010000"
             hexStringToByteArray(request).plus(arr.copyOfRange(0, 10))
         } else {
-            request = notifyHeader + Utils.subIntegerConversionCheck(Integer.toHexString(Input.length)) + "010000"
+            request += Utils.subIntegerConversionCheck(Integer.toHexString(Input.length + 3)) + "010000"
             offset = 9; hexStringToByteArray(request).plus(arr.copyOfRange(0, 9))
         }
         postCommand(Req1)
@@ -248,8 +255,8 @@ class LM517CommandInterpreter : CommandInterpreter() {
             if (arr.size > offset + 20)
                 Req1 = arr.copyOfRange(offset, offset + 20)
             else
-                Req1 = arr.copyOfRange(offset, arr.size - 1)
-            Utils.safeThreadSleep(50, false)
+                Req1 = arr.copyOfRange(offset, arr.size)
+            Utils.safeThreadSleep(1000, false)
             postCommand(Req1)
             offset += 20
         }
@@ -272,7 +279,10 @@ class LM517CommandInterpreter : CommandInterpreter() {
     }
 
     override fun setVibrationSetting(enabled: Boolean) {
-        //TODO("Not yet implemented") UNK
+        var request = "CD 00 09 12 01 08 04"
+        request += if (enabled) "01" else "00"
+        request += "00 00 00"
+        postCommand(hexStringToByteArray(request))
     }
 
     override fun setTargetSteps(count: Int) {
@@ -287,9 +297,6 @@ class LM517CommandInterpreter : CommandInterpreter() {
     }
 
     override fun requestSettings() {
-        // TODO fireNotification("2108:Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!H")
-
-
         postCommand(hexStringToByteArray("CD:00:05:1A:01:02:00:00"))
     }
 }

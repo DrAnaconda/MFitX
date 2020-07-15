@@ -1,22 +1,30 @@
 package anonymouls.dev.mgcex.util
 
 import android.Manifest
-import android.app.Activity
+import android.app.*
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Build
 import android.widget.Toast
+import androidx.annotation.RequiresApi
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationCompat.PRIORITY_MIN
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
 import anonymouls.dev.mgcex.app.main.SettingsActivity
 import anonymouls.dev.mgcex.databaseProvider.SleepRecordsTable
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import java.text.DecimalFormat
 import java.util.*
+import kotlin.collections.HashMap
 import kotlin.math.roundToInt
+
 
 object Utils {
 
@@ -26,6 +34,11 @@ object Utils {
     const val PermsRequest = 4
     const val PermsAdvancedRequest = 5
     var SharedPrefs: SharedPreferences? = null
+
+    enum class SDFPatterns(val pattern: String) {
+        DayScaling("LLLL d HH:mm"), WeekScaling("LLLL W yyyy"),
+        MonthScaling("d LLLL yyyy"), OverallStats("d LLL"), TimeOnly("HH:mm")
+    }
 
     var IsStorageAccess = true
     var IsLocationAccess = true
@@ -64,20 +77,20 @@ object Utils {
         } else true
     }
 
-    fun bluetoothEngaging(AContext: Activity): Boolean {
+    fun bluetoothEngaging(AContext: Context): Boolean {
         val bManager = AContext.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         if (bManager == null) {
             Toast.makeText(AContext, R.string.BluetoothIsNotSupported, Toast.LENGTH_SHORT).show()
-            AContext.finish()
         } else {
             if (bManager.adapter == null) {
                 Toast.makeText(AContext, R.string.bt_unavailable, Toast.LENGTH_SHORT).show()
-                requestEnableBluetooth(AContext)
+                //requestEnableBluetooth(AContext)
                 return false
-            } else
-                return true
+            } else {
+                return bManager.adapter.isEnabled
+            }
         }
-        return true
+        return false
     }
 
     fun requestPermissionsAdvanced(activity: Activity) {
@@ -103,6 +116,14 @@ object Utils {
             if (activity.checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED
                     && activity.shouldShowRequestPermissionRationale(Manifest.permission.READ_CONTACTS)) {
                 val dialog = DeviceControllerActivity.ViewDialog(activity.getString(R.string.contacts_perm_req), DeviceControllerActivity.ViewDialog.DialogTask.Permission, Manifest.permission.READ_CONTACTS)
+                dialog.showDialog(activity)
+                return
+            }
+
+            if (activity.checkSelfPermission(Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED
+                    && activity.shouldShowRequestPermissionRationale(Manifest.permission.READ_CONTACTS)) {
+                val dialog = DeviceControllerActivity.ViewDialog(activity.getString(R.string.incoming_number_perm),
+                        DeviceControllerActivity.ViewDialog.DialogTask.Permission, Manifest.permission.READ_CONTACTS)
                 dialog.showDialog(activity)
                 return
             }
@@ -184,8 +205,18 @@ object Utils {
         return false
     }
 
-    fun serviceStartForegroundMultiAPI(service: Intent, context: Context) {
+    fun serviceStartForegroundMultiAPI(service: Intent, context: Activity) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            //context.startForeground(66, buildForegroundNotification(context))
+            context.startForegroundService(service)
+        } else {
+            context.startService(service)
+        }
+    }
+
+    fun serviceStartForegroundMultiAPI(service: Intent, context: Service) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForeground(66, buildForegroundNotification(context))
             context.startForegroundService(service)
         } else {
             context.startService(service)
@@ -198,5 +229,75 @@ object Utils {
         } catch (e: InterruptedException) {
             if (rethrow) throw e
         }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun createNotificationChannel(context: Context, channelId: String, channelName: String): String {
+        val chan = NotificationChannel(channelId,
+                channelName, NotificationManager.IMPORTANCE_NONE)
+        chan.lightColor = Color.BLUE
+        chan.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
+        val service = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        service.createNotificationChannel(chan)
+        return channelId
+    }
+
+    private fun buildForegroundNotification(context: Context): Notification? {
+        val channelId =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    createNotificationChannel(context, context.getString(R.string.background_runner_label),
+                            context.getString(R.string.background_runner_label))
+                } else {
+                    ""
+                }
+
+        val notificationBuilder = NotificationCompat.Builder(context, channelId)
+        val notification = notificationBuilder.setOngoing(true)
+                .setSmallIcon(android.R.drawable.stat_sys_warning)
+                //.setBadgeIconType(R.mipmap.ic_launcher)
+                //.setContentTitle(context.getString(R.string.app_name))
+                .setContentText(context.getString(R.string.background_running))
+                .setPriority(PRIORITY_MIN)
+                //.setCategory(Notification.CATEGORY_SERVICE)
+                .build()
+        return notification
+    }
+}
+
+object ReplaceTable {
+
+    private val replaceTable = HashMap<Char, String>()
+
+    private fun initReplacer(context: Context?): Boolean {
+        if (replaceTable.size == 0 && context != null) {
+            val stream = context.assets.open("table", Context.MODE_PRIVATE)
+            val reader = InputStreamReader(stream)
+            val buffer = BufferedReader(reader)
+            do {
+                val line = buffer.readLine()
+                if (line != null) {
+                    val cells = line.split(';')
+                    if (!replaceTable.containsKey(cells[0][0]))
+                        replaceTable[cells[0][0]] = cells[1]
+
+
+                } else break
+            } while (true)
+
+            stream.close(); reader.close(); buffer.close()
+            return true
+        } else return replaceTable.size > 0
+    }
+
+    fun replaceString(input: String, context: Context? = null): String {
+        if (!initReplacer(context)) return input
+        var result = ""
+        for (x in input) {
+            if (replaceTable.containsKey(x))
+                result += replaceTable[x]
+            else
+                result += x
+        }
+        return result
     }
 }

@@ -1,15 +1,20 @@
 package anonymouls.dev.mgcex.app.data
 
 import android.app.Activity
+import android.content.res.Configuration
 import android.graphics.Point
+import android.os.Build
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.annotation.ColorInt
 import anonymouls.dev.mgcex.app.R
 import com.evrencoskun.tableview.adapter.AbstractTableAdapter
 import com.evrencoskun.tableview.adapter.recyclerview.holder.AbstractViewHolder
+
 
 open class Cell(val data: String) {
     companion object {
@@ -67,11 +72,24 @@ class MyTableViewAdapter(private val context: Activity) : AbstractTableAdapter<C
 
     override fun onBindCellViewHolder(holder: AbstractViewHolder, cellItemModel: Cell?, columnPosition: Int, rowPosition: Int) {
         val cell = cellItemModel as Cell
-
         // Get the holder to update cell item text
         val viewHolder = holder as MyCellViewHolder
         viewHolder.cell_textview.text = cell.data
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val typedValue = TypedValue()
+            val theme = context.theme
+            theme.resolveAttribute(android.R.attr.colorBackground, typedValue, true)
+            @ColorInt val color = typedValue.data
+            when (context.resources.configuration.uiMode.and(Configuration.UI_MODE_NIGHT_MASK)) {
+                Configuration.UI_MODE_NIGHT_YES -> {
+                    viewHolder.setBackgroundColor(color)
+                    viewHolder.cell_container.setBackgroundColor(color)
+                    viewHolder.cell_textview.setBackgroundColor(color)
+                    viewHolder.cell_textview.setTextColor(context.getColor(android.R.color.white))
+                }
+            }
+        }
         // If your TableView should have auto resize for cells & columns.
         // Then you should consider the below lines. Otherwise, you can ignore them.
 

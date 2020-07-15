@@ -4,10 +4,12 @@ import android.content.ContentResolver
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.AsyncTask
+import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import androidx.annotation.RequiresApi
 import anonymouls.dev.mgcex.app.main.SettingsActivity
 import anonymouls.dev.mgcex.databaseProvider.DatabaseController
 import anonymouls.dev.mgcex.databaseProvider.NotifyFilterTable
@@ -44,6 +46,7 @@ class NotificationService : NotificationListenerService() {
         super.onListenerDisconnected()
     }
 
+    @RequiresApi(Build.VERSION_CODES.KITKAT) // TODO ???
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         instance = this
         if (!Algorithm.IsActive || Settings.Global.getInt(contentResolver, "zen_mode") > 0) return

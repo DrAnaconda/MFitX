@@ -80,7 +80,6 @@ class UartService(private val context: Context) {
         }
 
         val device = mBluetoothAdapter.getRemoteDevice(address) ?: return false
-
         mBluetoothGatt = device.connectGatt(context, false, mGattCallback)
         return if (mBluetoothGatt != null) {
             mBluetoothDeviceAddress = address

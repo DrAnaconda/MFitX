@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.AsyncTask
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import anonymouls.dev.mgcex.util.ReplaceTable
 import anonymouls.dev.mgcex.util.Utils
 import java.util.*
 import kotlin.collections.ArrayDeque
@@ -34,7 +35,7 @@ class UartServiceBroadcastInterpreter : BroadcastReceiver() {
                 val Title = extras?.get("title") as String
                 val Text = extras.get("text") as String
                 val Message = Title + "\n" + Text
-                Algorithm.SelfPointer?.ci?.fireNotification(Message)
+                Algorithm.SelfPointer?.ci?.fireNotification(ReplaceTable.replaceString(Message, context))
             }
             UartService.ACTION_DATA_AVAILABLE -> {
                 if (!isInited) {
@@ -87,7 +88,7 @@ class InsertTask : AsyncTask<Void, Void, Void>() {
                         _insertedRunning.postValue(false)
 
                 } catch (ex: Exception) {
-
+                    ex.message
                 }
                 if (dataToHandle.size > 2500) dataToHandle.clear()
             }

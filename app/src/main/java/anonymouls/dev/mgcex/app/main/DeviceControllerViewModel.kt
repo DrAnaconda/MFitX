@@ -14,6 +14,7 @@ import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.savedValues.s
 import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.savedValues.savedSteps
 import anonymouls.dev.mgcex.app.backend.CommandInterpreter
 import anonymouls.dev.mgcex.app.backend.InsertTask
+import anonymouls.dev.mgcex.databaseProvider.HRRecord
 import anonymouls.dev.mgcex.databaseProvider.SleepRecordsTable
 import anonymouls.dev.mgcex.util.HRAnalyzer
 
@@ -31,7 +32,7 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
 
     val workInProgress = MutableLiveData(View.GONE)
     val _batteryHolder = MutableLiveData(savedBattery)
-    val _lastHearthRateIncomed = MutableLiveData<Int>(savedHR)
+    val _lastHearthRateIncomed = MutableLiveData<HRRecord>(savedHR)
     val _lastCcalsIncomed = MutableLiveData<Int>(savedCCals)
     val _lastStepsIncomed = MutableLiveData(savedSteps)
     val _currentStatus = MutableLiveData<String>(activity.getString(R.string.status_label))
@@ -41,7 +42,7 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
         get() {
             return _lastStepsIncomed
         }
-    val currentHR: LiveData<Int>
+    val currentHR: LiveData<anonymouls.dev.mgcex.databaseProvider.HRRecord>
         get() {
             return _lastHearthRateIncomed
         }
@@ -81,7 +82,7 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
         super.onCleared()
     }
 
-    private fun updateStatus(text: String, force: Boolean = false) {
+    private fun updateStatus(text: String) {
         if (savedStatus.length != 0) {
             val statusParts = savedStatus.split('\n').toMutableList()
             var newStatus = ""
@@ -115,7 +116,10 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
         Algorithm.StatusCode.observe(activity, Observer {
             if (it.code < Algorithm.StatusCodes.GattReady.code) {
                 _hrVisibility.postValue(View.GONE)
-                workInProgress.postValue(View.VISIBLE)
+                if (it.code > Algorithm.StatusCodes.BluetoothDisabled.code)
+                    workInProgress.postValue(View.VISIBLE)
+                else
+                    workInProgress.postValue(View.GONE)
             } else {
                 if (ci.hRRealTimeControlSupport)
                     _hrVisibility.postValue(View.VISIBLE)
@@ -178,7 +182,7 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
         if (savedCCals != -1) _lastCcalsIncomed.postValue(savedCCals)
         if (savedSteps != -1) _lastStepsIncomed.postValue(savedSteps)
         if (savedBattery != -1) _batteryHolder.postValue(savedBattery)
-        if (savedHR != -1) _lastHearthRateIncomed.postValue(savedHR)
+        if (savedHR.hr > -1) _lastHearthRateIncomed.postValue(savedHR)
         if (savedStatus.length > 0) _currentStatus.postValue(savedStatus)
     }
 

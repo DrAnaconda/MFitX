@@ -170,3 +170,5 @@ object HRRecordsTable {
         }
     }
 }
+
+class HRRecord(val recordTime: Calendar, val hr: Int)

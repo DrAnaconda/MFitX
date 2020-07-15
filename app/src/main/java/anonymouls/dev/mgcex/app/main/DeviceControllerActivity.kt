@@ -13,7 +13,10 @@ import android.os.Bundle
 import android.text.method.LinkMovementMethod
 import android.view.View
 import android.view.Window
-import android.widget.*
+import android.widget.ProgressBar
+import android.widget.Switch
+import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
@@ -114,8 +117,10 @@ class DeviceControllerActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         when (requestCode) {
             Utils.BluetoothEnableRequestCode -> {
-                if (resultCode == RESULT_CANCELED)
+                if (resultCode == RESULT_CANCELED) {
+                    Algorithm.SelfPointer?.bluetoothRejected = true; Algorithm.SelfPointer?.bluetoothRequested = false
                     DeviceControllerViewModel.instance?._currentStatus?.postValue(getString(R.string.offline_mode))
+                }
             }
         }
         super.onActivityResult(requestCode, resultCode, data)
@@ -191,6 +196,7 @@ class DeviceControllerActivity : AppCompatActivity() {
                         || DeviceControllerViewModel.instance?.workInProgress!!.value == View.VISIBLE) {
                     Toast.makeText(this, getString(R.string.wait_untill_complete), Toast.LENGTH_LONG).show()
                 } else {
+                    Algorithm.SelfPointer?.bluetoothRejected = false; Algorithm.SelfPointer?.bluetoothRequested = false
                     Algorithm.SelfPointer?.thread?.interrupt()
                 }
             }
@@ -268,7 +274,7 @@ class DeviceControllerActivity : AppCompatActivity() {
                 }
             }
 
-            val dialogButton = dialog.findViewById<View>(R.id.infoDialogClose) as Button
+            val dialogButton = dialog.findViewById<View>(R.id.infoDialogClose) as View
             dialogButton.setOnClickListener {
                 dialog.dismiss()
                 when (task) {

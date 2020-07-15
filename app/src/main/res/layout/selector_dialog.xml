@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:background="#FFFFFF"
+    android:theme="@style/Theme.AppCompat.DayNight"
     android:orientation="vertical">
 
     <TextView
@@ -10,7 +10,6 @@
         android:layout_height="wrap_content"
         android:layout_margin="4pt"
         android:text="@string/select_data_scaling_grouping_technique"
-        android:textColor="#000000"
         android:textStyle="bold" />
 
 
@@ -58,22 +57,24 @@
         android:layout_gravity="center"
         android:orientation="horizontal">
 
-        <Button
+        <TextView
             android:id="@+id/dialogDismiss"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_margin="6pt"
+            android:gravity="center"
             android:layout_weight="0.5"
-            android:background="@android:color/white"
             android:text="@string/cancel"
             android:textColor="#5DBCD2"
             android:textStyle="bold" />
 
-        <Button
+        <TextView
             android:id="@+id/dialogConfirm"
+            android:layout_margin="6pt"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:gravity="center"
             android:layout_weight="0.5"
-            android:background="@android:color/white"
             android:text="@string/confirm_str"
             android:textColor="#5DBCD2"
             android:textStyle="bold" />

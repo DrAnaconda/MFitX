@@ -1,18 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
         android:title="@string/confirm_str"
         android:id="@+id/ConfirmMenuBtn"
         android:orderInCategory="200"
-        android:showAsAction="always"
         android:visible="false"
-        />
+        app:showAsAction="ifRoom" />
     <item
         android:id="@+id/RequestHistory"
         android:title="@string/choose_period"
-        android:showAsAction="always"
         android:visible="true"
-        />
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/manualRequestHR"
+        android:title="@string/request_hr"
+        android:visible="false"
+        app:showAsAction="always" />
 
 </menu>

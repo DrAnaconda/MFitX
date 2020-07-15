@@ -4,10 +4,7 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
-import android.os.Build
-import androidx.annotation.RequiresApi
 
-@RequiresApi(Build.VERSION_CODES.LOLLIPOP)
 class ScannerCallback(private val ScannerActivity: ScanActivity) : ScanCallback() {
 
     override fun onScanResult(callbackType: Int, result: ScanResult) {

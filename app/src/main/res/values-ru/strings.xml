@@ -3,7 +3,6 @@
     <string name="bt_unavailable">Bluetooth недоступен</string>
     <string name="action_scan">Поиск</string>
     <string name="action_stop">Стоп</string>
-    <string name="confirm_str">ОК</string>
     <string name="title_activity_settings">Настройки</string>
     <string name="receive_notifications">Принимать уведомления?</string>
     <string name="BluetoothRequiredMsg">Необходимо включить Bluetooth</string>
@@ -67,7 +66,7 @@
     <string name="sleep_data_button">Кнопка данных сна</string>
     <string name="report_activity_button">Кнопка отчета</string>
     <string name="info_text">MGCOOL EX  v1.0\\nПоддерживаемые устройста: MGCOOL Band 4\\nРазработано DrAnaconda Labs</string>
-    <string name="connected_syncing">Статус: Полдючен. Синхронизация...</string>
+    <string name="connected_syncing">Статус: Подключен. Синхронизация...</string>
     <string name="device_controls">Управление устройством</string>
     <string name="times_every">раз каждые</string>
     <string name="repeat_notification">Повторять уведомление</string>
@@ -137,4 +136,16 @@
     <string name="until">до</string>
     <string name="from">От</string>
     <string name="synchronization_every">Синхронизация каждые</string>
+    <string name="enable_vibration">Включить вибрацию</string>
+    <string name="idle_reminder">Мониторинг бездействия</string>
+    <string name="device_not_supported">Это устройство не поддерживается</string>
+    <string name="target_steps_count">Целевое кол-во шагов:</string>
+    <string name="steps_count_min">Минимум 500</string>
+    <string name="background_running">Запущено в фоновом режиме</string>
+    <string name="background_runner_label">Фоновый сервис</string>
+    <string name="incoming_number_perm">Следующее разрешение необходимо для идентификации номера</string>
+    <string name="request_hr">Запрос ЧСС</string>
+    <string name="measuredHR">Текущая ЧСС:&#160;</string>
+    <string name="waiting_for_result_HR">Ожидание результатов... Кликните для отмены</string>
+    <string name="at">&#160;в&#160;</string>
 </resources>
