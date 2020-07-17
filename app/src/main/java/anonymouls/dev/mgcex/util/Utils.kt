@@ -46,6 +46,7 @@ object Utils {
     val UsedPerms = arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE, //Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE,
             Manifest.permission.READ_CONTACTS, Manifest.permission.READ_PHONE_NUMBERS, Manifest.permission.WAKE_LOCK,
+            Manifest.permission.READ_CALL_LOG,
             Manifest.permission.READ_PHONE_STATE)//, Manifest.permission.RECEIVE_BOOT_COMPLETED)
 
     fun getSharedPrefs(context: Context): SharedPreferences {
@@ -223,11 +224,12 @@ object Utils {
         }
     }
 
-    fun safeThreadSleep(milis: Long, rethrow: Boolean) {
+    fun safeThreadSleep(milis: Long, deepSleep: Boolean) {
         try {
             Thread.sleep(milis)
         } catch (e: InterruptedException) {
-            if (rethrow) throw e
+            if (deepSleep)
+                Thread.currentThread().interrupt()
         }
     }
 

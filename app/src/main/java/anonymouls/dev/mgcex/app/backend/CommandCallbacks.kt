@@ -6,7 +6,7 @@ import anonymouls.dev.mgcex.app.main.DeviceControllerViewModel
 import anonymouls.dev.mgcex.databaseProvider.*
 import java.util.*
 
-internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandReaction {
+class CommandCallbacks(context: Context) : CommandInterpreter.CommandReaction {
 
     private val database: SQLiteDatabase = DatabaseController.getDCObject(context).writableDatabase
     private var lastSyncMain: Long = -1
@@ -15,8 +15,8 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
     override fun mainInfo(Steps: Int, Calories: Int) {
         try {
             lastSyncMain = CustomDatabaseUtils.calendarToLong(Calendar.getInstance(), true)
-            DeviceControllerViewModel.instance?._lastStepsIncomed?.postValue(Steps); savedValues.savedSteps = Steps
-            DeviceControllerViewModel.instance?._lastCcalsIncomed?.postValue(Calories); savedValues.savedCCals = Calories
+            DeviceControllerViewModel.instance?._lastStepsIncomed?.postValue(Steps); SavedValues.savedSteps = Steps
+            DeviceControllerViewModel.instance?._lastCcalsIncomed?.postValue(Calories); SavedValues.savedCCals = Calories
             MainRecordsTable.insertRecordV2(Calendar.getInstance(), Steps, Calories, database)
         } catch (Ex: Exception) {
 
@@ -27,7 +27,7 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
         try {
             if (Charge > 5) {
                 DeviceControllerViewModel.instance?._batteryHolder?.postValue(Charge)
-                savedValues.savedBattery = Charge
+                SavedValues.savedBattery = Charge
             }
             // TODO Power consumption and battery health
         } catch (Ex: Exception) {
@@ -41,7 +41,7 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
         if (ResultHR < 0) ResultHR = (ResultHR and 0xFF)
         if (lastSyncHR <= CustomDatabaseUtils.calendarToLong(Time, true)) {
             val record = HRRecord(Time, ResultHR)
-            DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(record); savedValues.savedHR = record
+            DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(record); SavedValues.savedHR = record
             lastSyncHR = CustomDatabaseUtils.calendarToLong(Time, true)
         }
     }
@@ -54,7 +54,7 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
             HRRecordsTable.insertRecord(Time, ResultHR, database)
             if (lastSyncHR < CustomDatabaseUtils.calendarToLong(Time, true)) {
                 val record = HRRecord(Time, ResultHR)
-                DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(record); savedValues.savedHR = record
+                DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(record); SavedValues.savedHR = record
                 lastSyncHR = CustomDatabaseUtils.calendarToLong(Time, true)
             }
         } catch (Ex: Exception) {
@@ -69,8 +69,8 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
             if (MainRecordsTable.insertRecordV2(Time, Steps, Calories, database) > 0) {
                 val current = CustomDatabaseUtils.calendarToLong(Time, true)
                 if (current > lastSyncMain) {
-                    DeviceControllerViewModel.instance?._lastCcalsIncomed?.postValue(Calories); savedValues.savedCCals = Calories
-                    DeviceControllerViewModel.instance?._lastStepsIncomed?.postValue(Steps); savedValues.savedSteps = Steps
+                    DeviceControllerViewModel.instance?._lastCcalsIncomed?.postValue(Calories); SavedValues.savedCCals = Calories
+                    DeviceControllerViewModel.instance?._lastStepsIncomed?.postValue(Steps); SavedValues.savedSteps = Steps
                     lastSyncMain = CustomDatabaseUtils.calendarToLong(Time, true)
                 }
             }
@@ -96,7 +96,7 @@ internal class CommandCallbacks(context: Context) : CommandInterpreter.CommandRe
 
         lateinit var SelfPointer: CommandCallbacks
 
-        object savedValues {
+        object SavedValues {
 
             var savedCCals = -1
             var savedSteps = -1

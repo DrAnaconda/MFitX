@@ -4,6 +4,8 @@ import android.app.IntentService
 import android.content.*
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Handler
+import android.os.HandlerThread
 import android.os.IBinder
 import android.view.View
 import androidx.core.app.NotificationManagerCompat
@@ -27,14 +29,17 @@ class Algorithm : IntentService("Syncer") {
 
     private lateinit var database: DatabaseController
     private lateinit var prefs: SharedPreferences
-    private var hrMonitoringTimer: Timer? = null
     lateinit var ci: CommandInterpreter
     private var workInProgress = false
     private var isFirstTime = true
     private var connectionTries = 0
+    private var nextSyncMain: Calendar = Calendar.getInstance()
+    private var nextSyncHR: Calendar? = null
+
     var bluetoothRejected = false
     var bluetoothRequested = false
     var thread: Thread? = null
+    private val commandHandler: HandlerThread = HandlerThread("CommandsSender")
 
     private var serviceObject: IBinder? = null
     private var serviceName: ComponentName? = null
@@ -60,6 +65,34 @@ class Algorithm : IntentService("Syncer") {
     }
     private val mBinder: IBinder? = null
 
+    private fun checkPowerAlgo(): Boolean {
+        if (!Utils.getSharedPrefs(this).getBoolean(SettingsActivity.batterySaverEnabled, true))
+            return true
+        else {
+            val threshold = Utils.getSharedPrefs(this).getInt(SettingsActivity.batteryThreshold, 20)
+            return CommandCallbacks.Companion.SavedValues.savedBattery !in 0..threshold
+        }
+    }
+
+    private fun buildStatusMessage() {
+        var result = ""
+        if (checkPowerAlgo()) {
+            result += getString(R.string.next_sync_status) +
+                    SimpleDateFormat(Utils.SDFPatterns.TimeOnly.pattern,
+                            Locale.getDefault()).format(nextSyncMain.time)
+
+
+            if (nextSyncHR != null) {
+                result += "\n" + getString(R.string.hr_data_requested) +
+                        SimpleDateFormat(Utils.SDFPatterns.TimeOnly.pattern,
+                                Locale.getDefault()).format(nextSyncHR?.time)
+            }
+        } else {
+            result += "\n" + getString(R.string.battery_low_status)
+        }
+        currentAlgoStatus.postValue(result)
+    }
+
     //region Sync Utilities
 
     private fun getLastHRSync(): Calendar {
@@ -80,31 +113,21 @@ class Algorithm : IntentService("Syncer") {
         bluetoothRequested = false; bluetoothRejected = false
         DeviceControllerViewModel.instance?.workInProgress?.postValue(View.VISIBLE)
         GlobalScope.launch(Dispatchers.IO) { database.initRepairsAndSync(database.writableDatabase) }
-        ci.requestSettings()
-        Utils.safeThreadSleep(1000, false)
-        ci.requestBatteryStatus()
-        Utils.safeThreadSleep(1000, false)
-        ci.syncTime(Calendar.getInstance())
-        Utils.safeThreadSleep(1000, false)
-        ci.getMainInfoRequest()
-        Utils.safeThreadSleep(1000, false)
-        ci.requestSleepHistory(getLastSleepSync())
-        Utils.safeThreadSleep(1000, false)
-        ci.requestHRHistory(getLastHRSync())
-        Utils.safeThreadSleep(1000, false)
+        val h = Handler()
+        Handler(commandHandler.looper).postDelayed({ ci.requestSettings() }, 200)
+        Handler(commandHandler.looper).postDelayed({ ci.requestBatteryStatus() }, 500)
+        Handler(commandHandler.looper).postDelayed({ ci.syncTime(Calendar.getInstance()) }, 800)
+        Handler(commandHandler.looper).postDelayed({ ci.getMainInfoRequest() }, 1100)
+        Handler(commandHandler.looper).postDelayed({ ci.requestSleepHistory(getLastSleepSync()) }, 1400)
+        Handler(commandHandler.looper).postDelayed({ ci.requestHRHistory(getLastHRSync()) }, 2000)
         if (isFirstTime) forceSyncHR()
         //if (IsAlarmingTriggered && !IsFromActivity) alarmTriggerDecider(0)
     }
 
     private fun forceSyncHR() {
         ci.hRRealTimeControl(true)
-        ci.requestManualHRMeasure(false)
-        try {
-            Utils.safeThreadSleep(10000, true)
-        } catch (e: InterruptedException) {
-            this.thread?.interrupt()
-        }
-        ci.hRRealTimeControl(false)
+        //ci.requestManualHRMeasure(false)
+        Handler().postDelayed({ ci.hRRealTimeControl(false) }, 10000)
     }
 
     //endregion
@@ -127,24 +150,26 @@ class Algorithm : IntentService("Syncer") {
     }
 
     private fun executeMainAlgo() {
-        connectionTries = 0
-        currentAlgoStatus.postValue(getString(R.string.connected_syncing))
-        if (!isNotifyServiceAlive(this)) tryForceStartListener(this)
-        executeForceSync()
-        if ((!ci.hRRealTimeControlSupport && isFirstTime
-                        && prefs.contains(SettingsActivity.Companion.HRMonitoringSettings.hrMeasureInterval))
-                || ci.hRRealTimeControlSupport) {
-            forceSyncHR()
-            manualHRHack()
+        val syncPeriod = prefs.getInt(SettingsActivity.mainSyncMinutes, 5) * 60 * 1000
+        nextSyncMain = Calendar.getInstance()
+        nextSyncMain.add(Calendar.MILLISECOND, syncPeriod)
+
+        if (checkPowerAlgo()) {
+            connectionTries = 0
+            currentAlgoStatus.postValue(getString(R.string.connected_syncing))
+            executeForceSync()
+            if ((!ci.hRRealTimeControlSupport && isFirstTime
+                            && prefs.contains(SettingsActivity.Companion.HRMonitoringSettings.hrMeasureInterval))
+                    || ci.hRRealTimeControlSupport) {
+                forceSyncHR()
+                manualHRHack()
+            }
+            isFirstTime = false
+            buildStatusMessage()
         }
-        NextSync = Calendar.getInstance()
-        NextSync!!.add(Calendar.MILLISECOND, MainSyncPeriodSeconds)
-        currentAlgoStatus.postValue(getString(R.string.next_sync_status) +
-                SimpleDateFormat(Utils.SDFPatterns.TimeOnly.pattern, Locale.getDefault()).format(NextSync!!.time))
+        buildStatusMessage()
         workInProgress = false
-        isFirstTime = false
-        MainSyncPeriodSeconds = prefs.getInt(SettingsActivity.mainSyncMinutes, 5) * 60 * 1000
-        Utils.safeThreadSleep(MainSyncPeriodSeconds.toLong(), false)
+        Utils.safeThreadSleep(syncPeriod.toLong(), false)
         workInProgress = true
     }
 
@@ -206,7 +231,7 @@ class Algorithm : IntentService("Syncer") {
 
     override fun onHandleIntent(intent: Intent?) {
         Thread.currentThread().name = "Syncer"
-        Thread.currentThread().priority = Thread.MIN_PRIORITY
+        Thread.currentThread().priority = Thread.MAX_PRIORITY
         this.thread = Thread.currentThread()
         init()
         run()
@@ -240,12 +265,11 @@ class Algorithm : IntentService("Syncer") {
         ci = CommandInterpreter.getInterpreter(this)
         prefs = Utils.getSharedPrefs(this)
         database = DatabaseController.getDCObject(this)
+        commandHandler.start()
         UartService.instance = UartService(this)
-        MainSyncPeriodSeconds = prefs.getInt(SettingsActivity.mainSyncMinutes, 5) * 60 * 1000
 
         val dCAct = Intent(this, DeviceControllerActivity::class.java)
         dCAct.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-        //Utils.serviceStartForegroundMultiAPI(Intent(this, UartService::class.java), this)
         val service = Intent(this, NotificationService::class.java)
         if (!NotificationService.IsActive) {
             bindService(service, connection, Context.BIND_AUTO_CREATE)
@@ -270,6 +294,8 @@ class Algorithm : IntentService("Syncer") {
 
     //endregion
 
+    private var plannedHandler = Handler()
+
     private fun manualHRHack() {
         val startString = prefs.getString(SettingsActivity.Companion.HRMonitoringSettings.hrMeasureStart, "00:00")
         val endString = prefs.getString(SettingsActivity.Companion.HRMonitoringSettings.hrMeasureEnd, "00:00")
@@ -277,25 +303,21 @@ class Algorithm : IntentService("Syncer") {
         targetString += ":"
         targetString += Utils.subIntegerConversionCheck(Calendar.getInstance().get(Calendar.MINUTE).toString())
         val isActive = if (startString == endString) true; else Utils.isTimeInInterval(startString!!, endString!!, targetString)
-        if (isActive && prefs.getBoolean(SettingsActivity.Companion.HRMonitoringSettings.hrMonitoringEnabled, false)) {
+        if (isActive && prefs.getBoolean(SettingsActivity.Companion.HRMonitoringSettings.hrMonitoringEnabled, false)
+                && checkPowerAlgo()) {
             ci.requestManualHRMeasure(false)
         }
         val interval = prefs.getInt(SettingsActivity.Companion.HRMonitoringSettings.hrMeasureInterval, 5)
-        val taskForce = object : TimerTask() {
-            override fun run() {
-                manualHRHack()
-            }
-        }
-        hrMonitoringTimer = Timer(); hrMonitoringTimer?.schedule(taskForce, interval.toLong() * 60 * 1000)
+        this.nextSyncHR = Calendar.getInstance(); this.nextSyncHR?.add(Calendar.MINUTE, interval)
+        plannedHandler.postDelayed({ manualHRHack() }, interval.toLong() * 60 * 1000)
+        buildStatusMessage()
     }
 
     companion object {
 
-        var NextSync: Calendar? = null
         var SelfPointer: Algorithm? = null
         var StatusCode = MutableLiveData(StatusCodes.Disconnected)
 
-        var MainSyncPeriodSeconds = 310000
         const val StatusAction = "STATUS_CHANGED"
 
         val currentAlgoStatus = MutableLiveData<String>()
@@ -334,13 +356,11 @@ class Algorithm : IntentService("Syncer") {
 
 }
 
+// TODO Maybe add Jobs instead of service? but there are API 23 required
 // TODO CRITICAL. Looper is slow, some operations is slow
 // TODO Filter loading, icons slow downs app - investigate
 // TODO Speed up activities transitions or upgrade to fragments.
-// TODO Incapsulate UARTService
 // TODO Integrate data sleep visualization
 // TODO Integrate 3d party services
-// TODO Battery health tracker + Power save algo
-// TODO Manual hearth value request
-// TODO LM: Sleep Data (tests needed)
+// TODO Battery health tracker
 // TODO LM: Other settings (dnd, alarms)

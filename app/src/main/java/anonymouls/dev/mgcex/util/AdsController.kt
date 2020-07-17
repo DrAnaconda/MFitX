@@ -4,25 +4,22 @@ import android.app.Activity
 import android.content.Context
 import android.os.AsyncTask
 import android.os.Handler
-import android.os.Looper
 import android.widget.LinearLayout
 import com.google.android.gms.ads.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import java.util.*
 
 
 object AdsController {
     // Test : ca-app-pub-3940256099942544/1033173712 Big xren`
     private var savedContext: Context? = null
-    private var adTimer = Timer()
     private var adFree = true
+    private var adHandler = Handler()
 
     private fun adTimerTask(bigScreen: InterstitialAd) {
         if (bigScreen.isLoaded) {
             bigScreen.show()
-            adTimer.cancel()
-            adTimer.purge()
+            cancelBigAD()
         }
     }
 
@@ -45,13 +42,7 @@ object AdsController {
         //bigScreen.adUnitId = "ca-app-pub-3940256099942544/1033173712"
         //bigScreen.adListener = defaultListener
         bigScreen.loadAd(AdRequest.Builder().build())
-        adTimer.schedule(object : TimerTask() {
-            override fun run() {
-                val mainHandler = Handler(Looper.getMainLooper())
-                val runner = Runnable { adTimerTask(bigScreen) }
-                mainHandler.post(runner)
-            }
-        }, 500, 1000)
+        adHandler.postDelayed({ adTimerTask(bigScreen) }, 3500)
         return bigScreen
     }
 
@@ -61,8 +52,7 @@ object AdsController {
     }
 
     fun cancelBigAD() {
-        adTimer.cancel()
-        adTimer.purge()
+        adHandler.removeCallbacksAndMessages(null)
     }
 
 

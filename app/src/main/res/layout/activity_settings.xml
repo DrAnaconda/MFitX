@@ -21,9 +21,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="2pt"
-                android:layout_marginTop="2pt"
-                android:layout_marginEnd="2pt"
+                android:layout_margin="4pt"
                 android:orientation="vertical">
 
                 <TextView
@@ -162,19 +160,59 @@
             </LinearLayout>
 
             <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_margin="4pt">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/battery_saver_settings"
+                    android:textSize="7pt"
+                    android:textStyle="bold" />
+
+                <View style="@style/horizontalDivider" />
+
+                <Switch
+                    android:id="@+id/batterySaverSwitch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:onClick="onClickHandler"
+                    android:text="@string/enable_battery_saver" />
+
+                <LinearLayout
+                    android:id="@+id/batteryThresholdContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/battery_charge_level_threshold" />
+
+                    <EditText
+                        android:id="@+id/batteryThresholdEdit"
+                        android:layout_width="48dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="2pt"
+                        android:gravity="center"
+                        android:importantForAutofill="no"
+                        android:inputType="number"
+                        android:maxLength="2" />
+
+                </LinearLayout>
+
+
+            </LinearLayout>
+
+            <LinearLayout
                 android:id="@+id/smart_notify_lay"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_marginTop="16dp"
-                android:layout_marginEnd="8dp"
-                android:orientation="vertical"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintHorizontal_bias="0.0"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/EraseDataOnRDeviceBtn"
-                app:layout_constraintVertical_bias="0.0">
+                android:layout_margin="4pt"
+                android:orientation="vertical">
 
                 <TextView
                     android:id="@+id/smart_notify_text"
@@ -360,9 +398,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginEnd="8dp"
+                android:layout_margin="4pt"
                 android:orientation="vertical">
 
                 <TextView
@@ -378,7 +414,6 @@
                     android:id="@+id/analyticsOn"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4pt"
                     android:checked="true"
                     android:text="@string/send_anonymous_stats_and_data_usage"
                     android:textSize="6.15pt" />

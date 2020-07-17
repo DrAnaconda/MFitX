@@ -1,18 +1,20 @@
 package anonymouls.dev.mgcex.app.backend
 
+import android.os.Handler
 import anonymouls.dev.mgcex.app.main.SettingsActivity
 import anonymouls.dev.mgcex.databaseProvider.SleepRecordsTable
 import anonymouls.dev.mgcex.util.Utils
 import java.nio.ByteBuffer
 import java.util.*
 
+
+@ExperimentalUnsignedTypes
 class LM517CommandInterpreter : CommandInterpreter() {
     companion object {
         const val CodeName = "LM716"
 
         private const val syncTimeCommandHeader = "CD00091201010004"
         private const val longAlarmHeader = "CD0014120111000F"
-        private const val notifyHeader = "CD009e12011200"//CD001212011200"
 
         private const val UARTServiceUUIDString = "6e400001-b5a3-f393-e0a9-e50e24dcca9d"
         private const val UARTRXUUIDString = "6e400002-b5a3-f393-e0a9-e50e24dcca9d"
@@ -23,8 +25,6 @@ class LM517CommandInterpreter : CommandInterpreter() {
         private const val PowerTX2String = "00002a19-0000-0000-8000-00805f9b34fb"
         private const val PowerDescriptor = "00002902-0000-1000-8000-00805f9b34fb"
     }
-
-    private var cancelTimer: Timer? = null
 
     init {
         UartService.RX_SERVICE_UUID = UUID.fromString(UARTServiceUUIDString)
@@ -68,22 +68,16 @@ class LM517CommandInterpreter : CommandInterpreter() {
         return targetCalendar
     }
 
-    private fun cutArray(Input: ByteArray, offset: Int): ByteArray {
-        var end = offset
-        for (x in 0 until 20) {
-            if (Input[offset + x].toUByte() != (0).toUByte()) end++ else break
-        }
-        return Input.copyOfRange(offset, end)
-    }
-
     //endregion
 
     //region Proceeders
 
+    private var plannedHandler = Handler()
+
     private fun hrRecordProceeder(Input: ByteArray) {
         // WARNING. Shit like pressure and ox% is ignoring
         if (Input.size != 20) return
-        cancelTimer?.cancel(); cancelTimer?.purge()
+        plannedHandler.removeCallbacksAndMessages(null)
         var buffer = ByteBuffer.wrap(Input, 8, 2)
         var recordTime = decryptDays(buffer.short, null, true)
         buffer = ByteBuffer.wrap(Input, 13, 4)
@@ -135,8 +129,6 @@ class LM517CommandInterpreter : CommandInterpreter() {
     }
 
     private fun commandsEntryPoint(Input: ByteArray) {
-        var testval = (-120).toUByte()
-        testval = (19).toUByte()
         if (Input[0].toUByte() != 205.toUByte()) return
         if (Input[1].toUByte() != 0.toUByte()) return
         //if (Input[2].toUByte() != 21.toUByte()) return
@@ -165,7 +157,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
         mainNumber = mainNumber or (time shl 12)
         mainNumber = mainNumber or (targetTime.get(Calendar.MINUTE) shl 6)
         mainNumber = mainNumber or (targetTime.get(Calendar.SECOND))
-        postCommand(hexStringToByteArray(syncTimeCommandHeader + Integer.toHexString(mainNumber.toInt())))
+        postCommand(hexStringToByteArray(syncTimeCommandHeader + Integer.toHexString(mainNumber)))
     }
 
     override fun eraseDatabase() {
@@ -195,9 +187,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
         req1 = request.plus(req1)
         postCommand(req1)
         req1 = arr.copyOfRange(10, 13)
-        Utils.safeThreadSleep(500, false)
-        postCommand(req1)
-        val test = (6).toUByte()
+        Handler().postDelayed({ postCommand(req1) }, 1000)
     }
 
     override fun commandAction(Input: ByteArray, characteristic: UUID) {
@@ -214,8 +204,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
 
     override fun getMainInfoRequest() {
         postCommand(hexStringToByteArray("cd:00:06:12:01:15:00:01:01"))
-        Utils.safeThreadSleep(1000, false)
-        postCommand(hexStringToByteArray("cd:00:06:15:01:06:00:01:01"))
+        Handler().postDelayed({ postCommand(hexStringToByteArray("cd:00:06:15:01:06:00:01:01")) }, 1300)
     }
 
     override fun requestSleepHistory(FromDate: Calendar) {
@@ -239,7 +228,6 @@ class LM517CommandInterpreter : CommandInterpreter() {
     }
 
     override fun fireNotification(Input: String) {
-        // TODO Dead fixes needed
         var arr = hexStringToByteArray(messageToHexValue(Input, 165, false).replace("00", "FF"))
         var request = "CD00" + Utils.subIntegerConversionCheck(Integer.toHexString(arr.size + 8)) + "12011200"
         var offset = 10
@@ -256,8 +244,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
                 Req1 = arr.copyOfRange(offset, offset + 20)
             else
                 Req1 = arr.copyOfRange(offset, arr.size)
-            Utils.safeThreadSleep(1000, false)
-            postCommand(Req1)
+            Handler().postDelayed({ postCommand(Req1) }, 100 + (offset.toLong() * 2))
             offset += 20
         }
     }
@@ -270,12 +257,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
         var request = "CD00061201180001"
         request += if (cancel) "00" else "01"
         postCommand(hexStringToByteArray(request))
-        val taskForce = object : TimerTask() {
-            override fun run() {
-                requestManualHRMeasure(true); getMainInfoRequest()
-            }
-        }
-        cancelTimer = Timer(); cancelTimer?.schedule(taskForce, 90000)
+        plannedHandler.postDelayed({ requestManualHRMeasure(true); getMainInfoRequest() }, 90000)
     }
 
     override fun setVibrationSetting(enabled: Boolean) {

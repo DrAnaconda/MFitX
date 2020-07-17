@@ -59,30 +59,28 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    private fun <T> initTextBox(id: Int, defaultValue: Any, settingName: String) {
+        findViewById<EditText>(id).addTextChangedListener(createTextWatcher<T>(settingName, defaultValue))
+        when (defaultValue) {
+            is Float -> findViewById<EditText>(id).setText(prefs.getFloat(settingName, defaultValue).toString())
+            is Int -> findViewById<EditText>(id).setText(prefs.getInt(settingName, defaultValue).toString())
+            is String -> findViewById<EditText>(id).setText(prefs.getString(settingName, defaultValue).toString())
+        }
+    }
+
     private fun initTextBoxes() {
-        findViewById<EditText>(R.id.stepSize).addTextChangedListener(createTextWatcher<Float>(stepsSize, 0.6f))
-        findViewById<EditText>(R.id.stepSize).setText(prefs.getFloat(stepsSize, 0.66f).toString().replace('.', ','))
+        initTextBox<Float>(R.id.stepSize, 0.66f, stepsSize)
+        initTextBox<Int>(R.id.mainSyncInterval, 5, mainSyncMinutes)
+        initTextBox<Int>(R.id.batteryThresholdEdit, 20, batteryThreshold)
 
-        findViewById<EditText>(R.id.secondsRepeatsText).addTextChangedListener(createTextWatcher<Int>(secondsNotify, 1))
-        findViewById<EditText>(R.id.secondsRepeatsText).setText(prefs.getInt(secondsNotify, 5).toString())
+        initTextBox<Int>(R.id.secondsRepeatsText, 5, secondsNotify)
+        initTextBox<Int>(R.id.numberRepeatsTextBox, 3, repeatsNumbers)
 
-        findViewById<EditText>(R.id.numberRepeatsTextBox).addTextChangedListener(createTextWatcher<Int>(repeatsNumbers, 1))
-        findViewById<EditText>(R.id.numberRepeatsTextBox).setText(prefs.getInt(repeatsNumbers, 3).toString())
+        initTextBox<Int>(R.id.HRMonitoringInterval, 5, HRMonitoringSettings.hrMeasureInterval)
+        initTextBox<String>(R.id.HRMonitoringStart, "00:00", HRMonitoringSettings.hrMeasureStart)
+        initTextBox<String>(R.id.HRMonitoringEnd, "00:00", HRMonitoringSettings.hrMeasureEnd)
 
-        findViewById<EditText>(R.id.HRMonitoringInterval).addTextChangedListener(createTextWatcher<Int>(HRMonitoringSettings.hrMeasureInterval, 5))
-        findViewById<EditText>(R.id.HRMonitoringInterval).setText(prefs.getInt(HRMonitoringSettings.hrMeasureInterval, 5).toString())
-
-        findViewById<EditText>(R.id.HRMonitoringStart).addTextChangedListener(createTextWatcher(HRMonitoringSettings.hrMeasureStart, "11"))
-        findViewById<EditText>(R.id.HRMonitoringStart).setText(prefs.getString(HRMonitoringSettings.hrMeasureStart, "00:00").toString())
-
-        findViewById<EditText>(R.id.HRMonitoringEnd).addTextChangedListener(createTextWatcher(HRMonitoringSettings.hrMeasureEnd, "11"))
-        findViewById<EditText>(R.id.HRMonitoringEnd).setText(prefs.getString(HRMonitoringSettings.hrMeasureEnd, "00:00").toString())
-
-        findViewById<EditText>(R.id.mainSyncInterval).addTextChangedListener(createTextWatcher<Int>(mainSyncMinutes, 1))
-        findViewById<EditText>(R.id.mainSyncInterval).setText(prefs.getInt(mainSyncMinutes, 5).toString())
-
-        findViewById<EditText>(R.id.stepsCount).addTextChangedListener(createTextWatcher<Int>(targetSteps, 5000))
-        findViewById<EditText>(R.id.stepsCount).setText(prefs.getInt(targetSteps, 5000).toString())
+        initTextBox<Int>(R.id.stepsCount, 5000, targetSteps)
     }
 
     private fun dynamicContentInit() {
@@ -101,6 +99,11 @@ class SettingsActivity : AppCompatActivity() {
         else
             findViewById<Switch>(R.id.vibrationSwitch).visibility = View.GONE
 
+        if (prefs.getBoolean(batterySaverEnabled, true))
+            findViewById<View>(R.id.batteryThresholdContainer).visibility = View.VISIBLE
+        else
+            findViewById<View>(R.id.batteryThresholdContainer).visibility = View.GONE
+
         if (demoMode) {
             findViewById<Switch>(R.id.NotificationsSwitch).visibility = View.GONE
             findViewById<Switch>(R.id.PhoneSwitch).visibility = View.GONE
@@ -116,6 +119,7 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<Switch>(R.id.GyroSwitch).isChecked = prefs.getBoolean(illuminationSetting, false)
         findViewById<Switch>(R.id.vibrationSwitch).isChecked = prefs.getBoolean(vibrationSetting, false)
         findViewById<Switch>(R.id.sittingReminderSwitch).isChecked = prefs.getBoolean(longSittingSetting, false)
+        findViewById<Switch>(R.id.batterySaverSwitch).isChecked = prefs.getBoolean(batterySaverEnabled, true)
     }
 
     private fun initViews() {
@@ -141,11 +145,11 @@ class SettingsActivity : AppCompatActivity() {
 
     //region Utility
 
-    private fun <T> createTextWatcher(param: String, dataType: T): TextWatcher {
+    private fun <T> createTextWatcher(param: String, datatype: Any): TextWatcher {
         return object : TextWatcher {
             override fun afterTextChanged(p0: Editable?) {
                 if (p0.toString().isEmpty()) return
-                when (dataType) {
+                when (datatype) {
                     is Float -> Utils.getSharedPrefs(this@SettingsActivity).edit().putFloat(param, p0.toString().replace(',', '.').toFloat()).apply()
                     is Int -> Utils.getSharedPrefs(this@SettingsActivity).edit().putInt(param, p0.toString().toInt()).apply()
                     is String -> Utils.getSharedPrefs(this@SettingsActivity).edit().putString(param, p0.toString()).apply()
@@ -301,6 +305,7 @@ class SettingsActivity : AppCompatActivity() {
             R.id.LoadPackListBtn -> {
                 dataView = true
                 loadPackagesBtn()
+                return
             }
             R.id.NotificationsSwitch -> {
                 if (NotificationService.IsActive) {
@@ -337,7 +342,9 @@ class SettingsActivity : AppCompatActivity() {
                 prefs.edit().putBoolean(vibrationSetting, state).apply()
                 commandController.setVibrationSetting(state)
             }
+            R.id.batterySaverSwitch -> prefs.edit().putBoolean(batterySaverEnabled, state).apply()
         }
+        dynamicContentInit()
     }
 
     override fun onBackPressed() {
@@ -388,6 +395,8 @@ class SettingsActivity : AppCompatActivity() {
         const val longSittingSetting = "LongSittingReminder"
         const val vibrationSetting = "VibrationSetting"
         const val bandAddress = "BandAddress"
+        const val batteryThreshold = "BST"
+        const val batterySaverEnabled = "BSE"
 
         object HRMonitoringSettings {
             const val hrMonitoringEnabled = "HRMonitoringEnabled"

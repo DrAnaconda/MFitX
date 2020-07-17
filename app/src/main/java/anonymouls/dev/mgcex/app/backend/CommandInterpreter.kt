@@ -20,6 +20,7 @@ abstract class CommandInterpreter {
     }
 
     var callback: CommandReaction? = null
+    private var blocker: Any = Any()
 
     //region Special Features
 
@@ -33,6 +34,7 @@ abstract class CommandInterpreter {
     companion object {
         private var ActiveInterpreter: CommandInterpreter? = null
 
+        @ExperimentalUnsignedTypes
         fun getInterpreter(context: Context): CommandInterpreter {
             if (ActiveInterpreter == null) {
                 if (Utils.getSharedPrefs(context).contains(SettingsActivity.bandIDConst)) {
@@ -103,9 +105,11 @@ abstract class CommandInterpreter {
         }
         return result
     }
-
     fun postCommand(Request: ByteArray) {
-        UartService.instance!!.writeRXCharacteristic(Request)
+        synchronized(blocker) {
+            UartService.instance!!.writeRXCharacteristic(Request)
+            Utils.safeThreadSleep(500, true)
+        }
     }
 
     abstract fun syncTime(SyncTime: Calendar?)

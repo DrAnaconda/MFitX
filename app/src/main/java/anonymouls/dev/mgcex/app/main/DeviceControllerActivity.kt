@@ -32,8 +32,6 @@ import anonymouls.dev.mgcex.util.AdsController
 import anonymouls.dev.mgcex.util.Analytics
 import anonymouls.dev.mgcex.util.Utils
 import com.google.firebase.analytics.FirebaseAnalytics
-import java.text.SimpleDateFormat
-import java.util.*
 import kotlin.system.exitProcess
 
 
@@ -143,8 +141,6 @@ class DeviceControllerActivity : AppCompatActivity() {
             CommandCallbacks.SelfPointer = CommandCallbacks(this)
             CommandController = CommandInterpreter.getInterpreter(this)
             CommandController.callback = CommandCallbacks.SelfPointer
-            if (Algorithm.NextSync != null)
-                DeviceControllerViewModel.instance?._currentStatus?.postValue(getString(R.string.status_connected_next_sync) + SimpleDateFormat("HH:mm", Locale.getDefault()).format(Algorithm.NextSync!!.time))
             initAlgo()
         } else DeviceControllerViewModel.instance?._currentStatus?.postValue(getString(R.string.demo_mode))
         instance = this
@@ -156,13 +152,11 @@ class DeviceControllerActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
-        if (Algorithm.StatusCode.value!!.code < 3) {
+        if (Algorithm.StatusCode.value!!.code < Algorithm.StatusCodes.Connecting.code) {
             Algorithm.IsActive = false
-            this.finish()
             exitProcess(0)
-        } else {
-            this.moveTaskToBack(true)
         }
+        finish()
     }
 
     // endregion
@@ -217,7 +211,6 @@ class DeviceControllerActivity : AppCompatActivity() {
                 } else {
                     view.background = ContextCompat.getDrawable(this, R.drawable.custom_border)
                 }
-                Algorithm.MainSyncPeriodSeconds = 310000
                 CommandController.stopLongAlarm()
             } else {
                 val alarmIntent = Intent(baseContext, AlarmActivity::class.java)

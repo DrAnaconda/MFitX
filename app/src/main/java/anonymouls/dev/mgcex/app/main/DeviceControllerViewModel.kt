@@ -7,16 +7,14 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.*
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.backend.Algorithm
-import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.savedValues.savedBattery
-import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.savedValues.savedCCals
-import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.savedValues.savedHR
-import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.savedValues.savedStatus
-import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.savedValues.savedSteps
+import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.SavedValues.savedBattery
+import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.SavedValues.savedCCals
+import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.SavedValues.savedHR
+import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.SavedValues.savedStatus
+import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.SavedValues.savedSteps
 import anonymouls.dev.mgcex.app.backend.CommandInterpreter
 import anonymouls.dev.mgcex.app.backend.InsertTask
 import anonymouls.dev.mgcex.databaseProvider.HRRecord
-import anonymouls.dev.mgcex.databaseProvider.SleepRecordsTable
-import anonymouls.dev.mgcex.util.HRAnalyzer
 
 
 class MyViewModelFactory(private val activity: AppCompatActivity) : ViewModelProvider.Factory {
@@ -82,33 +80,6 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
         super.onCleared()
     }
 
-    private fun updateStatus(text: String) {
-        if (savedStatus.length != 0) {
-            val statusParts = savedStatus.split('\n').toMutableList()
-            var newStatus = ""
-            if (text.length > 0 && statusParts.size > 0) statusParts[0] = text
-            for (x in statusParts.indices) {
-                newStatus += statusParts[x]; if (x != statusParts.size - 1) newStatus += '\n' else break
-            }
-            savedStatus = newStatus
-            _currentStatus.postValue(savedStatus)
-        }
-    }
-
-    private fun checkForStatus(status: String): Boolean {
-        return savedStatus.contains(status)
-    }
-
-    private fun createObserverForString(status: String, arg: Boolean) {
-        if (arg && !checkForStatus(status)) {
-            savedStatus += "\n" + status
-        } else if (!arg) {
-            savedStatus = savedStatus.replace("\n" + status, "")
-        }
-        updateStatus("")
-    }
-
-
     fun reInit() {
 
 
@@ -126,21 +97,13 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
                 else
                     _hrVisibility.postValue(View.GONE)
                 if (firstLaunch) firstLaunch = false
-                updateStatus("")
             }
         })
-        Algorithm.currentAlgoStatus.observe(activity, Observer {
-            updateStatus(it)
-        })
 
-        SleepRecordsTable.GlobalSettings.isLaunched.observe(activity, Observer {
-            createObserverForString(activity.getString(R.string.sleep_data_analyzer), it)
-        })
-        HRAnalyzer.isShadowAnalyzerRunning.observe(activity, Observer {
-            createObserverForString(activity.getString(R.string.activity_data_analyzer), it)
+        Algorithm.currentAlgoStatus.observe(activity, Observer {
+            _currentStatus.postValue(it)
         })
         InsertTask.insertedRunning.observe(activity, Observer {
-            createObserverForString(activity.getString(R.string.downloading_data_status), it)
             if (it) workInProgress.postValue(View.VISIBLE) else workInProgress.postValue(View.GONE)
         })
 

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.os.AsyncTask
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
@@ -15,7 +16,7 @@ import anonymouls.dev.mgcex.databaseProvider.DatabaseController
 import anonymouls.dev.mgcex.databaseProvider.NotifyFilterTable
 import anonymouls.dev.mgcex.util.Utils
 import java.util.*
-import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.ConcurrentHashMap
 
 
 class NotificationService : NotificationListenerService() {
@@ -55,7 +56,7 @@ class NotificationService : NotificationListenerService() {
                         DatabaseController.getDCObject(applicationContext).readableDatabase))
             return
         val extras = sbn.notification.extras
-        var title = extras.getString("android.title")
+        val title = extras.getString("android.title")
         var applicationName = ""
         try {
             applicationName = this.packageManager.getApplicationLabel(packageManager.getApplicationInfo(sbn.packageName, 0)).toString()
@@ -70,12 +71,20 @@ class NotificationService : NotificationListenerService() {
         }
         if (UartService.instance != null &&
                 Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.Connected.code) {
-            if (title != null)
-                PendingList.add(CustomNotification(pack, title, text, sbn))
-            else
-                PendingList.add(CustomNotification(pack, applicationName, text, sbn))
+            if (title != null) {
+                addNotifyToQuene(CustomNotification(pack, title, text, sbn))
+            } else
+                addNotifyToQuene(CustomNotification(pack, applicationName, text, sbn))
+
         } else
             return
+    }
+
+    private fun addNotifyToQuene(notify: CustomNotification) {
+        if (PendingList.contains(notify.AppText))
+            PendingList[notify.AppText] = notify
+        else
+            PendingList[notify.AppText] = notify
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
@@ -88,30 +97,22 @@ class NotificationService : NotificationListenerService() {
         return super.onBind(intent)
     }
 
-    inner class CustomNotification(AppText: String, TitleText: String, ContentText: String, private val sbn: StatusBarNotification) {
-        private var titleText: String = ""
-        private var contentText: String = ""
-        private var appText: String = ""
+    inner class CustomNotification(val AppText: String,
+                                   val TitleText: String,
+                                   val ContentText: String,
+                                   private val sbn: StatusBarNotification) {
 
         var ID: Int = -1
         var repeats: Int = 0
         var isLocked: Boolean = false
         var ready: Boolean = false
-        var timer: Timer = Timer(false)
         var cancelled: Boolean = false
 
 
         init {
-            this.titleText = TitleText
-            this.contentText = ContentText
             this.ID = sbn.id
-            this.appText = AppText
-            timer.schedule(object : TimerTask() {
-                override fun run() {
-                    ready = true
-                }
-            }, (sharedPrefs!!.getInt(SettingsActivity.secondsNotify, 5) * 500).toLong(),
-                    (sharedPrefs!!.getInt(SettingsActivity.secondsNotify, 5) * 1000).toLong())
+            Handler().postDelayed({ this.ready = true },
+                    sharedPrefs!!.getInt(SettingsActivity.secondsNotify, 5).toLong() * 500)
         }
 
         private fun checkIsActive(): Boolean {
@@ -133,9 +134,9 @@ class NotificationService : NotificationListenerService() {
                 repeats++
                 ready = false
                 val msgrcv = Intent(NotifyAction)
-                msgrcv.putExtra("app", appText)
-                msgrcv.putExtra("title", titleText)
-                msgrcv.putExtra("text", contentText)
+                msgrcv.putExtra("app", AppText)
+                msgrcv.putExtra("title", TitleText)
+                msgrcv.putExtra("text", ContentText)
                 if (UartService.instance != null
                         && Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.GattReady.code)
                     sendBroadcast(msgrcv)
@@ -150,16 +151,16 @@ class NotificationService : NotificationListenerService() {
         var Repeater: AsyncRepeater? = null
         var instance: NotificationService? = null
         var IsActive: Boolean = false
-        var PendingList: ConcurrentLinkedQueue<CustomNotification> = ConcurrentLinkedQueue()
+        var PendingList: ConcurrentHashMap<String, CustomNotification> = ConcurrentHashMap()
         var sharedPrefs: SharedPreferences? = null
         var contentResolver: ContentResolver? = null
 
         fun findAndDeleteByID(ID: Int?) {
-            for (CN in PendingList) {
+            for (CN in PendingList.elements()) {
                 if (CN.ID == ID
                         || CN.repeats >= sharedPrefs!!.getInt(SettingsActivity.repeatsNumbers, 5)
                         || CN.cancelled)
-                    PendingList.remove(CN)
+                    PendingList.remove(CN.AppText)
             }
         }
 
@@ -168,13 +169,13 @@ class NotificationService : NotificationListenerService() {
                 if (sharedPrefs == null)
                     sharedPrefs = Utils.getSharedPrefs(instance!!)
                 Thread.currentThread().name = "NotifyRepeaters"
-                Thread.currentThread().priority = Thread.MIN_PRIORITY
+                Thread.currentThread().priority = Thread.MAX_PRIORITY
                 while (IsActive) {
                     if (Settings.Global.getInt(contentResolver, "zen_mode") == 0) {
-                        for (CN in PendingList) {
+                        for (CN in PendingList.elements()) {
                             CN.sendToDevice()
                             if (CN.repeats >= sharedPrefs!!.getInt(SettingsActivity.repeatsNumbers, 3))
-                                PendingList.remove(CN)
+                                PendingList.remove(CN.AppText)
                             Utils.safeThreadSleep(3000, false)
                         }
                     } else PendingList.clear()

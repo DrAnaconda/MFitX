@@ -148,4 +148,10 @@
     <string name="measuredHR">Текущая ЧСС:&#160;</string>
     <string name="waiting_for_result_HR">Ожидание результатов... Кликните для отмены</string>
     <string name="at">&#160;в&#160;</string>
+    <string name="background_syncer">Фоновая сихронизация</string>
+    <string name="hr_data_requested">ЧСС будет запрошено в&#160;</string>
+    <string name="battery_low_status">Низкий уровень заряда. Синхронизация приостановлена.</string>
+    <string name="battery_saver_settings">Настройки контроля заряда</string>
+    <string name="enable_battery_saver">Включить контроль заряда</string>
+    <string name="battery_charge_level_threshold">Порог заряда батареи</string>
 </resources>

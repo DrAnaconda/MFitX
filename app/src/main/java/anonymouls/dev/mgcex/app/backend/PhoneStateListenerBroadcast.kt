@@ -32,6 +32,8 @@ class PhoneStateListenerBroadcast : BroadcastReceiver() {
                 val smth = extras.get(TelephonyManager.EXTRA_INCOMING_NUMBER) // TODO upgrade in 29
                 if (smth != null)
                     incomingNumber = smth as String
+                else
+                    if (callLogPermissionGranted) return
             }
 
             val ci = CommandInterpreter.getInterpreter(context)

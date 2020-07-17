@@ -25,9 +25,7 @@ class UartService(private val context: Context) {
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 mBluetoothGatt = null
                 Algorithm.updateStatusCode(Algorithm.StatusCodes.Disconnected)
-                for (i in 0 until 3) {
-                    Algorithm.SelfPointer?.thread?.interrupt()
-                }
+                Algorithm.SelfPointer?.thread?.interrupt()
             }
         }
 

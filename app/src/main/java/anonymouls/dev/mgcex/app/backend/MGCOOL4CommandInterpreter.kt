@@ -1,5 +1,6 @@
 package anonymouls.dev.mgcex.app.backend
 
+import android.os.Handler
 import anonymouls.dev.mgcex.app.main.SettingsActivity
 import anonymouls.dev.mgcex.util.Utils
 import java.nio.ByteBuffer
@@ -235,15 +236,13 @@ class MGCOOL4CommandInterpreter : CommandInterpreter() {
 
     override fun fireNotification(Input: String) {
         val Req = buildNotify(Input)
-        var Req1 = Arrays.copyOfRange(Req, 0, 20)
+        var Req1 = Req.copyOfRange(0, 20)
         postCommand(Req1)
         Utils.safeThreadSleep(50, false)
-        Req1 = Arrays.copyOfRange(Req, 20, 40)
-        postCommand(Req1)
-        Utils.safeThreadSleep(50, false)
-        Req1 = Arrays.copyOfRange(Req, 40, 46)
-        postCommand(Req1)
-        Utils.safeThreadSleep(50, false)
+        Req1 = Req.copyOfRange(20, 40)
+        Handler().postDelayed({ postCommand(Req1) }, 50)
+        Req1 = Req.copyOfRange(40, 46)
+        Handler().postDelayed({ postCommand(Req1) }, 110)
     }
 
     override fun requestBatteryStatus() {

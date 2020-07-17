@@ -7,6 +7,7 @@ import anonymouls.dev.mgcex.app.backend.CommandInterpreter
 import anonymouls.dev.mgcex.databaseProvider.AlarmsTable
 import java.util.*
 
+@ExperimentalUnsignedTypes
 class AlarmProvider(var Hour: Int, var Minute: Int, var DayMask: Int, ID: Long, var IsEnabled: Boolean,
                     var HourStart: Int, var MinuteStart: Int, var IsSyncable: Boolean) {
 
@@ -36,7 +37,7 @@ class AlarmProvider(var Hour: Int, var Minute: Int, var DayMask: Int, ID: Long, 
         else
             performUpdateInformation(Operator)
         if (IsSyncable != lastSyncable) {
-            CommandInterpreter.getInterpreter(context)?.setAlarm(ID, IsEnabled, Hour, Minute, DayMask)
+            CommandInterpreter.getInterpreter(context).setAlarm(ID, IsEnabled, Hour, Minute, DayMask)
         }
         return ID
     }
