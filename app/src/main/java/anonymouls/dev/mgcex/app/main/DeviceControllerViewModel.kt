@@ -17,6 +17,7 @@ import anonymouls.dev.mgcex.app.backend.InsertTask
 import anonymouls.dev.mgcex.databaseProvider.HRRecord
 
 
+@ExperimentalStdlibApi
 class MyViewModelFactory(private val activity: AppCompatActivity) : ViewModelProvider.Factory {
     override fun <T : ViewModel?> create(modelClass: Class<T>): T {
         return DeviceControllerViewModel(activity) as T
@@ -24,6 +25,7 @@ class MyViewModelFactory(private val activity: AppCompatActivity) : ViewModelPro
 
 }
 
+@ExperimentalStdlibApi
 class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewModel() {
 
     //region live models
@@ -81,17 +83,12 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
     }
 
     fun reInit() {
-
-
-        if (savedStatus.length == 0) savedStatus = activity.getString(R.string.status_label)
         Algorithm.StatusCode.observe(activity, Observer {
             if (it.code < Algorithm.StatusCodes.GattReady.code) {
                 _hrVisibility.postValue(View.GONE)
-                if (it.code > Algorithm.StatusCodes.BluetoothDisabled.code)
-                    workInProgress.postValue(View.VISIBLE)
-                else
-                    workInProgress.postValue(View.GONE)
+                workInProgress.postValue(View.VISIBLE)
             } else {
+                workInProgress.postValue(View.GONE)
                 if (ci.hRRealTimeControlSupport)
                     _hrVisibility.postValue(View.VISIBLE)
                 else

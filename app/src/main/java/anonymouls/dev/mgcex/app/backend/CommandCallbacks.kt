@@ -6,6 +6,7 @@ import anonymouls.dev.mgcex.app.main.DeviceControllerViewModel
 import anonymouls.dev.mgcex.databaseProvider.*
 import java.util.*
 
+@ExperimentalStdlibApi
 class CommandCallbacks(context: Context) : CommandInterpreter.CommandReaction {
 
     private val database: SQLiteDatabase = DatabaseController.getDCObject(context).writableDatabase

@@ -26,6 +26,7 @@ import java.util.*
 import kotlin.collections.HashSet
 
 
+@ExperimentalStdlibApi
 class DataViewModel : ViewModel() {
 
     private lateinit var database: SQLiteDatabase
@@ -230,6 +231,7 @@ class DataViewModel : ViewModel() {
     }
 }
 
+@ExperimentalStdlibApi
 class Record(Result: Cursor?, var recordDate: Long, isGrouping: Boolean, private val scale: DataView.Scalings) {
     private var whenCalendar: Calendar = Calendar.getInstance()
     var mainValue: Int = -1// AVG + Default

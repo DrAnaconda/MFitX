@@ -17,6 +17,7 @@ import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
 import anonymouls.dev.mgcex.util.AdsController
 import java.util.*
 
+@ExperimentalStdlibApi
 class DataView : AppCompatActivity() {
 
     enum class DataTypes { HR, Steps, Calories }

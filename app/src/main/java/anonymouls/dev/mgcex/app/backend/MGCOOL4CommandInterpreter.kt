@@ -6,6 +6,7 @@ import anonymouls.dev.mgcex.util.Utils
 import java.nio.ByteBuffer
 import java.util.*
 
+@ExperimentalStdlibApi
 class MGCOOL4CommandInterpreter : CommandInterpreter() {
 
     companion object {

@@ -27,6 +27,7 @@ import anonymouls.dev.mgcex.util.Analytics
 import anonymouls.dev.mgcex.util.Utils
 import java.util.*
 
+@ExperimentalStdlibApi
 class ScanActivity : Activity() {
     private var BManager: BluetoothManager? = null
     private var mBTAdapter: BluetoothAdapter? = null

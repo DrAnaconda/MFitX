@@ -25,6 +25,7 @@ import anonymouls.dev.mgcex.util.Utils
 import java.util.*
 
 // TODO Fix time selector for idiots
+@ExperimentalStdlibApi
 class SettingsActivity : AppCompatActivity() {
     private var packagesList: TableLayout? = null
 
@@ -39,21 +40,21 @@ class SettingsActivity : AppCompatActivity() {
         if (!commandController.hRRealTimeControlSupport) {
             findViewById<LinearLayout>(R.id.HRMonitoringSettings).visibility = View.VISIBLE
             findViewById<Switch>(R.id.enableHRMonitoring).isChecked =
-                    prefs.getBoolean(HRMonitoringSettings.hrMonitoringEnabled, false)
+                    prefs.getBoolean(hrMonitoringEnabled, false)
 
             if (findViewById<Switch>(R.id.enableHRMonitoring).isChecked) {
                 findViewById<LinearLayout>(R.id.HRMonitoringSettingsBlock).visibility = View.VISIBLE
                 findViewById<EditText>(R.id.HRMonitoringInterval).setText(
-                        prefs.getInt(HRMonitoringSettings.hrMeasureInterval, 5).toString())
+                        prefs.getInt(hrMeasureInterval, 5).toString())
                 findViewById<EditText>(R.id.HRMonitoringStart).setText(
-                        prefs.getString(HRMonitoringSettings.hrMeasureStart, "00:00").toString())
+                        prefs.getString(hrMeasureStart, "00:00").toString())
                 findViewById<EditText>(R.id.HRMonitoringEnd).setText(
-                        prefs.getString(HRMonitoringSettings.hrMeasureEnd, "00:00").toString())
+                        prefs.getString(hrMeasureEnd, "00:00").toString())
             } else {
-                prefs.edit().remove(HRMonitoringSettings.hrMeasureInterval).apply()
-                prefs.edit().remove(HRMonitoringSettings.hrMeasureStart).apply()
-                prefs.edit().remove(HRMonitoringSettings.hrMeasureEnd).apply()
-                prefs.edit().remove(HRMonitoringSettings.hrMonitoringEnabled).apply()
+                prefs.edit().remove(hrMeasureInterval).apply()
+                prefs.edit().remove(hrMeasureStart).apply()
+                prefs.edit().remove(hrMeasureEnd).apply()
+                prefs.edit().remove(hrMonitoringEnabled).apply()
                 findViewById<LinearLayout>(R.id.HRMonitoringSettingsBlock).visibility = View.GONE
             }
         }
@@ -76,9 +77,9 @@ class SettingsActivity : AppCompatActivity() {
         initTextBox<Int>(R.id.secondsRepeatsText, 5, secondsNotify)
         initTextBox<Int>(R.id.numberRepeatsTextBox, 3, repeatsNumbers)
 
-        initTextBox<Int>(R.id.HRMonitoringInterval, 5, HRMonitoringSettings.hrMeasureInterval)
-        initTextBox<String>(R.id.HRMonitoringStart, "00:00", HRMonitoringSettings.hrMeasureStart)
-        initTextBox<String>(R.id.HRMonitoringEnd, "00:00", HRMonitoringSettings.hrMeasureEnd)
+        initTextBox<Int>(R.id.HRMonitoringInterval, 5, hrMeasureInterval)
+        initTextBox<String>(R.id.HRMonitoringStart, "00:00", hrMeasureStart)
+        initTextBox<String>(R.id.HRMonitoringEnd, "00:00", hrMeasureEnd)
 
         initTextBox<Int>(R.id.stepsCount, 5000, targetSteps)
     }
@@ -120,6 +121,7 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<Switch>(R.id.vibrationSwitch).isChecked = prefs.getBoolean(vibrationSetting, false)
         findViewById<Switch>(R.id.sittingReminderSwitch).isChecked = prefs.getBoolean(longSittingSetting, false)
         findViewById<Switch>(R.id.batterySaverSwitch).isChecked = prefs.getBoolean(batterySaverEnabled, true)
+        findViewById<Switch>(R.id.wakelocksSwitch).isChecked = prefs.getBoolean(permitWakeLock, true)
     }
 
     private fun initViews() {
@@ -319,6 +321,7 @@ class SettingsActivity : AppCompatActivity() {
                 commandController.setGyroAction(state)
                 prefs.edit().putBoolean(illuminationSetting, state).apply()
             }
+            R.id.wakelocksSwitch -> prefs.edit().putBoolean(permitWakeLock, state).apply()
             R.id.PhoneSwitch -> {
                 prefs.edit().putBoolean(receiveCallsSetting, state).apply(); Utils.requestPermissionsAdvanced(this); }
             R.id.RestoreToDefaultsBtn -> sendResetCommand()
@@ -328,12 +331,12 @@ class SettingsActivity : AppCompatActivity() {
             R.id.ignoreLightSleepData -> prefs.edit().putBoolean(lightSleepIgnore, state).apply()
             R.id.enableHRMonitoring -> {
                 prefs.edit()
-                        .putBoolean(HRMonitoringSettings.hrMonitoringEnabled, findViewById<Switch>(R.id.enableHRMonitoring).isChecked)
+                        .putBoolean(hrMonitoringEnabled, findViewById<Switch>(R.id.enableHRMonitoring).isChecked)
                         .apply()
                 initHRMonitoringBlock()
             }
-            R.id.HRMonitoringStart -> createTimePicker(HRMonitoringSettings.hrMeasureStart, v as EditText)
-            R.id.HRMonitoringEnd -> createTimePicker(HRMonitoringSettings.hrMeasureEnd, v as EditText)
+            R.id.HRMonitoringStart -> createTimePicker(hrMeasureStart, v as EditText)
+            R.id.HRMonitoringEnd -> createTimePicker(hrMeasureEnd, v as EditText)
             R.id.sittingReminderSwitch -> {
                 prefs.edit().putBoolean(longSittingSetting, state).apply()
                 commandController.setSittingReminder(state)
@@ -397,12 +400,12 @@ class SettingsActivity : AppCompatActivity() {
         const val bandAddress = "BandAddress"
         const val batteryThreshold = "BST"
         const val batterySaverEnabled = "BSE"
+        const val permitWakeLock = "PWL"
 
-        object HRMonitoringSettings {
-            const val hrMonitoringEnabled = "HRMonitoringEnabled"
-            const val hrMeasureInterval = "HRMeasureInterval"
-            const val hrMeasureStart = "HRMonitoringStart"
-            const val hrMeasureEnd = "HRMonitoringEnd"
-        }
+        const val hrMonitoringEnabled = "HRMEn"
+        const val hrMeasureInterval = "HRMI"
+        const val hrMeasureStart = "HRMS"
+        const val hrMeasureEnd = "HRMEnd"
+
     }
 }

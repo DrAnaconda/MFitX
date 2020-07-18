@@ -14,11 +14,13 @@ import androidx.annotation.RequiresApi
 import anonymouls.dev.mgcex.app.main.SettingsActivity
 import anonymouls.dev.mgcex.databaseProvider.DatabaseController
 import anonymouls.dev.mgcex.databaseProvider.NotifyFilterTable
+import anonymouls.dev.mgcex.util.ReplaceTable
 import anonymouls.dev.mgcex.util.Utils
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 
+@ExperimentalStdlibApi
 class NotificationService : NotificationListenerService() {
     override fun onCreate() {
         super.onCreate()
@@ -133,13 +135,12 @@ class NotificationService : NotificationListenerService() {
                 if (!ready || !checkIsActive()) return
                 repeats++
                 ready = false
-                val msgrcv = Intent(NotifyAction)
-                msgrcv.putExtra("app", AppText)
-                msgrcv.putExtra("title", TitleText)
-                msgrcv.putExtra("text", ContentText)
                 if (UartService.instance != null
-                        && Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.GattReady.code)
-                    sendBroadcast(msgrcv)
+                        && Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.GattReady.code) {
+                    //val app = extras!!.get("app") as String // TODO integrations
+                    val message = TitleText + "\n" + ContentText
+                    Algorithm.SelfPointer?.ci?.fireNotification(ReplaceTable.replaceString(message))
+                }
             }
         }
     }

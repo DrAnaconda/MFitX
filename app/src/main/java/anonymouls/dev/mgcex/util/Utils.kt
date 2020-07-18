@@ -10,6 +10,8 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
@@ -26,6 +28,7 @@ import kotlin.collections.HashMap
 import kotlin.math.roundToInt
 
 
+@ExperimentalStdlibApi
 object Utils {
 
     const val BluetoothEnableRequestCode = 1
@@ -144,6 +147,23 @@ object Utils {
                 ContextActivity.requestPermissions(array, PermsRequest)
             }
         }
+
+        // TODO Request ignore
+    }
+
+    private fun requestIgnoreBatteryOptimization(context: Activity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+
+            if (!(context.getSystemService(Context.POWER_SERVICE) as PowerManager)
+                            .isIgnoringBatteryOptimizations(context.packageName)
+                    && Utils.getSharedPrefs(context).getBoolean(SettingsActivity.permitWakeLock, true)) {
+                val Dialog = DeviceControllerActivity.ViewDialog("Disabled power optimization recommended for reliable connection",
+                        DeviceControllerActivity.ViewDialog.DialogTask.Intent, Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                        context, true, SettingsActivity.permitWakeLock)
+                Dialog.showDialog(context)
+            }
+
+        }
     }
 
     fun requestToBindNotifyService(ContextActivity: Activity) {
@@ -225,11 +245,16 @@ object Utils {
     }
 
     fun safeThreadSleep(milis: Long, deepSleep: Boolean) {
-        try {
-            Thread.sleep(milis)
-        } catch (e: InterruptedException) {
-            if (deepSleep)
-                Thread.currentThread().interrupt()
+        val startTime = System.currentTimeMillis()
+        while (System.currentTimeMillis() < startTime + milis) {
+            try {
+                Thread.sleep(milis)
+            } catch (e: InterruptedException) {
+                if (deepSleep)
+                    Thread.currentThread().interrupt()
+                else
+                    break
+            }
         }
     }
 

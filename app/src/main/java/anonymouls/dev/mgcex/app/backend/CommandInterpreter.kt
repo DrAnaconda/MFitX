@@ -9,6 +9,7 @@ import anonymouls.dev.mgcex.app.main.SettingsActivity
 import anonymouls.dev.mgcex.util.Utils
 import java.util.*
 
+@ExperimentalStdlibApi
 abstract class CommandInterpreter {
     interface CommandReaction {
         fun mainInfo(Steps: Int, Calories: Int)
@@ -34,6 +35,7 @@ abstract class CommandInterpreter {
     companion object {
         private var ActiveInterpreter: CommandInterpreter? = null
 
+        @ExperimentalStdlibApi
         @ExperimentalUnsignedTypes
         fun getInterpreter(context: Context): CommandInterpreter {
             if (ActiveInterpreter == null) {
@@ -105,9 +107,12 @@ abstract class CommandInterpreter {
         }
         return result
     }
+
     fun postCommand(Request: ByteArray) {
         synchronized(blocker) {
-            UartService.instance!!.writeRXCharacteristic(Request)
+            while (!UartService.instance!!.writeRXCharacteristic(Request)) {
+                Utils.safeThreadSleep(2000, true)
+            }
             Utils.safeThreadSleep(500, true)
         }
     }

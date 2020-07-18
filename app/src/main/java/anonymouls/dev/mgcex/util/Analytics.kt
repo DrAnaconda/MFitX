@@ -6,6 +6,7 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 
 // TODO Check everything before release
+@ExperimentalStdlibApi
 class Analytics(context: Context) {
 
     private val fireInstance: FirebaseAnalytics = FirebaseAnalytics.getInstance(context)

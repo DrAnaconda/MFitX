@@ -3,16 +3,19 @@ package anonymouls.dev.mgcex.app.backend
 import android.app.Service
 import android.bluetooth.*
 import android.content.Context
-import android.content.Intent
 import android.os.Build
 import java.util.*
 
+class SimpleRecord(val characteristic: String, val Data: ByteArray)
+
+@ExperimentalStdlibApi
 class UartService(private val context: Context) {
 
     private var mBluetoothAdapter: BluetoothAdapter =
             (context.getSystemService(Service.BLUETOOTH_SERVICE) as BluetoothManager).adapter
-    private var mBluetoothDeviceAddress: String? = null
+    private lateinit var mBluetoothDeviceAddress: String
     private var discoveringPending = false
+    private var device: BluetoothDevice? = null
 
     private val mGattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
@@ -24,8 +27,8 @@ class UartService(private val context: Context) {
                     Algorithm.updateStatusCode(Algorithm.StatusCodes.GattConnected)
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 mBluetoothGatt = null
+                device = null
                 Algorithm.updateStatusCode(Algorithm.StatusCodes.Disconnected)
-                Algorithm.SelfPointer?.thread?.interrupt()
             }
         }
 
@@ -48,24 +51,22 @@ class UartService(private val context: Context) {
                                           characteristic: BluetoothGattCharacteristic,
                                           status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic)
+                sendSimpleRecord(characteristic.uuid.toString(), characteristic.value)
             }
         }
 
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-            broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic)
+            sendSimpleRecord(characteristic.uuid.toString(), characteristic.value)
         }
     }
 
-    private fun broadcastUpdate(action: String, characteristic: BluetoothGattCharacteristic) {
-        val intent = Intent(action)
-        intent.putExtra(EXTRA_DATA, characteristic.value)
-        intent.putExtra(EXTRA_CHARACTERISTIC, characteristic.uuid.toString())
-        context.sendBroadcast(intent)
+    private fun sendSimpleRecord(characteristic: String, Data: ByteArray) {
+        val sm = SimpleRecord(characteristic, Data)
+        Algorithm.SelfPointer?.enqueneData(sm)
     }
 
-    fun connect(address: String?): Boolean {
-        if (mBluetoothDeviceAddress != null
+    fun connect(address: String): Boolean {
+        if (this::mBluetoothDeviceAddress.isInitialized
                 && address == mBluetoothDeviceAddress
                 && mBluetoothGatt != null) {
 
@@ -76,9 +77,11 @@ class UartService(private val context: Context) {
                 false
             }
         }
-
-        val device = mBluetoothAdapter.getRemoteDevice(address) ?: return false
-        mBluetoothGatt = device.connectGatt(context, false, mGattCallback)
+        discoveringPending = false
+        this.mBluetoothDeviceAddress = address
+        device = mBluetoothAdapter.getRemoteDevice(address) ?: return false
+        // WARNING Auto connect param impacting of productivity
+        mBluetoothGatt = device?.connectGatt(context, false, mGattCallback)
         return if (mBluetoothGatt != null) {
             mBluetoothDeviceAddress = address
             //retryDiscovering()
@@ -103,7 +106,7 @@ class UartService(private val context: Context) {
         if (mBluetoothGatt == null) {
             return
         }
-        mBluetoothDeviceAddress = null
+        mBluetoothDeviceAddress = ""
         mBluetoothGatt!!.close()
         mBluetoothGatt = null
     }
@@ -140,16 +143,47 @@ class UartService(private val context: Context) {
 
     }
 
-    fun writeRXCharacteristic(value: ByteArray): Boolean {
+    fun retryDiscovery() {
+        if (discoveringPending) return
         if (mBluetoothGatt == null) {
-            // here possible error
-            return false
+            connect(mBluetoothDeviceAddress)
+        } else {
+            Algorithm.StatusCode.postValue(Algorithm.StatusCodes.GattDiscovering)
+            discoveringPending = true
+            mBluetoothGatt?.discoverServices()
         }
-        val RxService = mBluetoothGatt!!.getService(RX_SERVICE_UUID) ?: return false
-        // here possible error
-        val RxChar = RxService.getCharacteristic(RX_CHAR_UUID) ?: return false
-        RxChar.value = value
-        return mBluetoothGatt!!.writeCharacteristic(RxChar)
+    }
+
+    fun probeConnection(): Boolean {
+        if (!mBluetoothAdapter.isEnabled) {
+            Algorithm.StatusCode.postValue(Algorithm.StatusCodes.BluetoothDisabled)
+            return false
+        } else {
+            if (mBluetoothGatt == null || device == null) {
+                connect(mBluetoothDeviceAddress)
+                return false
+            } else {
+                if (discoveringPending) {
+                    Algorithm.StatusCode.postValue(Algorithm.StatusCodes.GattDiscovering)
+                    return false
+                }
+            }
+        }
+        return true
+    }
+
+    private val locker = Any()
+    fun writeRXCharacteristic(value: ByteArray): Boolean {
+        synchronized(locker) {
+            if (mBluetoothGatt == null) {
+                connect(this.mBluetoothDeviceAddress)
+                return false
+            }
+            val rxService = mBluetoothGatt!!.getService(RX_SERVICE_UUID) ?: return false
+            val rxChar = rxService.getCharacteristic(RX_CHAR_UUID) ?: return false
+            rxChar.value = value
+            return mBluetoothGatt!!.writeCharacteristic(rxChar)
+        }
     }
 
     companion object {

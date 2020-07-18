@@ -10,6 +10,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 
+@ExperimentalStdlibApi
 object AdsController {
     // Test : ca-app-pub-3940256099942544/1033173712 Big xren`
     private var savedContext: Context? = null

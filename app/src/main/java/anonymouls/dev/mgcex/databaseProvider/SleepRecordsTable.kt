@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.lifecycle.MutableLiveData
 import java.util.*
 
+@ExperimentalStdlibApi
 object SleepRecordsTable {
     const val TableName = "SleepRecords"
     val ColumnNames = arrayOf("ID", "Date", "IDSS", "Duration", "Type")

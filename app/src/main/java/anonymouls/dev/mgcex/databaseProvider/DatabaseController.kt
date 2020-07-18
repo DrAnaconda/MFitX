@@ -11,6 +11,7 @@ import android.os.Environment
 import java.io.File
 import java.util.*
 
+@ExperimentalStdlibApi
 class DatabaseController(context: Context, name: String, factory: SQLiteDatabase.CursorFactory?, version: Int) :
         SQLiteOpenHelper(context, name, null, version) {
 
@@ -88,6 +89,7 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
         db?.enableWriteAheadLogging()
         //if (db != null) initRepairsAndSync(db)
     }
+
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
 
         checkCreateAllTables(db)

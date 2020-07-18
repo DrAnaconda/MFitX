@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 
+@ExperimentalStdlibApi
 object NotifyFilterTable {
     private val ColumnNames = arrayOf("ID", "Package", "Enabled")
 

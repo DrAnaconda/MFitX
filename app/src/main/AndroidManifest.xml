@@ -79,10 +79,12 @@
                 <action android:name="android.intent.action.PHONE_STATE" />
             </intent-filter>
         </receiver>
-        <receiver
-            android:name="anonymouls.dev.mgcex.app.backend.UartServiceBroadcastInterpreter"
-            android:enabled="true"
-            android:exported="false" />
+        <receiver android:name=".backend.BluetoothListener">
+            <intent-filter>
+                <action android:name="android.bluetooth.adapter.action.STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name="anonymouls.dev.mgcex.app.backend.NotificationService"
             android:enabled="true"
@@ -96,6 +98,7 @@
         <service
             android:name="anonymouls.dev.mgcex.app.backend.Algorithm"
             android:label="@string/background_syncer"
+            android:permission="android.permission.BIND_JOB_SERVICE"
             android:enabled="true" />
     </application>
 

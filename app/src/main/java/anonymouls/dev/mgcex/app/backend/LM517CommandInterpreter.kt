@@ -8,6 +8,7 @@ import java.nio.ByteBuffer
 import java.util.*
 
 
+@ExperimentalStdlibApi
 @ExperimentalUnsignedTypes
 class LM517CommandInterpreter : CommandInterpreter() {
     companion object {
@@ -72,12 +73,9 @@ class LM517CommandInterpreter : CommandInterpreter() {
 
     //region Proceeders
 
-    private var plannedHandler = Handler()
-
     private fun hrRecordProceeder(Input: ByteArray) {
         // WARNING. Shit like pressure and ox% is ignoring
         if (Input.size != 20) return
-        plannedHandler.removeCallbacksAndMessages(null)
         var buffer = ByteBuffer.wrap(Input, 8, 2)
         var recordTime = decryptDays(buffer.short, null, true)
         buffer = ByteBuffer.wrap(Input, 13, 4)
@@ -106,8 +104,10 @@ class LM517CommandInterpreter : CommandInterpreter() {
         if (Input.size != 11 && Input[3].toUByte() != (26).toUByte()) return
         val buffer = ByteBuffer.wrap(Input, Input.size - 2, 2)
         val steps = buffer.short
-        Utils.getSharedPrefs(Algorithm.SelfPointer!!.baseContext).edit()
-                .putInt(SettingsActivity.targetSteps, steps.toInt()).apply()
+        Algorithm.SelfPointer?.baseContext?.let {
+            Utils.getSharedPrefs(it).edit()
+                    .putInt(SettingsActivity.targetSteps, steps.toInt()).apply()
+        }
     }
 
     private fun sleepDataProceeder(Input: ByteArray) {
@@ -257,7 +257,6 @@ class LM517CommandInterpreter : CommandInterpreter() {
         var request = "CD00061201180001"
         request += if (cancel) "00" else "01"
         postCommand(hexStringToByteArray(request))
-        plannedHandler.postDelayed({ requestManualHRMeasure(true); getMainInfoRequest() }, 90000)
     }
 
     override fun setVibrationSetting(enabled: Boolean) {

@@ -5,6 +5,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import anonymouls.dev.mgcex.app.AlarmProvider
 
+@ExperimentalStdlibApi
 object AlarmsTable {
     //                                                  0    1       2          3       4
     val ColumnsNames = arrayOf("ID", "Hour", "Minute", "Days", "Enabled", "HourStart", "MinStart", "syncable")

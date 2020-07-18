@@ -6,6 +6,7 @@ import anonymouls.dev.mgcex.util.Utils
 import java.util.*
 import kotlin.math.abs
 
+@ExperimentalStdlibApi
 object AdvancedActivityTracker {
 
     const val TableName = "AdvancedActivity"

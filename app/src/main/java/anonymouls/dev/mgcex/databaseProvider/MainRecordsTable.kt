@@ -10,6 +10,7 @@ import anonymouls.dev.mgcex.util.Utils
 import java.lang.Math.abs
 import java.util.*
 
+@ExperimentalStdlibApi
 object MainRecordsTable {
 
     const val TableName = "MainRecords"
@@ -187,6 +188,7 @@ object MainRecordsTable {
 
     class MainRecord(val RTime: Calendar, val Steps: Int, val Calories: Int)
 
+    @ExperimentalStdlibApi
     class MainReport(var stepsCount: Int = -1, var caloriesCount: Int = -1, var recordsCount: Int = -1, var analytics: String? = null,
                      private val context: Context?) {
         var passedKm: Float = 0.0f

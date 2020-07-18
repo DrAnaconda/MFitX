@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 
+@ExperimentalStdlibApi
 class ScannerCallback(private val ScannerActivity: ScanActivity) : ScanCallback() {
 
     override fun onScanResult(callbackType: Int, result: ScanResult) {
@@ -22,6 +23,7 @@ class ScannerCallback(private val ScannerActivity: ScanActivity) : ScanCallback(
     }
 }
 
+@ExperimentalStdlibApi
 class DeprecatedScanner(private val ScannerActivity: ScanActivity) : BluetoothAdapter.LeScanCallback {
     override fun onLeScan(device: BluetoothDevice?, rssi: Int, scanRecord: ByteArray?) {
         ScannerActivity.runOnUiThread { ScannerActivity.mDeviceAdapter.update(device) }

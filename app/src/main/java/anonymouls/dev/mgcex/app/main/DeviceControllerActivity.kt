@@ -13,10 +13,7 @@ import android.os.Bundle
 import android.text.method.LinkMovementMethod
 import android.view.View
 import android.view.Window
-import android.widget.ProgressBar
-import android.widget.Switch
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
@@ -35,6 +32,7 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import kotlin.system.exitProcess
 
 
+@ExperimentalStdlibApi
 class DeviceControllerActivity : AppCompatActivity() {
 
     private var demoMode = false
@@ -233,7 +231,12 @@ class DeviceControllerActivity : AppCompatActivity() {
         }
     }
 
-    class ViewDialog(private val message: String, private val task: DialogTask, private val param: String? = null) {
+    class ViewDialog(private val message: String,
+                     private val task: DialogTask,
+                     private val param: String? = null,
+                     private val context: Context? = null,
+                     private val checkBoxNeeded: Boolean = false,
+                     private val checkBoxSetting: String = "") {
 
         enum class DialogTask { About, Permission, Intent }
 
@@ -266,6 +269,11 @@ class DeviceControllerActivity : AppCompatActivity() {
                     contact.visibility = View.GONE
                 }
             }
+            val checker = dialog.findViewById<CheckBox>(R.id.dialogCheckBox)
+            if (checkBoxNeeded)
+                checker.visibility = View.VISIBLE
+            else
+                checker.visibility = View.GONE
 
             val dialogButton = dialog.findViewById<View>(R.id.infoDialogClose) as View
             dialogButton.setOnClickListener {
@@ -282,6 +290,10 @@ class DeviceControllerActivity : AppCompatActivity() {
                     }
                     else -> {
                     }
+                }
+                if (checkBoxNeeded && checkBoxSetting.isNotEmpty() && context != null) {
+                    Utils.getSharedPrefs(context).edit().putBoolean(checkBoxSetting,
+                            checker.isChecked).apply()
                 }
 
             }

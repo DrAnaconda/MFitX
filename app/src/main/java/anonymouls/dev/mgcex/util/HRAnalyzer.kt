@@ -7,6 +7,7 @@ import androidx.lifecycle.MutableLiveData
 import anonymouls.dev.mgcex.databaseProvider.DatabaseController
 import anonymouls.dev.mgcex.databaseProvider.HRRecordsTable
 
+@ExperimentalStdlibApi
 object HRAnalyzer {
 
     private var lastAvgHR = -1

@@ -51,11 +51,16 @@
         android:text="@string/privacy_policy"
         android:textSize="8pt" />
 
+    <CheckBox
+        android:id="@+id/dialogCheckBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/never_prompt_again" />
+
     <View
         style="@style/horizontalDivider"
         android:background="#000000"
-        android:layout_height="1pt"
-        />
+        android:layout_height="1pt" />
 
     <LinearLayout
         android:layout_width="match_parent"

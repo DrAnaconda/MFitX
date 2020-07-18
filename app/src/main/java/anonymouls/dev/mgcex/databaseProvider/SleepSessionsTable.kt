@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
 import java.util.*
 
+@ExperimentalStdlibApi
 object SleepSessionsTable {
     const val TableName = "SleepSessions"
     val ColumnNames = arrayOf("ID", "Date")

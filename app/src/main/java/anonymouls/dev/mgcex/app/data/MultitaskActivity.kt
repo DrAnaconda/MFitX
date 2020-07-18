@@ -21,6 +21,7 @@ import java.util.*
 
 private var container: LinearLayout? = null
 
+@ExperimentalStdlibApi
 class MultitaskActivity : Activity() {
 
     companion object {
@@ -34,6 +35,10 @@ class MultitaskActivity : Activity() {
     private var text: String? = null
 
 //region default android
+
+    override fun onBackPressed() {
+        finish()
+    }
 
     override fun onDestroy() {
         AdsController.cancelBigAD()

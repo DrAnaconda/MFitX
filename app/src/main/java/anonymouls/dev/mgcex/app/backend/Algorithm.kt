@@ -3,10 +3,7 @@ package anonymouls.dev.mgcex.app.backend
 import android.app.IntentService
 import android.content.*
 import android.content.pm.PackageManager
-import android.os.Build
-import android.os.Handler
-import android.os.HandlerThread
-import android.os.IBinder
+import android.os.*
 import android.view.View
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.MutableLiveData
@@ -16,6 +13,7 @@ import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
 import anonymouls.dev.mgcex.app.main.DeviceControllerViewModel
 import anonymouls.dev.mgcex.app.main.SettingsActivity
 import anonymouls.dev.mgcex.databaseProvider.*
+import anonymouls.dev.mgcex.util.ReplaceTable
 import anonymouls.dev.mgcex.util.Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -23,6 +21,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
+@ExperimentalStdlibApi
 class Algorithm : IntentService("Syncer") {
 
     //region Properties
@@ -35,6 +34,10 @@ class Algorithm : IntentService("Syncer") {
     private var connectionTries = 0
     private var nextSyncMain: Calendar = Calendar.getInstance()
     private var nextSyncHR: Calendar? = null
+    private lateinit var inserter: InsertTask
+
+    private lateinit var lockedAddress: String
+    private lateinit var wakeLock: PowerManager.WakeLock
 
     var bluetoothRejected = false
     var bluetoothRequested = false
@@ -82,7 +85,7 @@ class Algorithm : IntentService("Syncer") {
                             Locale.getDefault()).format(nextSyncMain.time)
 
 
-            if (nextSyncHR != null) {
+            if (nextSyncHR != null && prefs.getBoolean(SettingsActivity.hrMonitoringEnabled, false)) {
                 result += "\n" + getString(R.string.hr_data_requested) +
                         SimpleDateFormat(Utils.SDFPatterns.TimeOnly.pattern,
                                 Locale.getDefault()).format(nextSyncHR?.time)
@@ -111,7 +114,6 @@ class Algorithm : IntentService("Syncer") {
 
     private fun executeForceSync() {
         bluetoothRequested = false; bluetoothRejected = false
-        DeviceControllerViewModel.instance?.workInProgress?.postValue(View.VISIBLE)
         GlobalScope.launch(Dispatchers.IO) { database.initRepairsAndSync(database.writableDatabase) }
         val h = Handler()
         Handler(commandHandler.looper).postDelayed({ ci.requestSettings() }, 200)
@@ -132,24 +134,26 @@ class Algorithm : IntentService("Syncer") {
 
     //endregion
 
-    //region Background taskforce
+    //region Background Taskforce
 
     private fun run() {
-        if (Thread.currentThread().name !== "Syncer") return
+        if (Thread.currentThread().name != "Syncer") return
         while (UartService.instance == null) Utils.safeThreadSleep(3000, false)
         while (IsActive) {
             workInProgress = true
             when (StatusCode.value!!) {
+                StatusCodes.GattConnected -> connectedAlgo()
+                StatusCodes.GattReady -> executeMainAlgo()
                 StatusCodes.BluetoothDisabled -> bluetoothDisabledAlgo()
                 StatusCodes.Connected, StatusCodes.Disconnected,
-                StatusCodes.DeviceLost, StatusCodes.Connecting, StatusCodes.GattConnecting -> deviceDisconnectedAlgo()
-                StatusCodes.GattConnected, StatusCodes.GattDiscovering -> connectedAlgo()
-                StatusCodes.GattReady -> executeMainAlgo()
+                StatusCodes.DeviceLost, StatusCodes.Connecting -> deviceDisconnectedAlgo()
+                StatusCodes.GattConnecting, StatusCodes.GattDiscovering -> connectionAlgos()
             }
         }
     }
 
     private fun executeMainAlgo() {
+        if (UartService.instance != null && !UartService.instance!!.probeConnection()) return
         val syncPeriod = prefs.getInt(SettingsActivity.mainSyncMinutes, 5) * 60 * 1000
         nextSyncMain = Calendar.getInstance()
         nextSyncMain.add(Calendar.MILLISECOND, syncPeriod)
@@ -159,7 +163,7 @@ class Algorithm : IntentService("Syncer") {
             currentAlgoStatus.postValue(getString(R.string.connected_syncing))
             executeForceSync()
             if ((!ci.hRRealTimeControlSupport && isFirstTime
-                            && prefs.contains(SettingsActivity.Companion.HRMonitoringSettings.hrMeasureInterval))
+                            && prefs.contains(SettingsActivity.hrMeasureInterval))
                     || ci.hRRealTimeControlSupport) {
                 forceSyncHR()
                 manualHRHack()
@@ -168,13 +172,21 @@ class Algorithm : IntentService("Syncer") {
             buildStatusMessage()
         }
         buildStatusMessage()
-        workInProgress = false
+        workInProgress = false; DeviceControllerViewModel.instance?.workInProgress?.postValue(View.GONE)
         Utils.safeThreadSleep(syncPeriod.toLong(), false)
-        workInProgress = true
+        workInProgress = true; DeviceControllerViewModel.instance?.workInProgress?.postValue(View.VISIBLE)
     }
 
     private fun bluetoothDisabledAlgo() {
         isFirstTime = true
+
+        if (DeviceControllerActivity.instance == null) {
+            wakeLock.release()
+            IsActive = false
+            return
+        } else {
+            wakeLock.acquire()
+        }
 
         if (Utils.bluetoothEngaging(this))
             StatusCode.postValue(StatusCodes.Disconnected)
@@ -197,31 +209,30 @@ class Algorithm : IntentService("Syncer") {
     }
 
     private fun deviceDisconnectedAlgo() {
-        if (StatusCode.value!!.code < StatusCodes.Connecting.code || connectionTries > 5) {
+        if (StatusCode.value!!.code < StatusCodes.Connecting.code) {
+            connectionTries = 0
             currentAlgoStatus.postValue(getString(R.string.conntecting_status))
-            if (UartService.instance!!.connect(LockedAddress)) {
+            if (UartService.instance!!.connect(lockedAddress)) {
                 if (StatusCode.value!!.code < StatusCodes.Connected.code)
                     StatusCode.postValue(StatusCodes.Connected)
-                connectionTries = 0
             }
-        } else {
-            if (connectionTries++ > 5)
-                StatusCode.postValue(StatusCodes.Disconnected)
-            else
-                Utils.safeThreadSleep(1000, false)
         }
+    }
+
+    private fun connectionAlgos() {
+        if (connectionTries++ > 10) {
+            UartService.instance?.disconnect()
+            connectionTries = 0
+            StatusCode.postValue(StatusCodes.Disconnected)
+        } else
+            Utils.safeThreadSleep(2000, true)
     }
 
     private fun connectedAlgo() {
         currentAlgoStatus.postValue(getString(R.string.discovering))
         if (StatusCode.value!!.code < StatusCodes.GattDiscovering.code) {
             connectionTries = 0
-            //UartService.instance!!.retryDiscovering()
-        } else if (StatusCode.value!!.code == StatusCodes.GattDiscovering.code) {
-            if (connectionTries++ > 25) {
-                UartService.instance?.disconnect()
-                connectionTries = 0
-            } else Utils.safeThreadSleep(1000, false)
+            UartService.instance?.retryDiscovery()
         }
     }
 
@@ -235,6 +246,7 @@ class Algorithm : IntentService("Syncer") {
         this.thread = Thread.currentThread()
         init()
         run()
+
     }
 
     override fun onBind(intent: Intent): IBinder? {
@@ -243,7 +255,6 @@ class Algorithm : IntentService("Syncer") {
     }
 
     override fun onDestroy() {
-        unregisterReceiver(SBIReceiver)
         unregisterReceiver(PhoneListener)
         SelfPointer = null
         super.onDestroy()
@@ -259,10 +270,24 @@ class Algorithm : IntentService("Syncer") {
         return super.stopService(name)
     }
 
+    fun enqueneData(sm: SimpleRecord) {
+        if (sm.characteristic == UartService.PowerTXUUID.toString() ||
+                sm.characteristic == UartService.PowerDescriptor.toString() ||
+                sm.characteristic == UartService.PowerServiceUUID.toString()) {
+            CommandCallbacks.SelfPointer.batteryInfo(sm.Data[0].toInt())
+        } else {
+            inserter.dataToHandle.add(sm)
+            inserter.thread.interrupt()
+        }
+    }
+
     fun init() {
         if (IsInit) return
         isFirstTime = true
+        ReplaceTable.replaceString("", this)
         ci = CommandInterpreter.getInterpreter(this)
+        inserter = InsertTask(ci)
+        inserter.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
         prefs = Utils.getSharedPrefs(this)
         database = DatabaseController.getDCObject(this)
         commandHandler.start()
@@ -277,10 +302,14 @@ class Algorithm : IntentService("Syncer") {
         }
         if (!isNotifyServiceAlive(this))
             tryForceStartListener(this)
-        LockedAddress = Utils.getSharedPrefs(this).getString(SettingsActivity.bandAddress, null)
+        lockedAddress = Utils.getSharedPrefs(this).getString(SettingsActivity.bandAddress, "").toString()
+        if (lockedAddress.isEmpty()) return
         PhoneListener = PhoneStateListenerBroadcast()
-        SBIReceiver = UartServiceBroadcastInterpreter()
-        registerReceiver(SBIReceiver, DeviceControllerActivity.makeGattUpdateIntentFilter())
+        wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
+            newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MFitX::Tag").apply {
+                acquire()
+            }
+        }
         val IF = IntentFilter("android.intent.action.PHONE_STATE")
 
         if (Utils.getSharedPrefs(this).getBoolean("ReceiveCalls", true))
@@ -288,28 +317,27 @@ class Algorithm : IntentService("Syncer") {
 
         IsInit = true
         SelfPointer = this
+
         getLastHRSync()
         getLastMainSync()
     }
 
     //endregion
 
-    private var plannedHandler = Handler()
-
     private fun manualHRHack() {
-        val startString = prefs.getString(SettingsActivity.Companion.HRMonitoringSettings.hrMeasureStart, "00:00")
-        val endString = prefs.getString(SettingsActivity.Companion.HRMonitoringSettings.hrMeasureEnd, "00:00")
+        val startString = prefs.getString(SettingsActivity.hrMeasureStart, "00:00")
+        val endString = prefs.getString(SettingsActivity.hrMeasureEnd, "00:00")
         var targetString = Utils.subIntegerConversionCheck(Calendar.getInstance().get(Calendar.HOUR_OF_DAY).toString())
         targetString += ":"
         targetString += Utils.subIntegerConversionCheck(Calendar.getInstance().get(Calendar.MINUTE).toString())
         val isActive = if (startString == endString) true; else Utils.isTimeInInterval(startString!!, endString!!, targetString)
-        if (isActive && prefs.getBoolean(SettingsActivity.Companion.HRMonitoringSettings.hrMonitoringEnabled, false)
+        if (isActive && prefs.getBoolean(SettingsActivity.hrMonitoringEnabled, false)
                 && checkPowerAlgo()) {
             ci.requestManualHRMeasure(false)
         }
-        val interval = prefs.getInt(SettingsActivity.Companion.HRMonitoringSettings.hrMeasureInterval, 5)
+        val interval = prefs.getInt(SettingsActivity.hrMeasureInterval, 5)
         this.nextSyncHR = Calendar.getInstance(); this.nextSyncHR?.add(Calendar.MINUTE, interval)
-        plannedHandler.postDelayed({ manualHRHack() }, interval.toLong() * 60 * 1000)
+        Handler(commandHandler.looper).postDelayed({ manualHRHack() }, interval.toLong() * 60 * 1000)
         buildStatusMessage()
     }
 
@@ -322,8 +350,6 @@ class Algorithm : IntentService("Syncer") {
 
         val currentAlgoStatus = MutableLiveData<String>()
 
-        var LockedAddress: String? = null
-
         var ApproachingAlarm: AlarmProvider? = null
         var IsAlarmWaiting = false
         var IsAlarmingTriggered = false
@@ -334,7 +360,6 @@ class Algorithm : IntentService("Syncer") {
 
 
         private var PhoneListener: PhoneStateListenerBroadcast? = null
-        private var SBIReceiver: UartServiceBroadcastInterpreter? = null
         fun isNotifyServiceAlive(context: Context): Boolean {
             val Names = NotificationManagerCompat.getEnabledListenerPackages(context)
             return Names.contains(context.packageName)

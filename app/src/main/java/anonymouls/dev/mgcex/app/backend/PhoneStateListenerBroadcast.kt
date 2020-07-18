@@ -12,6 +12,7 @@ import android.telephony.TelephonyManager
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.util.Utils
 
+@ExperimentalStdlibApi
 class PhoneStateListenerBroadcast : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         var permissionGrantedReadState = true

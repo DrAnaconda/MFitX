@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase
 import anonymouls.dev.mgcex.util.HRAnalyzer
 import java.util.*
 
+@ExperimentalStdlibApi
 object HRRecordsTable {
 
     enum class AnalyticTypes(val type: Byte) {

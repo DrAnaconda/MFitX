@@ -428,6 +428,15 @@
                     android:text="@string/ignore_light_sleep_phase"
                     android:textSize="6.15pt" />
 
+                <Switch
+                    android:id="@+id/wakelocksSwitch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2pt"
+                    android:layout_marginBottom="2pt"
+                    android:onClick="onClickHandler"
+                    android:text="@string/keep_cpu_alive" />
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

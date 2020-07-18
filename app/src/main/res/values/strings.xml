@@ -163,4 +163,6 @@
     <string name="battery_saver_settings">Battery saver settings</string>
     <string name="enable_battery_saver">Enable battery saver</string>
     <string name="battery_charge_level_threshold">Battery charge level threshold</string>
+    <string name="keep_cpu_alive">Keep CPU Alive</string>
+    <string name="never_prompt_again">Never prompt again</string>
 </resources>
