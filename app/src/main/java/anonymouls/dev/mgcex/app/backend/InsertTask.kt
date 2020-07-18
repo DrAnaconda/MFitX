@@ -35,7 +35,7 @@ class InsertTask(private var ci: CommandInterpreter) : AsyncTask<Void, Void, Voi
                 if (dataToHandle.size > 2500) dataToHandle.clear()
             }
             _insertedRunning.postValue(false)
-            Utils.safeThreadSleep(Long.MAX_VALUE / 2, false)
+            Utils.safeThreadSleep(Integer.MAX_VALUE.toLong(), false)
         }
     }
 

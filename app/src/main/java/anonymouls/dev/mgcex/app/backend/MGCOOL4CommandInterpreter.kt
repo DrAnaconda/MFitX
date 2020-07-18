@@ -1,6 +1,7 @@
 package anonymouls.dev.mgcex.app.backend
 
 import android.os.Handler
+import anonymouls.dev.mgcex.app.backend.ApplicationStarter.Companion.commandHandler
 import anonymouls.dev.mgcex.app.main.SettingsActivity
 import anonymouls.dev.mgcex.util.Utils
 import java.nio.ByteBuffer
@@ -241,9 +242,9 @@ class MGCOOL4CommandInterpreter : CommandInterpreter() {
         postCommand(Req1)
         Utils.safeThreadSleep(50, false)
         Req1 = Req.copyOfRange(20, 40)
-        Handler().postDelayed({ postCommand(Req1) }, 50)
+        Handler(commandHandler.looper).postDelayed({ postCommand(Req1) }, 50)
         Req1 = Req.copyOfRange(40, 46)
-        Handler().postDelayed({ postCommand(Req1) }, 110)
+        Handler(commandHandler.looper).postDelayed({ postCommand(Req1) }, 110)
     }
 
     override fun requestBatteryStatus() {

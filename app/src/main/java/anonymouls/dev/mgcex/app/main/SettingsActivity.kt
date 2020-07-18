@@ -22,6 +22,10 @@ import anonymouls.dev.mgcex.databaseProvider.DatabaseController
 import anonymouls.dev.mgcex.databaseProvider.NotifyFilterTable
 import anonymouls.dev.mgcex.util.Analytics
 import anonymouls.dev.mgcex.util.Utils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import java.util.*
 
 // TODO Fix time selector for idiots
@@ -30,9 +34,9 @@ class SettingsActivity : AppCompatActivity() {
     private var packagesList: TableLayout? = null
 
     private var dataView = false
-    private var demoMode = !Utils.getSharedPrefs(this).contains(bandAddress)
     private lateinit var commandController: CommandInterpreter
     private lateinit var prefs: SharedPreferences
+    private lateinit var loader: Job
 
     //region Init Views
 
@@ -105,7 +109,7 @@ class SettingsActivity : AppCompatActivity() {
         else
             findViewById<View>(R.id.batteryThresholdContainer).visibility = View.GONE
 
-        if (demoMode) {
+        if (!prefs.contains(bandAddress)) {
             findViewById<Switch>(R.id.NotificationsSwitch).visibility = View.GONE
             findViewById<Switch>(R.id.PhoneSwitch).visibility = View.GONE
             findViewById<Switch>(R.id.GyroSwitch).visibility = View.GONE
@@ -130,7 +134,7 @@ class SettingsActivity : AppCompatActivity() {
             initHRMonitoringBlock()
             dynamicContentInit()
             initSwitches()
-            if (prefs.contains("IsConnected") && prefs.getBoolean("IsConnected", false)) {
+            if (prefs.contains(bandAddress)) {
                 findViewById<TextView>(R.id.currentConnectionText).text = getString(R.string.current_connection) + prefs.getString(bandAddress, null)
                 findViewById<Button>(R.id.breakConnectionBtn).visibility = View.VISIBLE
             } else {
@@ -217,7 +221,7 @@ class SettingsActivity : AppCompatActivity() {
             return
         }
         TR.layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.MATCH_PARENT)
-        packagesList!!.addView(TR)
+        runOnUiThread { packagesList!!.addView(TR) }
     }
 
     private fun loadPackagesBtn() {
@@ -226,13 +230,16 @@ class SettingsActivity : AppCompatActivity() {
         val reqIntent = Intent(Intent.ACTION_MAIN, null)
         reqIntent.addCategory(Intent.CATEGORY_LAUNCHER)
         val packList = packageManager.queryIntentActivities(reqIntent, 0)
-        for (Pack in packList) {
-            try {
-                addToTable(Pack.activityInfo.packageName, NotifyFilterTable.isEnabled(Pack.activityInfo.packageName, DatabaseController.getDCObject(this).writableDatabase))
-            } catch (Ex: Exception) {
+        loader = GlobalScope.launch(Dispatchers.IO) {
+            for (Pack in packList) {
+                try {
+                    addToTable(Pack.activityInfo.packageName,
+                            NotifyFilterTable.isEnabled(Pack.activityInfo.packageName,
+                                    DatabaseController.getDCObject(this@SettingsActivity).writableDatabase))
+                } catch (Ex: Exception) {
 
+                }
             }
-
         }
     }
 
@@ -274,18 +281,17 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    private fun deAuthDevice() {
-        val IsConnected = prefs.getBoolean("IsConnected", false)
-        if (IsConnected) {
-            prefs.edit().putBoolean("IsConnected", false).apply()
-            prefs.edit().remove(bandIDConst).apply()
-            Algorithm.IsActive = false
-            DeviceControllerActivity.instance?.finish()
-            setContentView(R.layout.activity_scan)
-            finish()
-            val intent = Intent(baseContext, ScanActivity::class.java)
-            startActivity(intent)
-        }
+    private fun deAuthDevice(): Boolean {
+        prefs.edit().remove(bandAddress).apply()
+        prefs.edit().remove(bandIDConst).apply()
+        Algorithm.IsActive = false
+        DeviceControllerActivity.instance?.finish()
+        setContentView(R.layout.activity_scan)
+        finish()
+        Algorithm.updateStatusCode(Algorithm.StatusCodes.Dead)
+        val intent = Intent(baseContext, ScanActivity::class.java)
+        startActivity(intent)
+        return true
     }
 
     // endregion
@@ -302,7 +308,7 @@ class SettingsActivity : AppCompatActivity() {
 
     fun onClickHandler(v: View) {
         val state = if (v is Switch) v.isChecked else false
-
+        var end = false
         when (v.id) {
             R.id.LoadPackListBtn -> {
                 dataView = true
@@ -321,13 +327,16 @@ class SettingsActivity : AppCompatActivity() {
                 commandController.setGyroAction(state)
                 prefs.edit().putBoolean(illuminationSetting, state).apply()
             }
-            R.id.wakelocksSwitch -> prefs.edit().putBoolean(permitWakeLock, state).apply()
+            R.id.wakelocksSwitch -> {
+                prefs.edit().putBoolean(permitWakeLock, state).apply()
+                Algorithm.SelfPointer?.killWakeLock()
+            }
             R.id.PhoneSwitch -> {
                 prefs.edit().putBoolean(receiveCallsSetting, state).apply(); Utils.requestPermissionsAdvanced(this); }
             R.id.RestoreToDefaultsBtn -> sendResetCommand()
             R.id.EraseDataOnRDeviceBtn -> sendEraseDatabaseCommand()
-            R.id.breakConnectionBtn -> deAuthDevice()
-            R.id.analyticsOn -> Utils.SharedPrefs?.edit()?.putBoolean(Analytics.HelpData, state)?.apply()
+            R.id.breakConnectionBtn -> end = deAuthDevice()
+            R.id.analyticsOn -> prefs.edit().putBoolean(Analytics.HelpData, state).apply()
             R.id.ignoreLightSleepData -> prefs.edit().putBoolean(lightSleepIgnore, state).apply()
             R.id.enableHRMonitoring -> {
                 prefs.edit()
@@ -347,7 +356,8 @@ class SettingsActivity : AppCompatActivity() {
             }
             R.id.batterySaverSwitch -> prefs.edit().putBoolean(batterySaverEnabled, state).apply()
         }
-        dynamicContentInit()
+        if (!end)
+            dynamicContentInit()
     }
 
     override fun onBackPressed() {

@@ -11,6 +11,7 @@ import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.annotation.RequiresApi
+import anonymouls.dev.mgcex.app.backend.ApplicationStarter.Companion.commandHandler
 import anonymouls.dev.mgcex.app.main.SettingsActivity
 import anonymouls.dev.mgcex.databaseProvider.DatabaseController
 import anonymouls.dev.mgcex.databaseProvider.NotifyFilterTable
@@ -71,15 +72,10 @@ class NotificationService : NotificationListenerService() {
         } catch (ex: NullPointerException) {
 
         }
-        if (UartService.instance != null &&
-                Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.Connected.code) {
-            if (title != null) {
-                addNotifyToQuene(CustomNotification(pack, title, text, sbn))
-            } else
-                addNotifyToQuene(CustomNotification(pack, applicationName, text, sbn))
-
+        if (title != null) {
+            addNotifyToQuene(CustomNotification(pack, title, text, sbn))
         } else
-            return
+            addNotifyToQuene(CustomNotification(pack, applicationName, text, sbn))
     }
 
     private fun addNotifyToQuene(notify: CustomNotification) {
@@ -113,8 +109,9 @@ class NotificationService : NotificationListenerService() {
 
         init {
             this.ID = sbn.id
-            Handler().postDelayed({ this.ready = true },
-                    sharedPrefs!!.getInt(SettingsActivity.secondsNotify, 5).toLong() * 500)
+            if (commandHandler != null)
+                Handler(commandHandler.looper).postDelayed({ this.ready = true },
+                        sharedPrefs!!.getInt(SettingsActivity.secondsNotify, 5).toLong() * 500)
         }
 
         private fun checkIsActive(): Boolean {
@@ -133,13 +130,12 @@ class NotificationService : NotificationListenerService() {
                 return
             } else {
                 if (!ready || !checkIsActive()) return
-                repeats++
                 ready = false
-                if (UartService.instance != null
-                        && Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.GattReady.code) {
+                if (Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.GattReady.code) {
                     //val app = extras!!.get("app") as String // TODO integrations
                     val message = TitleText + "\n" + ContentText
                     Algorithm.SelfPointer?.ci?.fireNotification(ReplaceTable.replaceString(message))
+                    repeats++
                 }
             }
         }

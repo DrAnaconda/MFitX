@@ -1,14 +1,21 @@
 package anonymouls.dev.mgcex.app.backend
 
-import android.app.IntentService
-import android.content.*
+import android.app.Service
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.os.*
+import android.os.AsyncTask
+import android.os.Handler
+import android.os.IBinder
+import android.os.PowerManager
 import android.view.View
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.MutableLiveData
 import anonymouls.dev.mgcex.app.AlarmProvider
 import anonymouls.dev.mgcex.app.R
+import anonymouls.dev.mgcex.app.backend.ApplicationStarter.Companion.commandHandler
 import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
 import anonymouls.dev.mgcex.app.main.DeviceControllerViewModel
 import anonymouls.dev.mgcex.app.main.SettingsActivity
@@ -21,59 +28,46 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
+
 @ExperimentalStdlibApi
-class Algorithm : IntentService("Syncer") {
+class Algorithm : Service() {
 
     //region Properties
 
     private lateinit var database: DatabaseController
     private lateinit var prefs: SharedPreferences
-    lateinit var ci: CommandInterpreter
     private var workInProgress = false
     private var isFirstTime = true
-    private var connectionTries = 0
+    private var connectionTries: Long = 0
     private var nextSyncMain: Calendar = Calendar.getInstance()
     private var nextSyncHR: Calendar? = null
-    private lateinit var inserter: InsertTask
+    private var savedBattery = 100
 
+    lateinit var ci: CommandInterpreter
+    lateinit var uartService: UartService
+
+    private lateinit var inserter: InsertTask
     private lateinit var lockedAddress: String
     private lateinit var wakeLock: PowerManager.WakeLock
 
     var bluetoothRejected = false
     var bluetoothRequested = false
     var thread: Thread? = null
-    private val commandHandler: HandlerThread = HandlerThread("CommandsSender")
-
-    private var serviceObject: IBinder? = null
-    private var serviceName: ComponentName? = null
 
     //endregion
 
     enum class StatusCodes(val code: Int) {
-        BluetoothDisabled(-2), DeviceLost(-1),
+        Dead(-666), BluetoothDisabled(-2), DeviceLost(-1),
         Disconnected(0), Connected(10), Connecting(20), GattConnecting(21),
         GattConnected(30), GattDiscovering(40), GattReady(50)
     }
-
-    private val connection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName, service: IBinder) {
-            serviceObject = service
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                serviceName = name
-                tryForceStartListener(applicationContext)
-            }
-        }
-
-        override fun onServiceDisconnected(name: ComponentName) {}
-    }
-    private val mBinder: IBinder? = null
 
     private fun checkPowerAlgo(): Boolean {
         if (!Utils.getSharedPrefs(this).getBoolean(SettingsActivity.batterySaverEnabled, true))
             return true
         else {
             val threshold = Utils.getSharedPrefs(this).getInt(SettingsActivity.batteryThreshold, 20)
-            return CommandCallbacks.Companion.SavedValues.savedBattery !in 0..threshold
+            return savedBattery !in 0..threshold
         }
     }
 
@@ -115,7 +109,6 @@ class Algorithm : IntentService("Syncer") {
     private fun executeForceSync() {
         bluetoothRequested = false; bluetoothRejected = false
         GlobalScope.launch(Dispatchers.IO) { database.initRepairsAndSync(database.writableDatabase) }
-        val h = Handler()
         Handler(commandHandler.looper).postDelayed({ ci.requestSettings() }, 200)
         Handler(commandHandler.looper).postDelayed({ ci.requestBatteryStatus() }, 500)
         Handler(commandHandler.looper).postDelayed({ ci.syncTime(Calendar.getInstance()) }, 800)
@@ -129,16 +122,21 @@ class Algorithm : IntentService("Syncer") {
     private fun forceSyncHR() {
         ci.hRRealTimeControl(true)
         //ci.requestManualHRMeasure(false)
-        Handler().postDelayed({ ci.hRRealTimeControl(false) }, 10000)
+        Handler(commandHandler.looper).postDelayed({ ci.hRRealTimeControl(false) }, 10000)
     }
 
     //endregion
 
     //region Background Taskforce
 
+    private fun deadAlgo() {
+        uartService.disconnect()
+        this.stopSelf()
+        SelfPointer = null
+    }
+
     private fun run() {
-        if (Thread.currentThread().name != "Syncer") return
-        while (UartService.instance == null) Utils.safeThreadSleep(3000, false)
+        Thread.currentThread().name = "Syncer"
         while (IsActive) {
             workInProgress = true
             when (StatusCode.value!!) {
@@ -148,12 +146,13 @@ class Algorithm : IntentService("Syncer") {
                 StatusCodes.Connected, StatusCodes.Disconnected,
                 StatusCodes.DeviceLost, StatusCodes.Connecting -> deviceDisconnectedAlgo()
                 StatusCodes.GattConnecting, StatusCodes.GattDiscovering -> connectionAlgos()
+                StatusCodes.Dead -> deadAlgo()
             }
         }
     }
 
     private fun executeMainAlgo() {
-        if (UartService.instance != null && !UartService.instance!!.probeConnection()) return
+        if (!uartService.probeConnection()) return
         val syncPeriod = prefs.getInt(SettingsActivity.mainSyncMinutes, 5) * 60 * 1000
         nextSyncMain = Calendar.getInstance()
         nextSyncMain.add(Calendar.MILLISECOND, syncPeriod)
@@ -181,11 +180,12 @@ class Algorithm : IntentService("Syncer") {
         isFirstTime = true
 
         if (DeviceControllerActivity.instance == null) {
-            wakeLock.release()
+            if (this::wakeLock.isInitialized) wakeLock.release()
             IsActive = false
             return
         } else {
-            wakeLock.acquire()
+            if (Utils.getSharedPrefs(this).getBoolean(SettingsActivity.permitWakeLock, true))
+                wakeLock.acquire()
         }
 
         if (Utils.bluetoothEngaging(this))
@@ -210,18 +210,17 @@ class Algorithm : IntentService("Syncer") {
 
     private fun deviceDisconnectedAlgo() {
         if (StatusCode.value!!.code < StatusCodes.Connecting.code) {
-            connectionTries = 0
+            connectionTries = System.currentTimeMillis()
             currentAlgoStatus.postValue(getString(R.string.conntecting_status))
-            if (UartService.instance!!.connect(lockedAddress)) {
-                if (StatusCode.value!!.code < StatusCodes.Connected.code)
-                    StatusCode.postValue(StatusCodes.Connected)
+            if (uartService.connect(lockedAddress)) {
+                Utils.safeThreadSleep(1000, true)
             }
         }
     }
 
     private fun connectionAlgos() {
-        if (connectionTries++ > 10) {
-            UartService.instance?.disconnect()
+        if (System.currentTimeMillis() > connectionTries + 20000) {
+            uartService.disconnect()
             connectionTries = 0
             StatusCode.postValue(StatusCodes.Disconnected)
         } else
@@ -231,8 +230,8 @@ class Algorithm : IntentService("Syncer") {
     private fun connectedAlgo() {
         currentAlgoStatus.postValue(getString(R.string.discovering))
         if (StatusCode.value!!.code < StatusCodes.GattDiscovering.code) {
-            connectionTries = 0
-            UartService.instance?.retryDiscovery()
+            connectionTries = System.currentTimeMillis()
+            uartService.retryDiscovery()
         }
     }
 
@@ -240,24 +239,14 @@ class Algorithm : IntentService("Syncer") {
 
     //region Android
 
-    override fun onHandleIntent(intent: Intent?) {
-        Thread.currentThread().name = "Syncer"
-        Thread.currentThread().priority = Thread.MAX_PRIORITY
-        this.thread = Thread.currentThread()
-        init()
-        run()
-
-    }
-
     override fun onBind(intent: Intent): IBinder? {
-        init()
-        return mBinder
+        return null
     }
 
     override fun onDestroy() {
-        unregisterReceiver(PhoneListener)
-        SelfPointer = null
         super.onDestroy()
+        SelfPointer = null
+        sendBroadcast(Intent(MultitaskListener.restartAction))
     }
 
     override fun onCreate() {
@@ -265,16 +254,31 @@ class Algorithm : IntentService("Syncer") {
         init()
     }
 
+    override fun onTrimMemory(level: Int) {
+        DeviceControllerActivity.instance?.finish(); DeviceControllerActivity.instance = null
+
+    }
+
     override fun stopService(name: Intent?): Boolean {
         IsActive = false
+        StatusCode.postValue(StatusCodes.Dead)
+        SelfPointer = null
+        thread?.interrupt()
+        thread = null
         return super.stopService(name)
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
+        return START_STICKY
     }
 
     fun enqueneData(sm: SimpleRecord) {
         if (sm.characteristic == UartService.PowerTXUUID.toString() ||
                 sm.characteristic == UartService.PowerDescriptor.toString() ||
                 sm.characteristic == UartService.PowerServiceUUID.toString()) {
-            CommandCallbacks.SelfPointer.batteryInfo(sm.Data[0].toInt())
+            savedBattery = sm.Data[0].toInt()
+            CommandCallbacks.getCallback(this).batteryInfo(sm.Data[0].toInt())
         } else {
             inserter.dataToHandle.add(sm)
             inserter.thread.interrupt()
@@ -282,49 +286,69 @@ class Algorithm : IntentService("Syncer") {
     }
 
     fun init() {
-        if (IsInit) return
-        isFirstTime = true
-        ReplaceTable.replaceString("", this)
-        ci = CommandInterpreter.getInterpreter(this)
-        inserter = InsertTask(ci)
-        inserter.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
-        prefs = Utils.getSharedPrefs(this)
-        database = DatabaseController.getDCObject(this)
-        commandHandler.start()
-        UartService.instance = UartService(this)
-
-        val dCAct = Intent(this, DeviceControllerActivity::class.java)
-        dCAct.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-        val service = Intent(this, NotificationService::class.java)
-        if (!NotificationService.IsActive) {
-            bindService(service, connection, Context.BIND_AUTO_CREATE)
-            Utils.serviceStartForegroundMultiAPI(service, this)
+        if (!Utils.getSharedPrefs(this).contains(SettingsActivity.bandAddress)) {
+            stopSelf()
+            return
+        } else {
+            StatusCode.postValue(StatusCodes.Disconnected)
         }
-        if (!isNotifyServiceAlive(this))
-            tryForceStartListener(this)
-        lockedAddress = Utils.getSharedPrefs(this).getString(SettingsActivity.bandAddress, "").toString()
-        if (lockedAddress.isEmpty()) return
-        PhoneListener = PhoneStateListenerBroadcast()
-        wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
-            newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MFitX::Tag").apply {
-                acquire()
+        if (SelfPointer == null
+                || thread == null
+                || (thread != null && !thread!!.isAlive)) {
+            isFirstTime = true
+            ReplaceTable.replaceString("", this)
+            ci = CommandInterpreter.getInterpreter(this)
+            ci.callback = CommandCallbacks.getCallback(this)
+            inserter = InsertTask(ci)
+            inserter.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
+            prefs = Utils.getSharedPrefs(this)
+            database = DatabaseController.getDCObject(this)
+            if (!commandHandler.isAlive)
+                commandHandler.start()
+            uartService = UartService(this)
+
+            val dCAct = Intent(this, DeviceControllerActivity::class.java)
+            dCAct.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            val service = Intent(this, NotificationService::class.java)
+            if (!NotificationService.IsActive) {
+                Utils.serviceStartForegroundMultiAPI(service, this)
             }
+            if (!isNotifyServiceAlive(this))
+                tryForceStartListener(this)
+            lockedAddress = Utils.getSharedPrefs(this).getString(SettingsActivity.bandAddress, "").toString()
+            if (lockedAddress.isEmpty()) return
+            wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
+                newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MFitX::Tag").apply {
+                    acquire()
+                }
+            }
+
+            thread = Thread(Runnable {
+                run()
+            })
+            thread?.start()
+
+            SelfPointer = this
+
+            getLastHRSync()
+            getLastMainSync()
         }
-        val IF = IntentFilter("android.intent.action.PHONE_STATE")
+    }
 
-        if (Utils.getSharedPrefs(this).getBoolean("ReceiveCalls", true))
-            registerReceiver(PhoneListener, IF)
+    fun killWakeLock() {
+        if (this::wakeLock.isInitialized) wakeLock.release()
+    }
 
-        IsInit = true
-        SelfPointer = this
-
-        getLastHRSync()
-        getLastMainSync()
+    fun sendData(Data: ByteArray): Boolean {
+        return if (this::uartService.isInitialized) {
+            this.uartService.writeRXCharacteristic(Data)
+        } else false
     }
 
     //endregion
 
     private fun manualHRHack() {
+        if (Algorithm.StatusCode.value!!.code == StatusCodes.Dead.code) return
         val startString = prefs.getString(SettingsActivity.hrMeasureStart, "00:00")
         val endString = prefs.getString(SettingsActivity.hrMeasureEnd, "00:00")
         var targetString = Utils.subIntegerConversionCheck(Calendar.getInstance().get(Calendar.HOUR_OF_DAY).toString())
@@ -332,7 +356,8 @@ class Algorithm : IntentService("Syncer") {
         targetString += Utils.subIntegerConversionCheck(Calendar.getInstance().get(Calendar.MINUTE).toString())
         val isActive = if (startString == endString) true; else Utils.isTimeInInterval(startString!!, endString!!, targetString)
         if (isActive && prefs.getBoolean(SettingsActivity.hrMonitoringEnabled, false)
-                && checkPowerAlgo()) {
+                && checkPowerAlgo()
+                && Algorithm.StatusCode.value!!.code >= StatusCodes.GattReady.code) {
             ci.requestManualHRMeasure(false)
         }
         val interval = prefs.getInt(SettingsActivity.hrMeasureInterval, 5)
@@ -346,8 +371,6 @@ class Algorithm : IntentService("Syncer") {
         var SelfPointer: Algorithm? = null
         var StatusCode = MutableLiveData(StatusCodes.Disconnected)
 
-        const val StatusAction = "STATUS_CHANGED"
-
         val currentAlgoStatus = MutableLiveData<String>()
 
         var ApproachingAlarm: AlarmProvider? = null
@@ -356,10 +379,7 @@ class Algorithm : IntentService("Syncer") {
         var IsAlarmKilled = false
 
         var IsActive = true
-        private var IsInit = false
 
-
-        private var PhoneListener: PhoneStateListenerBroadcast? = null
         fun isNotifyServiceAlive(context: Context): Boolean {
             val Names = NotificationManagerCompat.getEnabledListenerPackages(context)
             return Names.contains(context.packageName)
@@ -381,6 +401,7 @@ class Algorithm : IntentService("Syncer") {
 
 }
 
+// TODO Fix filters in settings (duplicates, also there is no enabled records). Fix database readlock
 // TODO Maybe add Jobs instead of service? but there are API 23 required
 // TODO CRITICAL. Looper is slow, some operations is slow
 // TODO Filter loading, icons slow downs app - investigate

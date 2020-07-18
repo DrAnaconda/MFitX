@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.os.AsyncTask
 import android.os.Handler
+import android.os.Looper
 import android.widget.LinearLayout
 import com.google.android.gms.ads.*
 import kotlinx.coroutines.GlobalScope
@@ -15,7 +16,7 @@ object AdsController {
     // Test : ca-app-pub-3940256099942544/1033173712 Big xren`
     private var savedContext: Context? = null
     private var adFree = true
-    private var adHandler = Handler()
+    private var adHandler = Handler(Looper.getMainLooper())
 
     private fun adTimerTask(bigScreen: InterstitialAd) {
         if (bigScreen.isLoaded) {

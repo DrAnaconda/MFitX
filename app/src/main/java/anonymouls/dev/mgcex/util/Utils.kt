@@ -53,13 +53,11 @@ object Utils {
             Manifest.permission.READ_PHONE_STATE)//, Manifest.permission.RECEIVE_BOOT_COMPLETED)
 
     fun getSharedPrefs(context: Context): SharedPreferences {
-        if (SharedPrefs == null) {
-            SharedPrefs = context.getSharedPreferences("MainPrefs", Context.MODE_PRIVATE)
-            SleepRecordsTable.GlobalSettings.ignoreLightSleepData = SharedPrefs!!.getBoolean(SettingsActivity.lightSleepIgnore, true)
-        }
-        if (!SharedPrefs!!.contains(Analytics.UserID))
-            SharedPrefs!!.edit().putString(Analytics.UserID, UUID.randomUUID().toString()).apply()
-        return SharedPrefs!!
+        val prefs = context.getSharedPreferences("MainPrefs", Context.MODE_PRIVATE)
+        SleepRecordsTable.GlobalSettings.ignoreLightSleepData = prefs.getBoolean(SettingsActivity.lightSleepIgnore, true)
+        if (!prefs.contains(Analytics.UserID))
+            prefs.edit().putString(Analytics.UserID, UUID.randomUUID().toString()).apply()
+        return prefs
     }
 
     fun requestEnableBluetooth(ContextActivity: Activity) {
@@ -226,8 +224,11 @@ object Utils {
         return false
     }
 
-    fun serviceStartForegroundMultiAPI(service: Intent, context: Activity) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+    fun startSyncingService(service: Intent, context: Context) {
+        service.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION or
+                Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
+        if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             //context.startForeground(66, buildForegroundNotification(context))
             context.startForegroundService(service)
         } else {
@@ -236,7 +237,7 @@ object Utils {
     }
 
     fun serviceStartForegroundMultiAPI(service: Intent, context: Service) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForeground(66, buildForegroundNotification(context))
             context.startForegroundService(service)
         } else {

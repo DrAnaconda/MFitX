@@ -13,8 +13,8 @@ android {
         applicationId "anonymouls.dev.MGCEX"
         minSdkVersion 18
         targetSdkVersion 29
-        versionCode 1001
-        versionName "1.0.0.3IH"
+        versionCode 1004
+        versionName "1.0.0.3IIH2"
     }
     dataBinding {
         enabled true

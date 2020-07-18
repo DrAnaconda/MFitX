@@ -3,18 +3,20 @@ package anonymouls.dev.mgcex.app.main
 import android.os.Build
 import android.view.View
 import android.widget.ImageView
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.*
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.backend.Algorithm
-import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.SavedValues.savedBattery
-import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.SavedValues.savedCCals
-import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.SavedValues.savedHR
-import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.SavedValues.savedStatus
-import anonymouls.dev.mgcex.app.backend.CommandCallbacks.Companion.SavedValues.savedSteps
+import anonymouls.dev.mgcex.app.backend.CommandCallbacks
 import anonymouls.dev.mgcex.app.backend.CommandInterpreter
 import anonymouls.dev.mgcex.app.backend.InsertTask
 import anonymouls.dev.mgcex.databaseProvider.HRRecord
+import java.util.*
 
 
 @ExperimentalStdlibApi
@@ -31,10 +33,10 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
     //region live models
 
     val workInProgress = MutableLiveData(View.GONE)
-    val _batteryHolder = MutableLiveData(savedBattery)
-    val _lastHearthRateIncomed = MutableLiveData<HRRecord>(savedHR)
-    val _lastCcalsIncomed = MutableLiveData<Int>(savedCCals)
-    val _lastStepsIncomed = MutableLiveData(savedSteps)
+    val _batteryHolder = MutableLiveData(-1)
+    val _lastHearthRateIncomed = MutableLiveData<HRRecord>(HRRecord(Calendar.getInstance(), -1))
+    val _lastCcalsIncomed = MutableLiveData<Int>(-1)
+    val _lastStepsIncomed = MutableLiveData(-1)
     val _currentStatus = MutableLiveData<String>(activity.getString(R.string.status_label))
     private var _hrVisibility = MutableLiveData<Int>(View.GONE)
 
@@ -42,7 +44,7 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
         get() {
             return _lastStepsIncomed
         }
-    val currentHR: LiveData<anonymouls.dev.mgcex.databaseProvider.HRRecord>
+    val currentHR: LiveData<HRRecord>
         get() {
             return _lastHearthRateIncomed
         }
@@ -82,7 +84,7 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
         super.onCleared()
     }
 
-    fun reInit() {
+    private fun createStatusObserver() {
         Algorithm.StatusCode.observe(activity, Observer {
             if (it.code < Algorithm.StatusCodes.GattReady.code) {
                 _hrVisibility.postValue(View.GONE)
@@ -103,9 +105,16 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
         InsertTask.insertedRunning.observe(activity, Observer {
             if (it) workInProgress.postValue(View.VISIBLE) else workInProgress.postValue(View.GONE)
         })
+    }
 
+    private fun createBatteryObserver() {
         currentBattery.observe(activity, Observer {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                if (it > 5) {
+                    activity.findViewById<TextView>(R.id.BatteryStatus).visibility = View.VISIBLE
+                    activity.findViewById<TextView>(R.id.BatteryStatus).text = it.toString()
+                } else
+                    activity.findViewById<TextView>(R.id.BatteryStatus).visibility = View.INVISIBLE
                 when {
                     it < 5 -> {
                     }
@@ -130,20 +139,58 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
                     else -> activity.findViewById<ImageView>(R.id.batteryIcon)
                             .setImageResource((R.drawable.chargefull_icon))
                 }
+
             }
         })
+    }
 
+    private fun <T> createTextObserverUniversal(id: Int, dataToObserve: LiveData<T>) {
+        dataToObserve.observe(activity, Observer {
+            var string = ""
+            string = when (it) {
+                is HRRecord -> it.hr.toString()
+                is Int -> it.toString()
+                else -> it as String
+            }
+            if (Integer.parseInt(string) > 0) {
+                activity.findViewById<TextView>(id).visibility = View.VISIBLE
+                activity.findViewById<TextView>(id).text = string
+            } else
+                activity.findViewById<TextView>(id).visibility = View.INVISIBLE
+        })
+    }
+
+    private fun createValuesObserver() {
+        createTextObserverUniversal(R.id.HRValue, currentHR)
+        createTextObserverUniversal(R.id.StepsValue, currentSteps)
+        createTextObserverUniversal(R.id.CaloriesValue, currentCcals)
+    }
+
+    fun reInit() {
+        createValuesObserver()
+        createBatteryObserver()
+        createStatusObserver()
+
+        Algorithm.SelfPointer?.thread?.interrupt()
 
         if (Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.GattReady.code
                 && ci.hRRealTimeControlSupport)
             _hrVisibility.postValue(View.VISIBLE)
         else
             _hrVisibility.postValue(View.GONE)
-        if (savedCCals != -1) _lastCcalsIncomed.postValue(savedCCals)
-        if (savedSteps != -1) _lastStepsIncomed.postValue(savedSteps)
-        if (savedBattery != -1) _batteryHolder.postValue(savedBattery)
-        if (savedHR.hr > -1) _lastHearthRateIncomed.postValue(savedHR)
-        if (savedStatus.length > 0) _currentStatus.postValue(savedStatus)
+
+
+
+        if (CommandCallbacks.getCallback(activity).savedCCals != 0)
+            _lastCcalsIncomed.postValue(CommandCallbacks.getCallback(activity).savedCCals)
+        if (CommandCallbacks.getCallback(activity).savedSteps != 0)
+            _lastStepsIncomed.postValue(CommandCallbacks.getCallback(activity).savedSteps)
+        if (CommandCallbacks.getCallback(activity).savedBattery != 0)
+            _batteryHolder.postValue(CommandCallbacks.getCallback(activity).savedBattery)
+        if (CommandCallbacks.getCallback(activity).savedHR.hr > -1)
+            _lastHearthRateIncomed.postValue(CommandCallbacks.getCallback(activity).savedHR)
+        if (CommandCallbacks.getCallback(activity).savedStatus.length > 0)
+            _currentStatus.postValue(CommandCallbacks.getCallback(activity).savedStatus)
     }
 
     companion object {

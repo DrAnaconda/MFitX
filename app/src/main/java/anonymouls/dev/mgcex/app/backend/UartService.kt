@@ -3,6 +3,7 @@ package anonymouls.dev.mgcex.app.backend
 import android.app.Service
 import android.bluetooth.*
 import android.content.Context
+import android.nfc.FormatException
 import android.os.Build
 import java.util.*
 
@@ -22,7 +23,7 @@ class UartService(private val context: Context) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
                     gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
-                gatt.discoverServices()
+                discoveringPending = true; gatt.discoverServices()
                 if (Algorithm.StatusCode.value!!.code < Algorithm.StatusCodes.GattConnected.code)
                     Algorithm.updateStatusCode(Algorithm.StatusCodes.GattConnected)
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
@@ -36,13 +37,12 @@ class UartService(private val context: Context) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
                     gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_LOW_POWER)
-                instance?.enableTXNotification(RX_SERVICE_UUID, TX_CHAR_UUID, TXServiceDesctiptor)
-                instance?.enableTXNotification(PowerServiceUUID, PowerTXUUID, PowerDescriptor)
+                this@UartService.enableTXNotification(RX_SERVICE_UUID, TX_CHAR_UUID, TXServiceDesctiptor)
+                this@UartService.enableTXNotification(PowerServiceUUID, PowerTXUUID, PowerDescriptor)
                 Algorithm.updateStatusCode(Algorithm.StatusCodes.GattReady)
             } else {
                 gatt.discoverServices()
                 Algorithm.updateStatusCode(Algorithm.StatusCodes.GattConnected)
-                Algorithm.SelfPointer?.thread?.interrupt()
             }
             discoveringPending = false
         }
@@ -66,6 +66,7 @@ class UartService(private val context: Context) {
     }
 
     fun connect(address: String): Boolean {
+        Algorithm.StatusCode.postValue(Algorithm.StatusCodes.Connecting)
         if (this::mBluetoothDeviceAddress.isInitialized
                 && address == mBluetoothDeviceAddress
                 && mBluetoothGatt != null) {
@@ -99,6 +100,7 @@ class UartService(private val context: Context) {
         }
         mBluetoothGatt?.disconnect()
         mBluetoothGatt?.close()
+        mBluetoothGatt = null
         Algorithm.StatusCode.postValue(Algorithm.StatusCodes.Disconnected)
     }
 
@@ -176,8 +178,8 @@ class UartService(private val context: Context) {
     fun writeRXCharacteristic(value: ByteArray): Boolean {
         synchronized(locker) {
             if (mBluetoothGatt == null) {
-                connect(this.mBluetoothDeviceAddress)
-                return false
+                Algorithm.StatusCode.postValue(Algorithm.StatusCodes.Disconnected)
+                throw FormatException("Gatt disconnected")
             }
             val rxService = mBluetoothGatt!!.getService(RX_SERVICE_UUID) ?: return false
             val rxChar = rxService.getCharacteristic(RX_CHAR_UUID) ?: return false
@@ -187,15 +189,7 @@ class UartService(private val context: Context) {
     }
 
     companion object {
-
-        var instance: UartService? = null
-
-        var mBluetoothManager: BluetoothManager? = null
         private var mBluetoothGatt: BluetoothGatt? = null
-
-        const val ACTION_DATA_AVAILABLE = "ACTION_DATA_AVAILABLE"
-        const val EXTRA_DATA = "EXTRA_DATA"
-        const val EXTRA_CHARACTERISTIC = "EXTRA_CHAR"
 
         var PowerServiceUUID = UUID.fromString("00001804-0000-1000-8000-00805f9b34fb")
         var PowerTXUUID = UUID.fromString("00002a07-0000-1000-8000-00805f9b34fb")

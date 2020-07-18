@@ -3,10 +3,8 @@ package anonymouls.dev.mgcex.app.main
 import android.app.Activity
 import android.app.Dialog
 import android.app.NotificationManager
-import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -20,7 +18,10 @@ import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.ViewModelProviders
 import anonymouls.dev.mgcex.app.AlarmActivity
 import anonymouls.dev.mgcex.app.R
-import anonymouls.dev.mgcex.app.backend.*
+import anonymouls.dev.mgcex.app.backend.Algorithm
+import anonymouls.dev.mgcex.app.backend.CommandCallbacks
+import anonymouls.dev.mgcex.app.backend.CommandInterpreter
+import anonymouls.dev.mgcex.app.backend.MultitaskListener
 import anonymouls.dev.mgcex.app.data.DataView
 import anonymouls.dev.mgcex.app.data.MultitaskActivity
 import anonymouls.dev.mgcex.app.databinding.ActivityDeviceControllerBinding
@@ -41,16 +42,7 @@ class DeviceControllerActivity : AppCompatActivity() {
         ViewModelProviders.of(this, MyViewModelFactory(this)).get(DeviceControllerViewModel::class.java)
     }
 
-    var binding: ActivityDeviceControllerBinding? = null
-
-    private fun initAlgo() {
-        UartService.mBluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        if (!((UartService.mBluetoothManager != null) and UartService.mBluetoothManager!!.adapter.isEnabled)) {
-            Algorithm.StatusCode.postValue(Algorithm.StatusCodes.BluetoothDisabled)
-        }
-        //Utils.serviceStartForegroundMultiAPI(Intent(this, UartService::class.java), this)
-        Utils.serviceStartForegroundMultiAPI(Intent(this, Algorithm::class.java), this)// TODO Move to another?
-    }
+    private var binding: ActivityDeviceControllerBinding? = null
 
     private fun initBindings() {
         val binding: ActivityDeviceControllerBinding = DataBindingUtil.setContentView(this, R.layout.activity_device_controller)
@@ -70,7 +62,6 @@ class DeviceControllerActivity : AppCompatActivity() {
             val mNotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             mNotificationManager.cancel(21)
         }
-        DeviceControllerViewModel.instance?.reInit()
     }
 
     //region default android
@@ -122,10 +113,16 @@ class DeviceControllerActivity : AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, data)
     }
 
+    override fun onPostResume() {
+        this.binding?.viewmodel?.reInit()
+        super.onPostResume()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Utils.requestPermissionsDefault(this, Utils.UsedPerms)
-        //setContentView(R.layout.activity_device_controller)
+        if (Algorithm.SelfPointer == null)
+            MultitaskListener.ressurectService(this)
         initBindings()
         Analytics.getInstance(this)?.sendCustomEvent(FirebaseAnalytics.Event.APP_OPEN, null)
 //        AdsController.initAdBanned(ad, this)TODO
@@ -136,11 +133,10 @@ class DeviceControllerActivity : AppCompatActivity() {
                 demoMode = true
                 return
             }
-            CommandCallbacks.SelfPointer = CommandCallbacks(this)
             CommandController = CommandInterpreter.getInterpreter(this)
-            CommandController.callback = CommandCallbacks.SelfPointer
-            initAlgo()
-        } else DeviceControllerViewModel.instance?._currentStatus?.postValue(getString(R.string.demo_mode))
+            CommandController.callback = CommandCallbacks.getCallback(this)
+        } else
+            DeviceControllerViewModel.instance?._currentStatus?.postValue(getString(R.string.demo_mode))
         instance = this
     }
 
@@ -154,7 +150,9 @@ class DeviceControllerActivity : AppCompatActivity() {
             Algorithm.IsActive = false
             exitProcess(0)
         }
-        finish()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            this.finishAndRemoveTask()
+        } else finish()
     }
 
     // endregion
@@ -176,10 +174,7 @@ class DeviceControllerActivity : AppCompatActivity() {
             R.id.ExitBtnContainer -> {
                 Algorithm.IsActive = false
                 Algorithm.SelfPointer?.stopSelf()
-                UartService.instance?.disconnect()
-                //UartService.instance?.stopSelf()
                 stopService(Intent(this, Algorithm::class.java))
-                //stopService(Intent(this, UartService::class.java))
                 finish()
                 exitProcess(0)
             }
@@ -328,15 +323,5 @@ class DeviceControllerActivity : AppCompatActivity() {
 
 
         lateinit var CommandController: CommandInterpreter
-
-
-        fun makeGattUpdateIntentFilter(): IntentFilter {
-            val intentFilter = IntentFilter()
-            intentFilter.addAction(Algorithm.StatusAction)
-            intentFilter.addAction(UartService.ACTION_DATA_AVAILABLE)
-            intentFilter.addAction(NotificationService.NotifyAction)
-            intentFilter.addAction("AlarmAction")
-            return intentFilter
-        }
     }
 }

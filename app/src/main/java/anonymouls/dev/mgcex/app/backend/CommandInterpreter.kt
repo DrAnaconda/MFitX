@@ -3,6 +3,7 @@
 package anonymouls.dev.mgcex.app.backend
 
 import android.content.Context
+import android.nfc.FormatException
 import android.widget.Toast
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.main.SettingsActivity
@@ -110,10 +111,13 @@ abstract class CommandInterpreter {
 
     fun postCommand(Request: ByteArray) {
         synchronized(blocker) {
-            while (!UartService.instance!!.writeRXCharacteristic(Request)) {
-                Utils.safeThreadSleep(2000, true)
+            try {
+                while (!Algorithm.SelfPointer!!.sendData(Request)) {
+                    Utils.safeThreadSleep(8000, true)
+                }
+                Utils.safeThreadSleep(666, true)
+            } catch (e: FormatException) {
             }
-            Utils.safeThreadSleep(500, true)
         }
     }
 

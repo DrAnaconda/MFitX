@@ -165,10 +165,9 @@
                 android:clickable="false"
                 android:enabled="false"
                 android:gravity="center_horizontal"
-                android:text="@{Integer.toString(viewmodel.currentCcals)}"
+                android:visibility="invisible"
                 android:textColor="#FF000000"
                 android:textSize="20sp"
-                android:visibility="@{(viewmodel.currentCcals >= 0) ? View.VISIBLE : View.INVISIBLE}"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="parent" />
         </LinearLayout>
@@ -321,10 +320,9 @@
                 android:clickable="false"
                 android:enabled="false"
                 android:gravity="center_horizontal"
-                android:text="@{Integer.toString(viewmodel.currentSteps)}"
+                android:visibility="invisible"
                 android:textColor="#FF000000"
                 android:textSize="20sp"
-                android:visibility="@{(viewmodel.currentSteps >= 0) ? View.VISIBLE : View.INVISIBLE}"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="parent" />
         </LinearLayout>
@@ -371,10 +369,9 @@
                 android:clickable="false"
                 android:enabled="false"
                 android:gravity="center_horizontal"
-                android:text="@{Integer.toString(viewmodel.currentHR.hr)}"
+                android:visibility="invisible"
                 android:textColor="#FF000000"
                 android:textSize="20sp"
-                android:visibility="@{(viewmodel.currentHR.hr >= 0) ? View.VISIBLE : View.INVISIBLE}"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="parent" />
         </LinearLayout>
@@ -420,10 +417,9 @@
                 android:clickable="false"
                 android:enabled="false"
                 android:gravity="center_horizontal"
-                android:text="@{Integer.toString(viewmodel.currentBattery)}"
                 android:textColor="#FF000000"
                 android:textSize="20sp"
-                android:visibility="@{(viewmodel.currentBattery >= 0) ? View.VISIBLE : View.INVISIBLE}"
+                android:visibility="invisible"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="parent" />
         </LinearLayout>

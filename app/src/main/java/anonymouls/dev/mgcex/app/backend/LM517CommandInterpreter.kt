@@ -1,6 +1,7 @@
 package anonymouls.dev.mgcex.app.backend
 
 import android.os.Handler
+import anonymouls.dev.mgcex.app.backend.ApplicationStarter.Companion.commandHandler
 import anonymouls.dev.mgcex.app.main.SettingsActivity
 import anonymouls.dev.mgcex.databaseProvider.SleepRecordsTable
 import anonymouls.dev.mgcex.util.Utils
@@ -187,7 +188,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
         req1 = request.plus(req1)
         postCommand(req1)
         req1 = arr.copyOfRange(10, 13)
-        Handler().postDelayed({ postCommand(req1) }, 1000)
+        Handler(commandHandler.looper).postDelayed({ postCommand(req1) }, 1000)
     }
 
     override fun commandAction(Input: ByteArray, characteristic: UUID) {
@@ -204,7 +205,8 @@ class LM517CommandInterpreter : CommandInterpreter() {
 
     override fun getMainInfoRequest() {
         postCommand(hexStringToByteArray("cd:00:06:12:01:15:00:01:01"))
-        Handler().postDelayed({ postCommand(hexStringToByteArray("cd:00:06:15:01:06:00:01:01")) }, 1300)
+        Handler(commandHandler.looper)
+                .postDelayed({ postCommand(hexStringToByteArray("cd:00:06:15:01:06:00:01:01")) }, 1300)
     }
 
     override fun requestSleepHistory(FromDate: Calendar) {
@@ -228,56 +230,69 @@ class LM517CommandInterpreter : CommandInterpreter() {
     }
 
     override fun fireNotification(Input: String) {
-        var arr = hexStringToByteArray(messageToHexValue(Input, 165, false).replace("00", "FF"))
-        var request = "CD00" + Utils.subIntegerConversionCheck(Integer.toHexString(arr.size + 8)) + "12011200"
-        var offset = 10
-        var Req1 = if (offset > arr.size) {
-            request += Utils.subIntegerConversionCheck(Integer.toHexString(Input.length + 2)) + "010000"
-            hexStringToByteArray(request).plus(arr.copyOfRange(0, 10))
-        } else {
-            request += Utils.subIntegerConversionCheck(Integer.toHexString(Input.length + 3)) + "010000"
-            offset = 9; hexStringToByteArray(request).plus(arr.copyOfRange(0, 9))
-        }
-        postCommand(Req1)
-        while (offset < arr.size) {
-            if (arr.size > offset + 20)
-                Req1 = arr.copyOfRange(offset, offset + 20)
-            else
-                Req1 = arr.copyOfRange(offset, arr.size)
-            Handler().postDelayed({ postCommand(Req1) }, 100 + (offset.toLong() * 2))
-            offset += 20
+        synchronized(LM517CommandInterpreter::class) {
+            var arr = hexStringToByteArray(messageToHexValue(Input, 165, false).replace("00", "FF"))
+            var request = "CD00" + Utils.subIntegerConversionCheck(Integer.toHexString(arr.size + 8)) + "12011200"
+            var offset = 10
+            var Req1 = if (offset > arr.size) {
+                request += Utils.subIntegerConversionCheck(Integer.toHexString(Input.length + 2)) + "010000"
+                hexStringToByteArray(request).plus(arr.copyOfRange(0, arr.size))
+            } else {
+                request += Utils.subIntegerConversionCheck(Integer.toHexString(Input.length + 3)) + "010000"
+                offset = 9; hexStringToByteArray(request).plus(arr.copyOfRange(0, 9))
+            }
+            postCommand(Req1)
+            while (offset < arr.size) {
+                if (arr.size > offset + 20)
+                    Req1 = arr.copyOfRange(offset, offset + 20)
+                else
+                    Req1 = arr.copyOfRange(offset, arr.size)
+                postCommand(Req1)
+                offset += 20
+            }
         }
     }
 
     override fun requestBatteryStatus() {
-        UartService.instance?.readCharacteristic(UartService.PowerServiceUUID, UartService.PowerTXUUID)
+        Algorithm.SelfPointer?.uartService?.readCharacteristic(
+                UartService.PowerServiceUUID, UartService.PowerTXUUID)
     }
 
     override fun requestManualHRMeasure(cancel: Boolean) {
-        var request = "CD00061201180001"
-        request += if (cancel) "00" else "01"
-        postCommand(hexStringToByteArray(request))
+        synchronized(LM517CommandInterpreter::class) {
+            var request = "CD00061201180001"
+            request += if (cancel) "00" else "01"
+            postCommand(hexStringToByteArray(request))
+        }
     }
 
     override fun setVibrationSetting(enabled: Boolean) {
-        var request = "CD 00 09 12 01 08 04"
-        request += if (enabled) "01" else "00"
-        request += "00 00 00"
-        postCommand(hexStringToByteArray(request))
+        synchronized(LM517CommandInterpreter::class) {
+            var request = "CD 00 09 12 01 08 04"
+            request += if (enabled) "01" else "00"
+            request += "00 00 00"
+            postCommand(hexStringToByteArray(request))
+        }
     }
 
     override fun setTargetSteps(count: Int) {
         if (count < 500) return
-        postCommand(hexStringToByteArray("CD:00:09:12:01:03:00:04:00:00" + Integer.toHexString(count)))
+        synchronized(LM517CommandInterpreter::class) {
+            postCommand(hexStringToByteArray("CD:00:09:12:01:03:00:04:00:00" + Integer.toHexString(count)))
+        }
     }
 
     override fun setSittingReminder(enabled: Boolean) {
         var request = "CD:00:0D:12:01:05:00:08:00"
         request += if (enabled) "01" else "00"
-        postCommand(hexStringToByteArray(request + "00:96:04:08:16:00"))
+        synchronized(LM517CommandInterpreter::class) {
+            postCommand(hexStringToByteArray(request + "00:96:04:08:16:00"))
+        }
     }
 
     override fun requestSettings() {
-        postCommand(hexStringToByteArray("CD:00:05:1A:01:02:00:00"))
+        synchronized(LM517CommandInterpreter::class) {
+            postCommand(hexStringToByteArray("CD:00:05:1A:01:02:00:00"))
+        }
     }
 }

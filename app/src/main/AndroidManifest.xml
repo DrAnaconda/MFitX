@@ -10,7 +10,6 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission
         android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
@@ -28,14 +27,15 @@
 
     <application
         android:allowBackup="true"
+        android:name=".backend.ApplicationStarter"
         android:label="@string/app_name"
         android:theme="@style/AppBaseTheme"
         android:icon="@mipmap/ic_launcher"
-        tools:ignore="AllowBackup,GoogleAppIndexingWarning">
+        android:fullBackupContent="@xml/backup_descriptor">
 
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3631159279486321~5110209612"/>
+            android:value="ca-app-pub-3631159279486321~5110209612" />
 
 
         <activity
@@ -45,7 +45,6 @@
 
         <activity
             android:name="anonymouls.dev.mgcex.app.scanner.ScanActivity"
-            android:theme="@style/Theme.AppCompat.DayNight"
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -79,7 +78,7 @@
                 <action android:name="android.intent.action.PHONE_STATE" />
             </intent-filter>
         </receiver>
-        <receiver android:name=".backend.BluetoothListener">
+        <receiver android:name=".backend.MultitaskListener">
             <intent-filter>
                 <action android:name="android.bluetooth.adapter.action.STATE_CHANGED" />
             </intent-filter>
@@ -92,13 +91,16 @@
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
+                <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </service>
 
         <service
             android:name="anonymouls.dev.mgcex.app.backend.Algorithm"
             android:label="@string/background_syncer"
+            android:foregroundServiceType="connectedDevice"
             android:permission="android.permission.BIND_JOB_SERVICE"
+
             android:enabled="true" />
     </application>
 

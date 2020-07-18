@@ -32,10 +32,10 @@ class ScanActivity : Activity() {
     private var BManager: BluetoothManager? = null
     private var mBTAdapter: BluetoothAdapter? = null
     lateinit var mDeviceAdapter: DeviceAdapter
-    private var Prefs: SharedPreferences? = null
     private var mIsScanning: Boolean = false
     private var mScanner: BluetoothLeScanner? = null
     private lateinit var LECallback: ScannerCallback
+    private lateinit var prefs: SharedPreferences
     private lateinit var deprecatedScanner: DeprecatedScanner
 
 //region default android
@@ -75,21 +75,21 @@ class ScanActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_scan)
         if (Utils.isDeviceSupported(this)) {
+            prefs = Utils.getSharedPrefs(this)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 LECallback = ScannerCallback(this)
             } else {
                 deprecatedScanner = DeprecatedScanner(this)
             }
-            Prefs = Utils.getSharedPrefs(this)
-            if (Prefs!!.contains("IsConnected") && Prefs!!.contains(SettingsActivity.bandAddress)
-                    && Prefs!!.contains(SettingsActivity.bandIDConst)) {
-                if (Prefs!!.getBoolean("IsConnected", false)) {
-                    openDeviceControlActivity(this.baseContext,
-                            Prefs!!.getString(SettingsActivity.bandAddress, null),
-                            Prefs!!.getString(SettingsActivity.bandIDConst, null))
-                    this.finish()
-                } else
-                    init()
+            prefs = Utils.getSharedPrefs(this)
+            if (prefs.contains(SettingsActivity.bandAddress)
+                    && prefs.contains(SettingsActivity.bandIDConst)) {
+                openDeviceControlActivity(this.baseContext,
+                        prefs.getString(SettingsActivity.bandAddress, null),
+                        prefs.getString(SettingsActivity.bandIDConst, null))
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    this.finishAndRemoveTask()
+                } else finish()
             } else
                 init()
         }
@@ -166,21 +166,19 @@ class ScanActivity : Activity() {
         }
         if (LockedAddress != null) {
             intent.putExtra(DeviceControllerActivity.ExtraDevice, LockedAddress)
-            val PEditor = Prefs!!.edit()
-            PEditor.putBoolean("IsConnected", true)
+            val PEditor = prefs.edit()
             PEditor.putString(SettingsActivity.bandAddress, LockedAddress)
             PEditor.apply()
         } else Utils.getSharedPrefs(this).edit().remove(SettingsActivity.bandIDConst).apply()
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION or
+                Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
         startActivity(intent)
     }
 
     private fun checkLocationEnabled(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (this.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                Utils.requestPermissionsAdvanced(this)
-                return false
-            }
-            if (this.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 Utils.requestPermissionsAdvanced(this)
                 return false
             }
