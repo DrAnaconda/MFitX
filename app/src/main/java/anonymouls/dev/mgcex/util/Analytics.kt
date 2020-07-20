@@ -12,8 +12,8 @@ class Analytics(context: Context) {
     private val fireInstance: FirebaseAnalytics = FirebaseAnalytics.getInstance(context)
     private val fireCrash: FirebaseCrashlytics = FirebaseCrashlytics.getInstance()
 
-    private val isAllowed: Boolean? = Utils.SharedPrefs?.getBoolean(HelpData, true)
-    private val userID = Utils.SharedPrefs?.getString(UserID, "")
+    private val isAllowed: Boolean? = Utils.SharedPrefs.getBoolean(HelpData, true)
+    private val userID = Utils.SharedPrefs.getString(UserID, "")
 
     private fun checkEnabled(): Boolean {
         fireInstance.setUserId(userID)

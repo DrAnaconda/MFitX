@@ -154,4 +154,13 @@
     <string name="battery_saver_settings">Настройки контроля заряда</string>
     <string name="enable_battery_saver">Включить контроль заряда</string>
     <string name="battery_charge_level_threshold">Порог заряда батареи</string>
+    <string name="keep_cpu_alive">Держать телефон включенным</string>
+    <string name="never_prompt_again">Больше не предлагать</string>
+    <string name="click_to_disconnect">Нажмите для отключения</string>
+    <string name="device_management">Управление устройством</string>
+    <string name="summary_notifications">Будет отправлять уведомления на устройство согласно настройкам</string>
+    <string name="set_up_filter">Настроить фильтры</string>
+    <string name="summary_filters">Уведомления от указанных приложений будут отправлены на устройство</string>
+    <string name="summary_call">Отправит уведомление на устройство при входящем звонке</string>
+    <string name="summary_idle">Отправит уведомление при длительной бездеятельности</string>
 </resources>

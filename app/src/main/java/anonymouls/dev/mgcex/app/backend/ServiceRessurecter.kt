@@ -2,6 +2,7 @@ package anonymouls.dev.mgcex.app.backend
 
 import android.app.job.JobInfo
 import android.app.job.JobParameters
+import android.app.job.JobScheduler
 import android.app.job.JobService
 import android.content.ComponentName
 import android.content.Context
@@ -10,28 +11,41 @@ import androidx.annotation.RequiresApi
 import anonymouls.dev.mgcex.app.main.SettingsActivity
 import anonymouls.dev.mgcex.util.Utils
 
+@ExperimentalStdlibApi
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
 class ServiceRessurecter : JobService() {
 
     @ExperimentalStdlibApi
     companion object {
         private const val JobID = 66
+        private var isSchleduled = false
 
         fun startJob(context: Context) {
-            val component = ComponentName(context, ServiceRessurecter::class.java)
-            val pendingJob = JobInfo.Builder(JobID, component)
-            pendingJob.setPeriodic(
-                    Utils.getSharedPrefs(context).getInt(
-                            SettingsActivity.disconnectedMonitoring, 5).toLong() * 1000 * 60)
+            synchronized(isSchleduled) {
+                if (isSchleduled) return
+                val component = ComponentName(context, ServiceRessurecter::class.java)
+                val pendingJob = JobInfo.Builder(JobID, component)
+                pendingJob.setPeriodic(
+                        Utils.getSharedPrefs(context).getInt(
+                                SettingsActivity.disconnectedMonitoring, 5).toLong() * 1000 * 60)
+
+                val jobScheduler = context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
+                val test = jobScheduler.schedule(pendingJob.build())
+                isSchleduled = true
+            }
         }
     }
 
     override fun onStopJob(params: JobParameters?): Boolean {
-        TODO("Not yet implemented")
+        MultitaskListener.ressurectService(this)
+        return true
+
     }
 
     override fun onStartJob(params: JobParameters?): Boolean {
-        TODO("Not yet implemented")
+        MultitaskListener.ressurectService(this)
+        return true
     }
+
 
 }

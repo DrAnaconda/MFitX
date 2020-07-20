@@ -198,7 +198,7 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel() {
         val ID = view.id
         when (ID) {
             R.id.realtimeHRSync -> {
-                DeviceControllerActivity.CommandController.hRRealTimeControl((view as Switch).isChecked)
+                Algorithm.SelfPointer?.ci?.hRRealTimeControl((view as Switch).isChecked)
             }
             R.id.ExitBtnContainer -> {
                 Algorithm.IsActive = false
@@ -232,7 +232,7 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel() {
                 } else {
                     view.background = ContextCompat.getDrawable(activity, R.drawable.custom_border)
                 }
-                DeviceControllerActivity.CommandController.stopLongAlarm()
+                Algorithm.SelfPointer?.ci?.stopLongAlarm()
             } else {
                 launchActivity(Intent(activity, AlarmActivity::class.java))
             }

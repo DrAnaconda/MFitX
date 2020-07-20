@@ -17,6 +17,9 @@ import anonymouls.dev.mgcex.databaseProvider.DatabaseController
 import anonymouls.dev.mgcex.databaseProvider.NotifyFilterTable
 import anonymouls.dev.mgcex.util.ReplaceTable
 import anonymouls.dev.mgcex.util.Utils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -50,9 +53,7 @@ class NotificationService : NotificationListenerService() {
         super.onListenerDisconnected()
     }
 
-    @RequiresApi(Build.VERSION_CODES.KITKAT) // TODO ???
-    override fun onNotificationPosted(sbn: StatusBarNotification) {
-        instance = this
+    private fun proceedNotify(sbn: StatusBarNotification) {
         if (!Algorithm.IsActive || Settings.Global.getInt(contentResolver, "zen_mode") > 0) return
         val pack = sbn.packageName
         if (!NotifyFilterTable.isEnabled(pack,
@@ -76,6 +77,12 @@ class NotificationService : NotificationListenerService() {
             addNotifyToQuene(CustomNotification(pack, title, text, sbn))
         } else
             addNotifyToQuene(CustomNotification(pack, applicationName, text, sbn))
+    }
+
+    @RequiresApi(Build.VERSION_CODES.KITKAT) // TODO ???
+    override fun onNotificationPosted(sbn: StatusBarNotification) {
+        instance = this
+        GlobalScope.launch(Dispatchers.IO) { proceedNotify(sbn) }
     }
 
     private fun addNotifyToQuene(notify: CustomNotification) {

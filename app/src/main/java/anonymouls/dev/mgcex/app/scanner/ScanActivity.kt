@@ -179,8 +179,8 @@ class ScanActivity : Activity() {
 
     private fun checkLocationEnabled(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (this.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                Utils.requestPermissionsAdvanced(this)
+            if (checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                Utils.requestPermissionsDefault(this, arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION))
                 return false
             }
         }

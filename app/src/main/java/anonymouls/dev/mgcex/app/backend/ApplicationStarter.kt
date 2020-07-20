@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.os.HandlerThread
 import android.os.StrictMode
+import anonymouls.dev.mgcex.app.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -12,18 +13,20 @@ import kotlinx.coroutines.launch
 class ApplicationStarter : Application() {
     companion object {
         lateinit var appContext: Context
-        val commandHandler: HandlerThread = HandlerThread("CommandsSender")
+        val commandHandler: HandlerThread = HandlerThread("AACommandsSender")
     }
 
     override fun onCreate() {
-        StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.Builder()
-                .detectAll()
-                .penaltyLog().penaltyDialog()
-                .build())
-        StrictMode.setVmPolicy(StrictMode.VmPolicy.Builder()
-                .detectAll()
-                .penaltyLog()
-                .build())
+        if (BuildConfig.DEBUG) {
+            StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.Builder()
+                    .detectAll()
+                    .penaltyLog().penaltyDialog()
+                    .build())
+            StrictMode.setVmPolicy(StrictMode.VmPolicy.Builder()
+                    .detectAll()
+                    .penaltyLog()
+                    .build())
+        }
         try {
             appContext = applicationContext
         } catch (e: Throwable) {

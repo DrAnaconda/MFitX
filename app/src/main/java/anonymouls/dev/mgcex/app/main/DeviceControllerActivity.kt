@@ -19,7 +19,6 @@ import androidx.lifecycle.ViewModelProviders
 import anonymouls.dev.mgcex.app.AlarmActivity
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.backend.Algorithm
-import anonymouls.dev.mgcex.app.backend.CommandCallbacks
 import anonymouls.dev.mgcex.app.backend.CommandInterpreter
 import anonymouls.dev.mgcex.app.backend.MultitaskListener
 import anonymouls.dev.mgcex.app.data.DataView
@@ -130,8 +129,6 @@ class DeviceControllerActivity : AppCompatActivity() {
                 demoMode = true
                 return
             }
-            CommandController = CommandInterpreter.getInterpreter(this)
-            CommandController.callback = CommandCallbacks.getCallback(this)
         } else
             DeviceControllerViewModel.instance?._currentStatus?.postValue(getString(R.string.demo_mode))
         instance = this
@@ -166,7 +163,7 @@ class DeviceControllerActivity : AppCompatActivity() {
         val ID = view.id
         when (ID) {
             R.id.realtimeHRSync -> {
-                CommandController.hRRealTimeControl((view as Switch).isChecked)
+                Algorithm.SelfPointer?.ci?.hRRealTimeControl((view as Switch).isChecked)
             }
             R.id.ExitBtnContainer -> {
                 Algorithm.IsActive = false
@@ -201,7 +198,6 @@ class DeviceControllerActivity : AppCompatActivity() {
                 } else {
                     view.background = ContextCompat.getDrawable(this, R.drawable.custom_border)
                 }
-                CommandController.stopLongAlarm()
             } else {
                 val alarmIntent = Intent(baseContext, AlarmActivity::class.java)
                 alarmIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -317,8 +313,5 @@ class DeviceControllerActivity : AppCompatActivity() {
 
         const val ExtraDevice = "EXTRA_BLE_DEVICE"
         var instance: DeviceControllerActivity? = null
-
-
-        lateinit var CommandController: CommandInterpreter
     }
 }

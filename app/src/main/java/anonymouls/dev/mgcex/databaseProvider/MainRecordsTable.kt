@@ -196,7 +196,7 @@ object MainRecordsTable {
         init {
             passedKm =
                     if (context != null) Utils.getSharedPrefs(context).getFloat(SettingsActivity.stepsSize, 0.5f) * stepsCount
-                    else Utils.SharedPrefs!!.getFloat(SettingsActivity.stepsSize, 0.5f) * stepsCount
+                    else Utils.SharedPrefs.getFloat(SettingsActivity.stepsSize, 0.5f) * stepsCount
         }
     }
 

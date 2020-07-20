@@ -16,6 +16,9 @@ import anonymouls.dev.mgcex.util.AdsController
 import anonymouls.dev.mgcex.util.Analytics
 import anonymouls.dev.mgcex.util.HRAnalyzer
 import anonymouls.dev.mgcex.util.Utils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -64,7 +67,7 @@ class MultitaskActivity : Activity() {
 
     private fun loaderDecider(bundle: Bundle?) {
         when (taskType) {
-            TaskTypes.OverallStats -> fillOverallStatsData()
+            TaskTypes.OverallStats -> GlobalScope.launch(Dispatchers.IO) { fillOverallStatsData() }
             TaskTypes.SimpleText -> {
                 this.text = bundle?.getString(TextIntent, "")
                 loadText()
@@ -117,13 +120,13 @@ class MultitaskActivity : Activity() {
             layoutParams.setMargins(0, 8, 0, 0)
         } else layoutParams.setMargins(0, 4, 0, 4)
         tt.layoutParams = layoutParams
-        container!!.addView(tt)
+        runOnUiThread { container!!.addView(tt) }
     }
 
     @SuppressLint("SetTextI18n")
     private fun initDataBlock(fromPeriod: Calendar?, toPeriod: Calendar?): HRRecordsTable.HRReport {
 
-        LayoutInflater.from(this).inflate(R.xml.horizontal_divider, container!!)
+        runOnUiThread { LayoutInflater.from(this).inflate(R.xml.horizontal_divider, container!!) }
 
         val overallMainReport = MainRecordsTable.generateReport(fromPeriod, toPeriod, DatabaseController.getDCObject(this).readableDatabase, this)
         val overallHRReport = HRRecordsTable.generateReport(fromPeriod, toPeriod, DatabaseController.getDCObject(this).readableDatabase)

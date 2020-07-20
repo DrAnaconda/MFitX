@@ -49,7 +49,8 @@ object Utils {
     val UsedPerms = arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE, //Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE,
             Manifest.permission.READ_CONTACTS, Manifest.permission.READ_PHONE_NUMBERS, Manifest.permission.WAKE_LOCK,
-            Manifest.permission.READ_CALL_LOG,
+            Manifest.permission.READ_CALL_LOG, Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+            Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.READ_PHONE_STATE)//, Manifest.permission.RECEIVE_BOOT_COMPLETED)
 
     fun getSharedPrefs(context: Context): SharedPreferences {
@@ -234,7 +235,7 @@ object Utils {
         service.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or
                 Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION or
                 Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
-        if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             //context.startForeground(66, buildForegroundNotification(context))
             context.startForegroundService(service)
         } else {

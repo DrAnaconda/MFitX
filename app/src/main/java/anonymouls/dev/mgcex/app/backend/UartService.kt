@@ -25,6 +25,7 @@ class UartService(private val context: Context) {
     private val mGattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             synchronized(bluetoothServiceBusy) {
+                Thread.currentThread().name = "AAConnecter" + (Random().nextInt() % 50)
                 when (newState) {
                     BluetoothProfile.STATE_CONNECTED -> {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)

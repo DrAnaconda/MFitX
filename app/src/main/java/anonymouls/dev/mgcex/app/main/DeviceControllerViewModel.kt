@@ -16,6 +16,9 @@ import anonymouls.dev.mgcex.app.backend.CommandCallbacks
 import anonymouls.dev.mgcex.app.backend.CommandInterpreter
 import anonymouls.dev.mgcex.app.backend.InsertTask
 import anonymouls.dev.mgcex.databaseProvider.HRRecord
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.util.*
 
 
@@ -180,17 +183,18 @@ class DeviceControllerViewModel(private val activity: AppCompatActivity) : ViewM
             _hrVisibility.postValue(View.GONE)
 
 
-
-        if (CommandCallbacks.getCallback(activity).savedCCals != 0)
-            _lastCcalsIncomed.postValue(CommandCallbacks.getCallback(activity).savedCCals)
-        if (CommandCallbacks.getCallback(activity).savedSteps != 0)
-            _lastStepsIncomed.postValue(CommandCallbacks.getCallback(activity).savedSteps)
-        if (CommandCallbacks.getCallback(activity).savedBattery != 0)
-            _batteryHolder.postValue(CommandCallbacks.getCallback(activity).savedBattery)
-        if (CommandCallbacks.getCallback(activity).savedHR.hr > -1)
-            _lastHearthRateIncomed.postValue(CommandCallbacks.getCallback(activity).savedHR)
-        if (CommandCallbacks.getCallback(activity).savedStatus.length > 0)
-            _currentStatus.postValue(CommandCallbacks.getCallback(activity).savedStatus)
+        GlobalScope.launch(Dispatchers.IO) {
+            if (CommandCallbacks.getCallback(activity).savedCCals != 0)
+                _lastCcalsIncomed.postValue(CommandCallbacks.getCallback(activity).savedCCals)
+            if (CommandCallbacks.getCallback(activity).savedSteps != 0)
+                _lastStepsIncomed.postValue(CommandCallbacks.getCallback(activity).savedSteps)
+            if (CommandCallbacks.getCallback(activity).savedBattery != 0)
+                _batteryHolder.postValue(CommandCallbacks.getCallback(activity).savedBattery)
+            if (CommandCallbacks.getCallback(activity).savedHR.hr > -1)
+                _lastHearthRateIncomed.postValue(CommandCallbacks.getCallback(activity).savedHR)
+            if (CommandCallbacks.getCallback(activity).savedStatus.length > 0)
+                _currentStatus.postValue(CommandCallbacks.getCallback(activity).savedStatus)
+        }
     }
 
     companion object {

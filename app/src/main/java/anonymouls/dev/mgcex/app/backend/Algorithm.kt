@@ -213,8 +213,7 @@ class Algorithm : Service() {
     }
 
     private fun deviceDisconnectedAlgo() {
-        if (StatusCode.value!!.code < StatusCodes.Connecting.code
-                && checkDisconnectedTime()) {
+        if (StatusCode.value!!.code < StatusCodes.Connecting.code) {
             connectionTries = System.currentTimeMillis()
             disconnectedTimestamp = System.currentTimeMillis()
             currentAlgoStatus.postValue(getString(R.string.conntecting_status))
@@ -225,6 +224,7 @@ class Algorithm : Service() {
     }
 
     private fun connectionAlgos() {
+        if (!checkDisconnectedTime()) return
         if (System.currentTimeMillis() > connectionTries + 20000) {
             uartService.disconnect()
             connectionTries = 0
@@ -286,6 +286,7 @@ class Algorithm : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
+        GlobalScope.launch(Dispatchers.IO) { init() }
         return START_STICKY
     }
 
@@ -302,52 +303,55 @@ class Algorithm : Service() {
     }
 
     fun init() {
-        if (!Utils.getSharedPrefs(this).contains(SettingsActivity.bandAddress)) {
-            stopSelf()
-            return
-        } else {
-            StatusCode.postValue(StatusCodes.Disconnected)
-        }
-        if (SelfPointer == null
-                || thread == null
-                || (thread != null && !thread!!.isAlive)) {
-            isFirstTime = true
-            ReplaceTable.replaceString("", this)
-            ci = CommandInterpreter.getInterpreter(this)
-            ci.callback = CommandCallbacks.getCallback(this)
-            inserter = InsertTask(ci)
-            inserter.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
-            prefs = Utils.getSharedPrefs(this)
-            database = DatabaseController.getDCObject(this)
-            if (!commandHandler.isAlive)
-                commandHandler.start()
-            uartService = UartService(this)
-
-            val dCAct = Intent(this, DeviceControllerActivity::class.java)
-            dCAct.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            val service = Intent(this, NotificationService::class.java)
-            if (!NotificationService.IsActive) {
-                Utils.serviceStartForegroundMultiAPI(service, this)
+        synchronized(isFirstTime) {
+            if (!Utils.getSharedPrefs(this).contains(SettingsActivity.bandAddress)) {
+                stopSelf()
+                return
+            } else {
+                StatusCode.postValue(StatusCodes.Disconnected)
             }
-            if (!isNotifyServiceAlive(this))
-                tryForceStartListener(this)
-            lockedAddress = Utils.getSharedPrefs(this).getString(SettingsActivity.bandAddress, "").toString()
-            if (lockedAddress.isEmpty()) return
-            wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
-                newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MFitX::Tag").apply {
-                    acquire()
+            if (SelfPointer == null
+                    || thread == null
+                    || (thread != null && !thread!!.isAlive)) {
+                isFirstTime = true
+                ReplaceTable.replaceString("", this)
+                ci = CommandInterpreter.getInterpreter(this)
+                ci.callback = CommandCallbacks.getCallback(this)
+                inserter = InsertTask(ci)
+                inserter.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
+                prefs = Utils.getSharedPrefs(this)
+                database = DatabaseController.getDCObject(this)
+                if (!commandHandler.isAlive)
+                    commandHandler.start()
+                uartService = UartService(this)
+                ServiceRessurecter.startJob(this)
+
+                val dCAct = Intent(this, DeviceControllerActivity::class.java)
+                dCAct.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                val service = Intent(this, NotificationService::class.java)
+                if (!NotificationService.IsActive) {
+                    Utils.serviceStartForegroundMultiAPI(service, this)
                 }
+                if (!isNotifyServiceAlive(this))
+                    tryForceStartListener(this)
+                lockedAddress = Utils.getSharedPrefs(this).getString(SettingsActivity.bandAddress, "").toString()
+                if (lockedAddress.isEmpty()) return
+                wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
+                    newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MFitX::Tag").apply {
+                        acquire()
+                    }
+                }
+
+                thread = Thread(Runnable {
+                    run()
+                })
+                thread?.start()
+
+                SelfPointer = this
+
+                getLastHRSync()
+                getLastMainSync()
             }
-
-            thread = Thread(Runnable {
-                run()
-            })
-            thread?.start()
-
-            SelfPointer = this
-
-            getLastHRSync()
-            getLastMainSync()
         }
     }
 

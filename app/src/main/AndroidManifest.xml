@@ -6,9 +6,9 @@
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission
@@ -80,6 +80,8 @@
         <receiver android:name=".backend.MultitaskListener">
             <intent-filter>
                 <action android:name="android.bluetooth.adapter.action.STATE_CHANGED" />
+                <action android:name="android.intent.action.MAIN" />
+                <action android:name="SVSR" />
             </intent-filter>
         </receiver>
 
@@ -97,7 +99,10 @@
             android:name=".backend.Algorithm"
             android:enabled="true"
             android:foregroundServiceType="connectedDevice"
-            android:label="@string/background_syncer"
+            android:label="@string/background_syncer" />
+        <service
+            android:name=".backend.ServiceRessurecter"
+            android:enabled="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
     </application>
 
