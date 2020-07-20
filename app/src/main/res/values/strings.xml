@@ -165,4 +165,27 @@
     <string name="battery_charge_level_threshold">Battery charge level threshold</string>
     <string name="keep_cpu_alive">Keep CPU Alive</string>
     <string name="never_prompt_again">Never prompt again</string>
+    <!-- Preference Titles -->
+    <string name="messages_header">Messages</string>
+    <string name="sync_header">Sync</string>
+
+    <!-- Messages Preferences -->
+    <string name="signature_title">Your signature</string>
+    <string name="reply_title">Default reply action</string>
+
+    <!-- Sync Preferences -->
+    <string name="sync_title">Sync email periodically</string>
+    <string name="attachment_title">Download incoming attachments</string>
+    <string name="attachment_summary_on">Automatically download attachments for incoming emails
+    </string>
+    <string name="attachment_summary_off">Only download attachments when manually requested</string>
+    <string name="click_to_disconnect">Click to disconnect</string>
+    <string name="device_management">Device management</string>
+    <string name="summary_notifications">Will duplicate notifications according to user defined settings.</string>
+    <string name="set_up_filter">Set up notification filters</string>
+    <string name="summary_filters">Notification from selected apps will be transmitted to device</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="summary_call">Will enable alarm on device when incoming call received</string>
+    <string name="summary_idle">Alarm do about poor activity</string>
 </resources>

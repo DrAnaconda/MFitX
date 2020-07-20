@@ -4,8 +4,11 @@ import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.database.sqlite.SQLiteDatabase
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.HandlerThread
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Gravity
@@ -22,11 +25,9 @@ import anonymouls.dev.mgcex.databaseProvider.DatabaseController
 import anonymouls.dev.mgcex.databaseProvider.NotifyFilterTable
 import anonymouls.dev.mgcex.util.Analytics
 import anonymouls.dev.mgcex.util.Utils
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import java.util.*
+import kotlin.collections.ArrayList
 
 // TODO Fix time selector for idiots
 @ExperimentalStdlibApi
@@ -36,9 +37,17 @@ class SettingsActivity : AppCompatActivity() {
     private var dataView = false
     private lateinit var commandController: CommandInterpreter
     private lateinit var prefs: SharedPreferences
-    private lateinit var loader: Job
+    private val loader = CoroutineScope(Job())
+    private val fakeLooper: HandlerThread = HandlerThread("FakeLooper")
+
+    private var packList: ArrayList<View> = ArrayList()
+    private var checker = 0
 
     //region Init Views
+
+    init {
+        fakeLooper.start()
+    }
 
     private fun initHRMonitoringBlock() {
         if (!commandController.hRRealTimeControlSupport) {
@@ -171,76 +180,108 @@ class SettingsActivity : AppCompatActivity() {
         Toast.makeText(this, getString(R.string.connection_not_established), Toast.LENGTH_LONG).show()
     }
 
-    private fun addToTable(Content: String, IsEnabled: Boolean) {
-        var drop = false
-        val SW = Switch(this)
-        val TR = CustomTableRow(this, Content, SW)
-        val Info = TextView(this)
-
-        val appIcon = ImageView(this)
-        appIcon.adjustViewBounds = true
-        appIcon.minimumWidth = 64
-        appIcon.minimumWidth = 64
-        appIcon.maxWidth = 64
-        appIcon.maxHeight = 64
-        appIcon.layoutParams = TableRow.LayoutParams(64, 64)
-        appIcon.scaleType = ImageView.ScaleType.FIT_CENTER
-        try {
-            val iconApp = packageManager.getApplicationIcon(Content)
-            appIcon.setImageDrawable(iconApp)
-        } catch (ex: Exception) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                appIcon.setImageDrawable(getDrawable(android.R.drawable.ic_menu_help))
-            } else {
-                appIcon.setImageResource(android.R.drawable.ic_menu_help)
+    private fun preload() {
+        val reqIntent = Intent(Intent.ACTION_MAIN, null)
+        reqIntent.addCategory(Intent.CATEGORY_LAUNCHER)
+        val packList = packageManager.queryIntentActivities(reqIntent, 0)
+        findViewById<View>(R.id.LoadPackListBtn).isEnabled = false
+        loader.launch(Dispatchers.IO) {
+            val jobs = ArrayList<Job>()
+            for (Pack in packList) {
+                val readable = DatabaseController.getDCObject(this@SettingsActivity).readableDatabase
+                val writeble = DatabaseController.getDCObject(this@SettingsActivity).writableDatabase
+                jobs.add(launch(Dispatchers.IO) {
+                    addToTable(Pack.activityInfo.packageName,
+                            NotifyFilterTable.isEnabled(Pack.activityInfo.packageName,
+                                    readable), writeble)
+                })
             }
-            drop = true
+            jobs.joinAll()
+            this@SettingsActivity.runOnUiThread { findViewById<View>(R.id.LoadPackListBtn).isEnabled = true }
         }
+    }
 
+    private fun addToTable(Content: String, IsEnabled: Boolean, db: SQLiteDatabase) {
         try {
-            Info.text = packageManager.getApplicationLabel(packageManager.getApplicationInfo(Content, 0))
+            var drop = false
+            val SW = Switch(this)
+            val TR = CustomTableRow(this, Content, SW)
+            val Info = TextView(this)
+
+            val appIcon = ImageView(this)
+            appIcon.adjustViewBounds = true
+            appIcon.minimumWidth = 64
+            appIcon.minimumWidth = 64
+            appIcon.maxWidth = 64
+            appIcon.maxHeight = 64
+            appIcon.layoutParams = TableRow.LayoutParams(64, 64)
+            appIcon.scaleType = ImageView.ScaleType.FIT_CENTER
+            GlobalScope.launch {
+                try {
+                    val iconApp = packageManager.getApplicationIcon(Content)
+                    appIcon.setImageDrawable(iconApp)
+                } catch (ex: Exception) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        appIcon.setImageDrawable(getDrawable(android.R.drawable.ic_menu_help))
+                    } else {
+                        appIcon.setImageResource(android.R.drawable.ic_menu_help)
+                    }
+                    drop = true
+                }
+            }
+            try {
+                Info.text = packageManager.getApplicationLabel(packageManager.getApplicationInfo(Content, 0))
+            } catch (ex: Exception) {
+                Info.text = Content
+                drop = true
+            }
+            Info.setPadding(5, 5, 5, 5)
+            Info.layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.WRAP_CONTENT)
+            Info.textSize = 15f
+            Info.gravity = Gravity.CENTER
+
+            try {
+                Handler(fakeLooper.looper).post { SW.isChecked = IsEnabled }
+                SW.gravity = Gravity.END
+                SW.layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.WRAP_CONTENT)
+                SW.setOnClickListener {
+                    NotifyFilterTable.insertRecord(Content, (it as Switch).isChecked, db)
+                }
+            } catch (ex: Exception) {
+                val test = ""
+            }
+            TR.addView(appIcon)
+            TR.addView(Info)
+            TR.addView(SW)
+            if (!IsEnabled && drop) {
+                GlobalScope.launch(Dispatchers.Default)
+                { NotifyFilterTable.dropRecord(Content, DatabaseController.getDCObject(this@SettingsActivity).writableDatabase) }
+                checker++
+                return
+            }
+            TR.layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.MATCH_PARENT)
+            packList.add(TR)
         } catch (ex: Exception) {
-            Info.text = Content
-            drop = true
+            val test = ""
         }
-        Info.setPadding(5, 5, 5, 5)
-        TableRow.LayoutParams()
-        Info.layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.WRAP_CONTENT)
-        Info.textSize = 15f
-        Info.gravity = Gravity.CENTER
+    }
 
-        SW.isChecked = IsEnabled
-        SW.gravity = Gravity.END
-        SW.layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.WRAP_CONTENT)
-
-        TR.addView(appIcon)
-        TR.addView(Info)
-        TR.addView(SW)
-        if (!IsEnabled && drop) {
-            NotifyFilterTable.dropRecord(Content, DatabaseController.getDCObject(this).writableDatabase)
-            return
+    private fun parsePack() {
+        if (packagesList != null && packagesList!!.childCount > 0) return
+        for (v in packList) {
+            packagesList?.addView(v)
         }
-        TR.layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.MATCH_PARENT)
-        runOnUiThread { packagesList!!.addView(TR) }
     }
 
     private fun loadPackagesBtn() {
         setContentView(R.layout.activity_data_without_calendartool)
         initViews()
-        val reqIntent = Intent(Intent.ACTION_MAIN, null)
-        reqIntent.addCategory(Intent.CATEGORY_LAUNCHER)
-        val packList = packageManager.queryIntentActivities(reqIntent, 0)
-        loader = GlobalScope.launch(Dispatchers.IO) {
-            for (Pack in packList) {
-                try {
-                    addToTable(Pack.activityInfo.packageName,
-                            NotifyFilterTable.isEnabled(Pack.activityInfo.packageName,
-                                    DatabaseController.getDCObject(this@SettingsActivity).writableDatabase))
-                } catch (Ex: Exception) {
+        parsePack()
+    }
 
-                }
-            }
-        }
+    override fun onStart() {
+        super.onStart()
+        preload()
     }
 
     private fun createTimePicker(param: String, textObject: EditText) {
@@ -304,6 +345,7 @@ class SettingsActivity : AppCompatActivity() {
         commandController = CommandInterpreter.getInterpreter(this)
         prefs = Utils.getSharedPrefs(this)
         initViews()
+        //preload()
     }
 
     fun onClickHandler(v: View) {
@@ -367,14 +409,7 @@ class SettingsActivity : AppCompatActivity() {
             prefs.edit().putBoolean("NotificationGranted", true).apply()
         }
         if (dataView) {
-            for (i in 0 until packagesList!!.childCount) {
-                val ctr = packagesList!!.getChildAt(i) as CustomTableRow
-                if (ctr.IsEnabled.isChecked)
-                    NotifyFilterTable.insertRecord(ctr.Package, ctr.IsEnabled.isChecked,
-                            DatabaseController.getDCObject(this).writableDatabase)
-                else
-                    NotifyFilterTable.dropRecord(ctr.Package, DatabaseController.getDCObject(this).writableDatabase)
-            }
+            packagesList?.removeAllViews()
             dataView = !dataView
             setContentView(R.layout.activity_settings)
             initViews()
@@ -411,6 +446,7 @@ class SettingsActivity : AppCompatActivity() {
         const val batteryThreshold = "BST"
         const val batterySaverEnabled = "BSE"
         const val permitWakeLock = "PWL"
+        const val disconnectedMonitoring = "DMT"
 
         const val hrMonitoringEnabled = "HRMEn"
         const val hrMeasureInterval = "HRMI"

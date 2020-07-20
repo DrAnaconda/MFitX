@@ -3,6 +3,9 @@ package anonymouls.dev.mgcex.databaseProvider
 import android.content.ContentValues
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 @ExperimentalStdlibApi
 object NotifyFilterTable {
@@ -16,15 +19,18 @@ object NotifyFilterTable {
     }
 
     fun insertRecord(Package: String, IsEnabled: Boolean, Operator: SQLiteDatabase) {
-        if (Package.length < 6) return
-        val CV = ContentValues()
-        CV.put(ColumnNames[1], Package)
-        CV.put(ColumnNames[2], IsEnabled)
-        try {
-            Operator.insert(DatabaseController.NotifyFilterTableName, null, CV)
-        } catch (ex: Exception) {
-            CV.put(ColumnNames[2], IsEnabled)
-            Operator.update(DatabaseController.NotifyFilterTableName, CV, ColumnNames[1] + " = '" + Package + "'", null)
+        GlobalScope.launch(Dispatchers.IO) {
+            if (Package.length > 6) {
+                val CV = ContentValues()
+                CV.put(ColumnNames[1], Package)
+                CV.put(ColumnNames[2], IsEnabled)
+                try {
+                    Operator.insert(DatabaseController.NotifyFilterTableName, null, CV)
+                } catch (ex: Exception) {
+                    CV.put(ColumnNames[2], IsEnabled)
+                    Operator.update(DatabaseController.NotifyFilterTableName, CV, ColumnNames[1] + " = '" + Package + "'", null)
+                }
+            }
         }
     }
 
@@ -60,6 +66,7 @@ object NotifyFilterTable {
                 false
             }
         } else {
+            req?.close()
             false
         }
     }

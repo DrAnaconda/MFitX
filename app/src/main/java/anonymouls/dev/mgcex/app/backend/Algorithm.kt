@@ -41,7 +41,8 @@ class Algorithm : Service() {
     private var connectionTries: Long = 0
     private var nextSyncMain: Calendar = Calendar.getInstance()
     private var nextSyncHR: Calendar? = null
-    private var savedBattery = 100
+    private var savedBattery: Short = 100
+    private var disconnectedTimestamp: Long = System.currentTimeMillis()
 
     lateinit var ci: CommandInterpreter
     lateinit var uartService: UartService
@@ -60,15 +61,6 @@ class Algorithm : Service() {
         Dead(-666), BluetoothDisabled(-2), DeviceLost(-1),
         Disconnected(0), Connected(10), Connecting(20), GattConnecting(21),
         GattConnected(30), GattDiscovering(40), GattReady(50)
-    }
-
-    private fun checkPowerAlgo(): Boolean {
-        if (!Utils.getSharedPrefs(this).getBoolean(SettingsActivity.batterySaverEnabled, true))
-            return true
-        else {
-            val threshold = Utils.getSharedPrefs(this).getInt(SettingsActivity.batteryThreshold, 20)
-            return savedBattery !in 0..threshold
-        }
     }
 
     private fun buildStatusMessage() {
@@ -133,12 +125,14 @@ class Algorithm : Service() {
         uartService.disconnect()
         this.stopSelf()
         SelfPointer = null
+        IsActive = false
     }
 
     private fun run() {
-        Thread.currentThread().name = "Syncer"
+        Thread.currentThread().name = "AASyncer"
         while (IsActive) {
             workInProgress = true
+            uartService.probeConnection()
             when (StatusCode.value!!) {
                 StatusCodes.GattConnected -> connectedAlgo()
                 StatusCodes.GattReady -> executeMainAlgo()
@@ -149,6 +143,16 @@ class Algorithm : Service() {
                 StatusCodes.Dead -> deadAlgo()
             }
         }
+    }
+
+    private fun checkDisconnectedTime(): Boolean {
+        val now = System.currentTimeMillis() / 1000 / 60
+        val startInMin = disconnectedTimestamp / 1000 / 60
+        if (now - startInMin > prefs.getInt(SettingsActivity.disconnectedMonitoring, 5)) { // TODO: Public value
+            StatusCode.postValue(StatusCodes.Dead)
+            return false
+        }
+        return true
     }
 
     private fun executeMainAlgo() {
@@ -193,9 +197,9 @@ class Algorithm : Service() {
         else {
             StatusCode.postValue(StatusCodes.BluetoothDisabled)
         }
-
+        uartService.forceEnableBluetooth()
+        /*
         if (DeviceControllerActivity.instance != null && !bluetoothRejected && !bluetoothRequested) {
-            Utils.requestEnableBluetooth(DeviceControllerActivity.instance!!)
             bluetoothRequested = true
             if (Utils.bluetoothEngaging(DeviceControllerActivity.instance!!)) {
                 StatusCode.postValue(StatusCodes.Disconnected)
@@ -205,15 +209,17 @@ class Algorithm : Service() {
             workInProgress = false
             StatusCode.postValue(StatusCodes.BluetoothDisabled)
             currentAlgoStatus.postValue(getString(R.string.BluetoothRequiredMsg))
-        }
+        }*/
     }
 
     private fun deviceDisconnectedAlgo() {
-        if (StatusCode.value!!.code < StatusCodes.Connecting.code) {
+        if (StatusCode.value!!.code < StatusCodes.Connecting.code
+                && checkDisconnectedTime()) {
             connectionTries = System.currentTimeMillis()
+            disconnectedTimestamp = System.currentTimeMillis()
             currentAlgoStatus.postValue(getString(R.string.conntecting_status))
             if (uartService.connect(lockedAddress)) {
-                Utils.safeThreadSleep(1000, true)
+                Utils.safeThreadSleep(21000, false)
             }
         }
     }
@@ -224,15 +230,24 @@ class Algorithm : Service() {
             connectionTries = 0
             StatusCode.postValue(StatusCodes.Disconnected)
         } else
-            Utils.safeThreadSleep(2000, true)
+            Utils.safeThreadSleep(10000, true)
     }
 
     private fun connectedAlgo() {
         currentAlgoStatus.postValue(getString(R.string.discovering))
-        if (StatusCode.value!!.code < StatusCodes.GattDiscovering.code) {
+        if (StatusCode.value!!.code < StatusCodes.GattDiscovering.code
+                && StatusCode.value!!.code == StatusCodes.GattConnected.code) {
             connectionTries = System.currentTimeMillis()
             uartService.retryDiscovery()
+            Utils.safeThreadSleep(21000, false)
         }
+    }
+
+    private fun checkPowerAlgo(): Boolean {
+        return if (Utils.getSharedPrefs(this).getBoolean(SettingsActivity.batterySaverEnabled, true)) {
+            val threshold = Utils.getSharedPrefs(this).getInt(SettingsActivity.batteryThreshold, 20)
+            savedBattery !in 0..threshold
+        } else true
     }
 
     //endregion
@@ -251,11 +266,12 @@ class Algorithm : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        init()
+        GlobalScope.launch(Dispatchers.Default) { init() }
     }
 
     override fun onTrimMemory(level: Int) {
-        DeviceControllerActivity.instance?.finish(); DeviceControllerActivity.instance = null
+        DeviceControllerActivity.instance?.finish()
+        DeviceControllerActivity.instance = null
 
     }
 
@@ -277,7 +293,7 @@ class Algorithm : Service() {
         if (sm.characteristic == UartService.PowerTXUUID.toString() ||
                 sm.characteristic == UartService.PowerDescriptor.toString() ||
                 sm.characteristic == UartService.PowerServiceUUID.toString()) {
-            savedBattery = sm.Data[0].toInt()
+            savedBattery = sm.Data[0].toShort()
             CommandCallbacks.getCallback(this).batteryInfo(sm.Data[0].toInt())
         } else {
             inserter.dataToHandle.add(sm)
@@ -348,7 +364,7 @@ class Algorithm : Service() {
     //endregion
 
     private fun manualHRHack() {
-        if (Algorithm.StatusCode.value!!.code == StatusCodes.Dead.code) return
+        if (StatusCode.value!!.code == StatusCodes.Dead.code) return
         val startString = prefs.getString(SettingsActivity.hrMeasureStart, "00:00")
         val endString = prefs.getString(SettingsActivity.hrMeasureEnd, "00:00")
         var targetString = Utils.subIntegerConversionCheck(Calendar.getInstance().get(Calendar.HOUR_OF_DAY).toString())
@@ -357,7 +373,7 @@ class Algorithm : Service() {
         val isActive = if (startString == endString) true; else Utils.isTimeInInterval(startString!!, endString!!, targetString)
         if (isActive && prefs.getBoolean(SettingsActivity.hrMonitoringEnabled, false)
                 && checkPowerAlgo()
-                && Algorithm.StatusCode.value!!.code >= StatusCodes.GattReady.code) {
+                && StatusCode.value!!.code >= StatusCodes.GattReady.code) {
             ci.requestManualHRMeasure(false)
         }
         val interval = prefs.getInt(SettingsActivity.hrMeasureInterval, 5)

@@ -36,7 +36,7 @@ object Utils {
     const val PermissionsRequest = 3
     const val PermsRequest = 4
     const val PermsAdvancedRequest = 5
-    var SharedPrefs: SharedPreferences? = null
+    lateinit var SharedPrefs: SharedPreferences
 
     enum class SDFPatterns(val pattern: String) {
         DayScaling("LLLL d HH:mm"), WeekScaling("LLLL W yyyy"),
@@ -53,11 +53,13 @@ object Utils {
             Manifest.permission.READ_PHONE_STATE)//, Manifest.permission.RECEIVE_BOOT_COMPLETED)
 
     fun getSharedPrefs(context: Context): SharedPreferences {
-        val prefs = context.getSharedPreferences("MainPrefs", Context.MODE_PRIVATE)
-        SleepRecordsTable.GlobalSettings.ignoreLightSleepData = prefs.getBoolean(SettingsActivity.lightSleepIgnore, true)
-        if (!prefs.contains(Analytics.UserID))
-            prefs.edit().putString(Analytics.UserID, UUID.randomUUID().toString()).apply()
-        return prefs
+        if (!Utils::SharedPrefs.isInitialized) {
+            SharedPrefs = context.getSharedPreferences("MainPrefs", Context.MODE_PRIVATE)
+            SleepRecordsTable.GlobalSettings.ignoreLightSleepData = SharedPrefs.getBoolean(SettingsActivity.lightSleepIgnore, true)
+            if (!SharedPrefs.contains(Analytics.UserID))
+                SharedPrefs.edit().putString(Analytics.UserID, UUID.randomUUID().toString()).apply()
+        }
+        return SharedPrefs
     }
 
     fun requestEnableBluetooth(ContextActivity: Activity) {
@@ -222,6 +224,10 @@ object Utils {
             if (targetMin in minStart..minEnd) return true
         }
         return false
+    }
+
+    fun startActivityUniversal() {
+
     }
 
     fun startSyncingService(service: Intent, context: Context) {

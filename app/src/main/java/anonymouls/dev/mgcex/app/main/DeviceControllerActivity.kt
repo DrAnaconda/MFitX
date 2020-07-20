@@ -27,9 +27,7 @@ import anonymouls.dev.mgcex.app.data.MultitaskActivity
 import anonymouls.dev.mgcex.app.databinding.ActivityDeviceControllerBinding
 import anonymouls.dev.mgcex.databaseProvider.DatabaseController
 import anonymouls.dev.mgcex.util.AdsController
-import anonymouls.dev.mgcex.util.Analytics
 import anonymouls.dev.mgcex.util.Utils
-import com.google.firebase.analytics.FirebaseAnalytics
 import kotlin.system.exitProcess
 
 
@@ -39,7 +37,9 @@ class DeviceControllerActivity : AppCompatActivity() {
     private var demoMode = false
 
     private val customViewModel by lazy {
-        ViewModelProviders.of(this, MyViewModelFactory(this)).get(DeviceControllerViewModel::class.java)
+        ViewModelProviders.of(this,
+                MyViewModelFactory(this))
+                .get(DeviceControllerViewModel::class.java)
     }
 
     private var binding: ActivityDeviceControllerBinding? = null
@@ -72,13 +72,11 @@ class DeviceControllerActivity : AppCompatActivity() {
                 DatabaseController.DCObject?.migrateToExternal(this)
             }
             if (grantResults.contains(PackageManager.PERMISSION_DENIED)) {
-                Analytics.getInstance(this)?.sendCustomEvent(permissions[0], "rejected")
             }
         } else {
             var shouldRetry = false
             for (x in grantResults.indices) {
                 if (grantResults[x] == PackageManager.PERMISSION_DENIED) {
-                    Analytics.getInstance(this)?.sendCustomEvent(permissions[x], "denied")
                     shouldRetry = true
                 }
             }
@@ -124,7 +122,6 @@ class DeviceControllerActivity : AppCompatActivity() {
         if (Algorithm.SelfPointer == null)
             MultitaskListener.ressurectService(this)
         initBindings()
-        Analytics.getInstance(this)?.sendCustomEvent(FirebaseAnalytics.Event.APP_OPEN, null)
 //        AdsController.initAdBanned(ad, this)TODO
         if (Utils.isDeviceSupported(this)) {
             if (!Utils.getSharedPrefs(this).contains(SettingsActivity.bandAddress)) {

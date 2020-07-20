@@ -15,7 +15,11 @@ import anonymouls.dev.mgcex.app.backend.CommandInterpreter
 import anonymouls.dev.mgcex.app.databinding.ActivityDataViewBinding
 import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
 import anonymouls.dev.mgcex.util.AdsController
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.util.*
+
 
 @ExperimentalStdlibApi
 class DataView : AppCompatActivity() {
@@ -48,18 +52,7 @@ class DataView : AppCompatActivity() {
         binding.mainTable.setAdapter(customAdapter)
         binding.mainTable.rowHeaderWidth = 0
         binding.mainTable.setHasFixedWidth(true)
-
         AdsController.initAdBanned(binding.dataAD, this)
-
-        customViewModel.data.observe(this, androidx.lifecycle.Observer {
-            while (it.size > 0) {
-                try {
-                    customAdapter.addRow(customAdapter.countRows++, null, it.remove().getCellsList() as MutableList<Cell?>)
-                } catch (ex: Exception) {
-                    continue
-                }
-            }
-        })
     }
 
     private fun init() {
@@ -90,7 +83,7 @@ class DataView : AppCompatActivity() {
     private fun executeTableCreation(From: Calendar, To: Calendar, DataType: DataTypes) {
         customAdapter.removeEverything()
         customAdapter.setColumnHeaderItems(Cell.listToCells<ColumnHeader>(headerChooser(), true) as List<ColumnHeader?>?)
-        customViewModel.fetchDataStageA(this, From, To, scale, DataType)
+        GlobalScope.launch { customViewModel.fetchDataStageA(From, To, scale, DataType, customAdapter, this@DataView) }
     }
 
     private fun loadData(From: Calendar, To: Calendar) {
@@ -183,7 +176,7 @@ class DataView : AppCompatActivity() {
         todayEnd.set(Calendar.HOUR_OF_DAY, 23)
         todayEnd.set(Calendar.MINUTE, 59)
         todayEnd.set(Calendar.SECOND, 59)
-        loadData(todayStart, todayEnd)
+        GlobalScope.launch(Dispatchers.Default) { loadData(todayStart, todayEnd) }
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {

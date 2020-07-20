@@ -20,31 +20,32 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.INTERNET" />
 
-
     <uses-feature
         android:name="android.hardware.bluetooth_le"
         android:required="true" />
 
     <application
-        android:allowBackup="true"
         android:name=".backend.ApplicationStarter"
-        android:label="@string/app_name"
-        android:theme="@style/AppBaseTheme"
+        android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_descriptor"
         android:icon="@mipmap/ic_launcher"
-        android:fullBackupContent="@xml/backup_descriptor">
+        android:label="@string/app_name"
+        android:theme="@style/AppBaseTheme">
+
+        <activity
+            android:name=".main.MainActivity"
+            android:theme="@style/Theme.AppCompat.DayNight" />
 
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-3631159279486321~5110209612" />
 
-
         <activity
-            android:name="anonymouls.dev.mgcex.app.data.MultitaskActivity"
+            android:name=".data.MultitaskActivity"
             android:label="@string/title_activity_report_activity"
             android:theme="@style/Theme.AppCompat.DayNight" />
-
         <activity
-            android:name="anonymouls.dev.mgcex.app.scanner.ScanActivity"
+            android:name=".scanner.ScanActivity"
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -52,28 +53,26 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
         <activity
-            android:name="anonymouls.dev.mgcex.app.main.DeviceControllerActivity"
+            android:name=".main.DeviceControllerActivity"
             android:label="Device Control"
             android:showOnLockScreen="true"
             android:theme="@style/Theme.AppCompat.DayNight" />
-
         <activity
-            android:name="anonymouls.dev.mgcex.app.data.DataView"
+            android:name=".data.DataView"
             android:label="Data"
             android:theme="@style/Theme.AppCompat.DayNight" />
-
         <activity
-            android:name="anonymouls.dev.mgcex.app.main.SettingsActivity"
+            android:name=".main.SettingsActivity"
             android:label="@string/title_activity_settings"
             android:theme="@style/Theme.AppCompat.DayNight"
             android:windowSoftInputMode="stateHidden" />
         <activity
-            android:name="anonymouls.dev.mgcex.app.AlarmActivity"
+            android:name=".AlarmActivity"
             android:label="@string/title_activity_alarm" />
 
-        <receiver android:name="anonymouls.dev.mgcex.app.backend.PhoneStateListenerBroadcast">
+
+        <receiver android:name=".backend.PhoneStateListenerBroadcast">
             <intent-filter>
                 <action android:name="android.intent.action.PHONE_STATE" />
             </intent-filter>
@@ -85,7 +84,7 @@
         </receiver>
 
         <service
-            android:name="anonymouls.dev.mgcex.app.backend.NotificationService"
+            android:name=".backend.NotificationService"
             android:enabled="true"
             android:label="@string/app_name"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
@@ -94,16 +93,12 @@
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </service>
-
         <service
-            android:name="anonymouls.dev.mgcex.app.backend.Algorithm"
-            android:label="@string/background_syncer"
+            android:name=".backend.Algorithm"
+            android:enabled="true"
             android:foregroundServiceType="connectedDevice"
-            android:permission="android.permission.BIND_JOB_SERVICE"
-
-            android:enabled="true" />
+            android:label="@string/background_syncer"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
     </application>
-
-
 
 </manifest>

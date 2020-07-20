@@ -1,0 +1,102 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="@string/device_management">
+
+        <SwitchPreferenceCompat
+            android:summary="@string/click_to_disconnect"
+            app:key="BandAddress"
+            app:title="@string/current_connection" />
+
+        <SwitchPreferenceCompat
+            android:title="@string/enable_auto_illumination"
+            app:defaultValue="false"
+            app:key="illuminationSetting" />
+
+        <SwitchPreferenceCompat
+            android:title="@string/receive_phone_call"
+            app:defaultValue="false"
+            app:key="ReceiveCalls"
+            app:summary="@string/summary_call" />
+
+        <SwitchPreferenceCompat
+            android:title="@string/enable_vibration"
+            app:defaultValue="false"
+            app:key="VibrationSetting" />
+
+        <SwitchPreferenceCompat
+            android:title="@string/idle_reminder"
+            app:defaultValue="false"
+            app:key="LongSittingReminder"
+            app:summary="@string/summary_idle" />
+
+        <EditTextPreference
+            android:maxLength="2"
+            android:title="@string/target_steps_count"
+            app:defaultValue="5000"
+            app:key="TargetStepsSetting"
+            app:useSimpleSummaryProvider="true" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/battery_saver_settings">
+
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:key="BSE"
+            app:title="@string/enable_battery_saver" />
+
+        <EditTextPreference
+            android:inputType="number"
+            app:defaultValue="20"
+            app:dependency="BSE"
+            app:key="attachment"
+            app:title="@string/battery_charge_level_threshold"
+            app:useSimpleSummaryProvider="true" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/smart_notification_settings">
+
+        <SwitchPreferenceCompat
+            app:key="NotificationsEnabled"
+            app:summary="@string/summary_notifications"
+            app:title="@string/receive_notifications" />
+
+        <CheckBoxPreference
+            android:key="Dummy01"
+            android:summary="@string/summary_filters"
+            android:title="@string/set_up_filter" />
+
+        <EditTextPreference
+            android:inputType="number"
+            app:defaultValue="3"
+            app:key="repeatsNumber"
+            app:title="@string/repeat_notification"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            android:inputType="number"
+            app:defaultValue="5"
+            app:key="secondsRepeat"
+            app:title="Notification repeat/delay time (seconds)"
+            app:useSimpleSummaryProvider="true" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/apps_settings">
+
+        <SwitchPreferenceCompat
+            app:key="sync"
+            app:title="@string/sync_title" />
+
+        <SwitchPreferenceCompat
+            app:dependency="sync"
+            app:key="attachment"
+            app:summaryOff="@string/attachment_summary_off"
+            app:summaryOn="@string/attachment_summary_on"
+            app:title="@string/attachment_title" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

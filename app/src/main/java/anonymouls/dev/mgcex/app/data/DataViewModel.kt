@@ -1,5 +1,6 @@
 package anonymouls.dev.mgcex.app.data
 
+import android.app.Activity
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
@@ -149,10 +150,11 @@ class DataViewModel : ViewModel() {
     }
 
 
-    fun fetchDataStageA(context: Context, From: Calendar, To: Calendar,
-                        scale: DataView.Scalings, DataType: DataView.DataTypes) {
+    fun fetchDataStageA(From: Calendar, To: Calendar,
+                        scale: DataView.Scalings, DataType: DataView.DataTypes,
+                        tableAdapter: MyTableViewAdapter, activity: Activity) {
         this.cancelled = false
-        this.database = DatabaseController.getDCObject(context).readableDatabase
+        this.database = DatabaseController.getDCObject(activity).readableDatabase
         this.fromLong = CustomDatabaseUtils.calendarToLong(From, true)
         this.toLong = CustomDatabaseUtils.calendarToLong(To, true)
         currentLock = this.fromLong
@@ -163,14 +165,14 @@ class DataViewModel : ViewModel() {
         _infoBlockVisible.postValue(View.VISIBLE)
         setOffset()
         val hashCodes = HashSet<String>()
-        val inputQuene: Queue<Record> = LinkedList<Record>()
-        viewModelScope.launch(Dispatchers.IO) {
-            fetchDataStageB(context).collect {
+        viewModelScope.launch(Dispatchers.Default) {
+            fetchDataStageB(activity).collect {
                 if (it != null) {
                     if (!hashCodes.contains(it.toString())) {
-                        hashCodes.add(it.toString())
-                        inputQuene.add(it)
-                        _result.postValue(inputQuene)
+                        activity.runOnUiThread {
+                            tableAdapter.addRow(tableAdapter.countRows++,
+                                    null, it.getCellsList() as MutableList<Cell?>)
+                        }
                     }
                 }
             }

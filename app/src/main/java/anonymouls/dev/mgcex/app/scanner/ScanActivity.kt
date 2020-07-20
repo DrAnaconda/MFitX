@@ -159,6 +159,7 @@ class ScanActivity : Activity() {
 //region Logic
 
     private fun openDeviceControlActivity(context: Context, LockedAddress: String?, DeviceName: String?) {
+        //val intent = Intent(context, MainActivity::class.java)
         val intent = Intent(context, DeviceControllerActivity::class.java)
 
         if (DeviceName != null) {

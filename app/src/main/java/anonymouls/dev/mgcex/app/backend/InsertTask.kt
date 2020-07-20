@@ -16,7 +16,7 @@ class InsertTask(private var ci: CommandInterpreter) : AsyncTask<Void, Void, Voi
 
     @ExperimentalStdlibApi
     override fun doInBackground(vararg params: Void?): Void? {
-        Thread.currentThread().name = "Database Inserter"
+        Thread.currentThread().name = "AADatabaseInserter"
         thread = Thread.currentThread()
         while (true) {
             if (dataToHandle.size > 0) _insertedRunning.postValue(true)
