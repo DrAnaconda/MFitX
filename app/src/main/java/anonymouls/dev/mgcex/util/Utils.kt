@@ -266,6 +266,16 @@ object Utils {
         }
     }
 
+    fun promptSimpleDialog(activity: Activity, message: String, taskforce: ()-> Any){
+        val dialog = AlertDialog.Builder(activity)
+        dialog.setTitle("Warning")
+        dialog.setIcon(android.R.drawable.ic_dialog_alert)
+        dialog.setMessage(message)
+        dialog.setPositiveButton(android.R.string.ok) { dial, _ -> taskforce; dial.cancel(); }
+        dialog.setNegativeButton(android.R.string.cancel) { dial, _ -> dial.cancel(); }
+        dialog.create().show()
+    }
+
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createNotificationChannel(context: Context, channelId: String, channelName: String): String {
         val chan = NotificationChannel(channelId,

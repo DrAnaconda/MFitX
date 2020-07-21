@@ -22,6 +22,7 @@ import android.widget.ProgressBar
 import android.widget.Toast
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
+import anonymouls.dev.mgcex.app.main.MainActivity
 import anonymouls.dev.mgcex.app.main.SettingsActivity
 import anonymouls.dev.mgcex.util.Analytics
 import anonymouls.dev.mgcex.util.Utils
@@ -159,8 +160,8 @@ class ScanActivity : Activity() {
 //region Logic
 
     private fun openDeviceControlActivity(context: Context, LockedAddress: String?, DeviceName: String?) {
-        //val intent = Intent(context, MainActivity::class.java)
-        val intent = Intent(context, DeviceControllerActivity::class.java)
+        val intent = Intent(context, MainActivity::class.java)
+        //val intent = Intent(context, DeviceControllerActivity::class.java)
 
         if (DeviceName != null) {
             Utils.getSharedPrefs(this).edit().putString(SettingsActivity.bandIDConst, DeviceName).apply()
@@ -178,7 +179,7 @@ class ScanActivity : Activity() {
     }
 
     private fun checkLocationEnabled(): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 Utils.requestPermissionsDefault(this, arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION))
                 return false

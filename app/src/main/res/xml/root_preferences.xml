@@ -3,10 +3,17 @@
 
     <PreferenceCategory app:title="@string/device_management">
 
-        <SwitchPreferenceCompat
+        <Preference app:key="BandAddress"
             android:summary="@string/click_to_disconnect"
-            app:key="BandAddress"
             app:title="@string/current_connection" />
+
+        <Preference app:key="ResetToDefault"
+            app:summary="@string/summary_reset"
+            app:title="@string/restore_to_defaults_str"/>
+
+        <Preference app:key="WipeSmartData"
+            app:summary="@string/summary_erase"
+            app:title="@string/erase_data_on_band_str"/>
 
         <SwitchPreferenceCompat
             android:title="@string/enable_auto_illumination"
@@ -46,13 +53,38 @@
             app:key="BSE"
             app:title="@string/enable_battery_saver" />
 
-        <EditTextPreference
+        <anonymouls.dev.mgcex.util.RedifinedEditTextPreference
             android:inputType="number"
             app:defaultValue="20"
             app:dependency="BSE"
             app:key="attachment"
             app:title="@string/battery_charge_level_threshold"
             app:useSimpleSummaryProvider="true" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:key="HRMon" app:title="@string/hearth_rate_monitoring">
+
+    <SwitchPreferenceCompat app:defaultValue="false"
+        app:key="HRMEn"
+        app:summary="@string/summart_hrmonitor"
+        app:title="@string/enable_hr_auto_collecting"/>
+
+    <anonymouls.dev.mgcex.util.RedifinedEditTextPreference app:defaultValue="5"
+        app:dependency="HRMEn"
+        app:key="HRMI"
+        app:title="@string/collect_every"
+        app:useSimpleSummaryProvider="true"/>
+
+    <anonymouls.dev.mgcex.util.TimePreference app:defaultValue="0"
+        app:dependency="HRMEn"
+        app:key="HRMS"
+        app:title="@string/start_time"/>
+
+    <anonymouls.dev.mgcex.util.TimePreference app:defaultValue="0"
+        app:dependency="HRMEn"
+        app:key="HRMEnd"
+        app:title="@string/end_time"/>
 
     </PreferenceCategory>
 
@@ -63,29 +95,57 @@
             app:summary="@string/summary_notifications"
             app:title="@string/receive_notifications" />
 
-        <CheckBoxPreference
-            android:key="Dummy01"
-            android:summary="@string/summary_filters"
-            android:title="@string/set_up_filter" />
+        <anonymouls.dev.mgcex.util.RedifinedPreference android:summary="@string/summary_filters"
+            android:title="@string/set_up_filter"
+            app:dependency="NotificationsEnabled"
+            app:key="NFilter" />
 
-        <EditTextPreference
+        <anonymouls.dev.mgcex.util.RedifinedEditTextPreference app:dependency="NotificationsEnabled"
             android:inputType="number"
+            app:title="@string/repeat_notification"
             app:defaultValue="3"
             app:key="repeatsNumber"
-            app:title="@string/repeat_notification"
             app:useSimpleSummaryProvider="true" />
 
-        <EditTextPreference
+        <anonymouls.dev.mgcex.util.RedifinedEditTextPreference app:dependency="NotificationsEnabled"
+            app:title="@string/notify_delay"
             android:inputType="number"
             app:defaultValue="5"
             app:key="secondsRepeat"
-            app:title="Notification repeat/delay time (seconds)"
             app:useSimpleSummaryProvider="true" />
 
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/apps_settings">
 
+    <SwitchPreferenceCompat
+        app:defaultValue="true"
+        app:key="AnalyticsEnabled"
+        app:summary="@string/summary_analytics"
+        app:title="@string/send_anonymous_stats_and_data_usage"/>
+
+    <SwitchPreferenceCompat
+        app:defaultValue="true"
+        app:summary="@string/summary_light_sleep"
+        app:title="@string/ignore_light_sleep_phase"/>
+
+    <SwitchPreferenceCompat app:key="PWL"
+        app:summary="@string/summary_cpualive"
+        app:title="@string/keep_cpu_alive" />
+
+    <EditTextPreference
+        android:inputType="number"
+        app:defaultValue="5"
+        app:key="AutoSyncInterval"
+        app:title="@string/sync_setting"
+        app:useSimpleSummaryProvider="true"/>
+
+    <EditTextPreference
+        android:inputType="numberDecimal"
+        app:defaultValue="0,66"
+        app:key="Step_Size"
+        app:title="@string/step_size_centimeters"
+        app:useSimpleSummaryProvider="true"/>
 
     </PreferenceCategory>
 

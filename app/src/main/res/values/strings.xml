@@ -77,7 +77,7 @@
     <string name="connected_syncing">Status : Connected. Syncing...</string>
     <string name="device_controls">Device controls</string>
     <string name="times_every">times every</string>
-    <string name="repeat_notification">Repeat notification</string>
+    <string name="repeat_notification">Repeat notification X times</string>
     <string name="smart_notification_settings">Smart notification settings</string>
     <string name="seconds">seconds</string>
     <string name="default_banner_id" translatable="false">ca-app-pub-3631159279486321/2484046271</string>
@@ -139,7 +139,7 @@
     <string name="ignore_light_sleep_phase">Ignore light sleep phase</string>
     <string name="hearth_rate_monitoring">Hearth Rate Monitoring</string>
     <string name="enable_hr_auto_collecting">Enable Auto Collecting</string>
-    <string name="collect_every">Collect Every</string>
+    <string name="collect_every">Collect every X minutes</string>
     <string name="minutes">minutes</string>
     <string name="until">until</string>
     <string name="from">From</string>
@@ -165,17 +165,25 @@
     <string name="battery_charge_level_threshold">Battery charge level threshold</string>
     <string name="keep_cpu_alive">Keep CPU Alive</string>
     <string name="never_prompt_again">Never prompt again</string>
-    <!-- Preference Titles -->
 
-    <!-- Messages Preferences -->
-
-    <!-- Sync Preferences -->
     <string name="click_to_disconnect">Click to disconnect</string>
     <string name="device_management">Device management</string>
     <string name="summary_notifications">Will duplicate notifications according to user defined settings.</string>
     <string name="set_up_filter">Set up notification filters</string>
     <string name="summary_filters">Notification from selected apps will be transmitted to device</string>
-    <!-- TODO: Remove or change this placeholder text -->
+
     <string name="summary_call">Will enable alarm on device when incoming call received</string>
     <string name="summary_idle">Alarm do about poor activity</string>
+    <string name="notify_delay">Notification repeat/delay time (seconds)</string>
+    <string name="summary_analytics">Send data about app performance and usage activity</string>
+    <string name="summary_light_sleep">Application will record light sleep phase, but will not proceed in analytics algos</string>
+    <string name="summary_cpualive">WARNING: This function drains battery</string>
+    <string name="sync_setting">Sync main data every X time</string>
+    <string name="summary_reset">Click to send reset command</string>
+    <string name="summary_erase">Click to wipe data on smartwatch</string>
+    <string name="summart_hrmonitor">Will automatically send request for HR measure</string>
+    <string name="start_time">Start time</string>
+    <string name="end_time">End time</string>
+    <string name="unlimited_monitor">&#160;set equal time for unlimited monitoring</string>
+    <string name="confirmneeded">This action requires confirmation</string>
 </resources>

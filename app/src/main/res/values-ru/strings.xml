@@ -69,7 +69,7 @@
     <string name="connected_syncing">Статус: Подключен. Синхронизация...</string>
     <string name="device_controls">Управление устройством</string>
     <string name="times_every">раз каждые</string>
-    <string name="repeat_notification">Повторять уведомление</string>
+    <string name="repeat_notification">Повторять уведомление X раз</string>
     <string name="smart_notification_settings">Настройки \"умных\" уведомлений</string>
     <string name="seconds">секунд</string>
     <string name="manual_sync_status">Ручная синхронизация...</string>
@@ -131,7 +131,7 @@
     <string name="ignore_light_sleep_phase">Игнорировать статистику сна</string>
     <string name="hearth_rate_monitoring">Мониторинг ЧСС</string>
     <string name="enable_hr_auto_collecting">Включить мониторинг</string>
-    <string name="collect_every">Собирать каждые</string>
+    <string name="collect_every">Собирать каждые X минут</string>
     <string name="minutes">минут</string>
     <string name="until">до</string>
     <string name="from">От</string>
