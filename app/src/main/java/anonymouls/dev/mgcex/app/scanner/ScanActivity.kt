@@ -78,9 +78,9 @@ class ScanActivity : Activity() {
         if (Utils.isDeviceSupported(this)) {
             prefs = Utils.getSharedPrefs(this)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                LECallback = ScannerCallback(this)
+                //LECallback = ScannerCallback(this)
             } else {
-                deprecatedScanner = DeprecatedScanner(this)
+                //deprecatedScanner = DeprecatedScanner(this)
             }
             prefs = Utils.getSharedPrefs(this)
             if (prefs.contains(SettingsActivity.bandAddress)

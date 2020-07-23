@@ -4,7 +4,8 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import anonymouls.dev.mgcex.app.data.DataView
+import anonymouls.dev.mgcex.app.backend.ApplicationStarter
+import anonymouls.dev.mgcex.app.data.DataFragment
 import anonymouls.dev.mgcex.app.main.SettingsActivity
 import anonymouls.dev.mgcex.util.Utils
 import java.lang.Math.abs
@@ -107,8 +108,8 @@ object MainRecordsTable {
 
 //endregion
 
-    fun extractRecords(From: Long, To: Long, Operator: SQLiteDatabase, scaling: DataView.Scalings): Cursor {
-        val tableName = if (scaling == DataView.Scalings.Day) MainRecordsTable.TableName + "COPY" else MainRecordsTable.TableName
+    fun extractRecords(From: Long, To: Long, Operator: SQLiteDatabase, scaling: DataFragment.Scalings): Cursor {
+        val tableName = if (scaling == DataFragment.Scalings.Day) MainRecordsTable.TableName + "COPY" else MainRecordsTable.TableName
         val record = Operator.query(tableName, ColumnsForExtraction,
                 ColumnNames[1] + " BETWEEN ? AND ?", arrayOf(From.toString(), To.toString()), null, null, ColumnNames[1])
         record.moveToFirst()
@@ -195,8 +196,10 @@ object MainRecordsTable {
 
         init {
             passedKm =
-                    if (context != null) Utils.getSharedPrefs(context).getFloat(SettingsActivity.stepsSize, 0.5f) * stepsCount
-                    else Utils.SharedPrefs.getFloat(SettingsActivity.stepsSize, 0.5f) * stepsCount
+                    if (context != null)
+                        Utils.getSharedPrefs(ApplicationStarter.appContext).getString(SettingsActivity.stepsSize, "0.5")!!.replace(',', '.').toFloat() * stepsCount
+                    else
+                        Utils.getSharedPrefs(ApplicationStarter.appContext).getString(SettingsActivity.stepsSize, "0.5")!!.replace(',', '.').toFloat() * stepsCount
         }
     }
 

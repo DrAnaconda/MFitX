@@ -12,6 +12,7 @@ import androidx.preference.PreferenceManager
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.backend.Algorithm
 import anonymouls.dev.mgcex.app.backend.CommandInterpreter
+import anonymouls.dev.mgcex.app.scanner.ScanFragment
 import anonymouls.dev.mgcex.util.Utils.promptSimpleDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -50,15 +51,19 @@ class SettingsFragment : PreferenceFragmentCompat() {
     }
     private fun proceedStaticContent(){
         findPreference<Preference>(SettingsActivity.bandAddress)?.setOnPreferenceClickListener {
-            clickListenerUniversal(SettingsActivity.bandAddress); true; }
+            clickListenerUniversal(SettingsActivity.bandAddress); true
+        }
         findPreference<Preference>("ResetToDefault")?.setOnPreferenceClickListener {
-            clickListenerUniversal("ResetToDefault"); true; }
+            clickListenerUniversal("ResetToDefault"); true
+        }
         findPreference<Preference>("WipeSmartData")?.setOnPreferenceClickListener {
             clickListenerUniversal("WipeSmartData"); true
         }
         findPreference<Preference>("NFilter")?.setOnPreferenceClickListener {
             clickListenerUniversal("NFilter"); true
         }
+        if (prefs.contains("BandAddress"))
+            findPreference<Preference>("BandAddress")?.title = this.requireContext().getString(R.string.current_connection) + prefs.getString("BandAddress", null)
         // TODO Extract strings???
     }
     private fun proceedDynamicContent(){
@@ -81,12 +86,11 @@ class SettingsFragment : PreferenceFragmentCompat() {
         prefs.edit().remove(SettingsActivity.bandIDConst).apply()
         Algorithm.IsActive = false
         Algorithm.updateStatusCode(Algorithm.StatusCodes.Dead)
-        // TODO Scan fragment
-        val frag = SettingsFragment()
+        val frag = ScanFragment()
         val transaction = this.requireActivity().supportFragmentManager.beginTransaction()
+        val fm = this.requireActivity().supportFragmentManager
+        fm.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
         transaction.disallowAddToBackStack()
-        val fm: FragmentManager = this.requireActivity().supportFragmentManager
-        for (i in 0 until fm.backStackEntryCount) fm.popBackStack()
         transaction.replace(R.id.container, frag)
         transaction.commit()
     }

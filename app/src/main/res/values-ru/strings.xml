@@ -65,7 +65,7 @@
     <string name="info_about_app_and_other">Информация о приложении и другое</string>
     <string name="sleep_data_button">Кнопка данных сна</string>
     <string name="report_activity_button">Кнопка отчета</string>
-    <string name="info_text">MGCOOL EX  v1.0\\nПоддерживаемые устройста: MGCOOL Band 4\\nРазработано DrAnaconda Labs</string>
+    <string name="info_text">MGCOOL EX  v1.0\nПоддерживаемые устройста: MGCOOL Band 4\nLM715 (M4 Tracker)\nРазработано DrAnaconda Labs</string>
     <string name="connected_syncing">Статус: Подключен. Синхронизация...</string>
     <string name="device_controls">Управление устройством</string>
     <string name="times_every">раз каждые</string>

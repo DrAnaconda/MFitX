@@ -83,7 +83,7 @@ class DataView : AppCompatActivity() {
     private fun executeTableCreation(From: Calendar, To: Calendar, DataType: DataTypes) {
         customAdapter.removeEverything()
         customAdapter.setColumnHeaderItems(Cell.listToCells<ColumnHeader>(headerChooser(), true) as List<ColumnHeader?>?)
-        GlobalScope.launch { customViewModel.fetchDataStageA(From, To, scale, DataType, customAdapter, this@DataView) }
+        //GlobalScope.launch { customViewModel.fetchDataStageA(From, To, scale, DataType, customAdapter, this@DataView) }
     }
 
     private fun loadData(From: Calendar, To: Calendar) {
@@ -167,7 +167,6 @@ class DataView : AppCompatActivity() {
         init()
         val extras = intent.extras
         dataIntent = extras!!.get(ExtraDataToLoad) as String
-        ViewMode = extras.get(ExtraViewMode) as Int
         val todayStart = Calendar.getInstance()
         todayStart.set(Calendar.HOUR_OF_DAY, 0)
         todayStart.set(Calendar.MINUTE, 0)
@@ -221,9 +220,6 @@ class DataView : AppCompatActivity() {
 
         var ExtraDataToLoad = "EXTRA_DATA"
         var ExtraViewMode = "EXTRA_VIEW_MODE"
-
-        private var ViewMode = 0
-
     }
 }
 

@@ -12,6 +12,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import anonymouls.dev.mgcex.app.R
+import anonymouls.dev.mgcex.app.backend.ApplicationStarter
 import anonymouls.dev.mgcex.app.backend.CommandInterpreter
 import anonymouls.dev.mgcex.app.main.DeviceControllerViewModel
 import anonymouls.dev.mgcex.databaseProvider.*
@@ -36,8 +37,8 @@ class DataViewModel : ViewModel() {
     private var currentLock: Long = 0
     private var staticOffset: Long = 0
     private var grouping = true
-    private var dataType: DataView.DataTypes = DataView.DataTypes.HR
-    private var scale: DataView.Scalings = DataView.Scalings.Day
+    private var dataType: DataFragment.DataTypes = DataFragment.DataTypes.HR
+    private var scale: DataFragment.Scalings = DataFragment.Scalings.Day
     var manualHRRequesting = false
     var cancelled = false
 
@@ -71,19 +72,19 @@ class DataViewModel : ViewModel() {
         return (b / c.toDouble() * a).toInt().toString()
     }
 
-    private fun convertDateWithScaling(calendar: Calendar, scale: DataView.Scalings): String {
+    private fun convertDateWithScaling(calendar: Calendar): String {
         return when (scale) {
-            DataView.Scalings.Day -> SimpleDateFormat(Utils.SDFPatterns.DayScaling.pattern, Locale.getDefault()).format(calendar.time)
-            DataView.Scalings.Week -> SimpleDateFormat(Utils.SDFPatterns.WeekScaling.pattern, Locale.getDefault()).format(calendar.time)
-            DataView.Scalings.Month -> SimpleDateFormat(Utils.SDFPatterns.MonthScaling.pattern, Locale.getDefault()).format(calendar.time)
+            DataFragment.Scalings.Day -> SimpleDateFormat(Utils.SDFPatterns.DayScaling.pattern, Locale.getDefault()).format(calendar.time)
+            DataFragment.Scalings.Week -> SimpleDateFormat(Utils.SDFPatterns.WeekScaling.pattern, Locale.getDefault()).format(calendar.time)
+            DataFragment.Scalings.Month -> SimpleDateFormat(Utils.SDFPatterns.MonthScaling.pattern, Locale.getDefault()).format(calendar.time)
         }
     }
 
     private fun setOffset() {
         staticOffset = when (scale) {
-            DataView.Scalings.Day -> CustomDatabaseUtils.calculateOffsetValue(5, Calendar.MINUTE, false)
-            DataView.Scalings.Week -> CustomDatabaseUtils.calculateOffsetValue(7, Calendar.DAY_OF_MONTH, false)
-            DataView.Scalings.Month -> CustomDatabaseUtils.calculateOffsetValue(1, Calendar.MONTH, false)
+            DataFragment.Scalings.Day -> CustomDatabaseUtils.calculateOffsetValue(5, Calendar.MINUTE, false)
+            DataFragment.Scalings.Week -> CustomDatabaseUtils.calculateOffsetValue(7, Calendar.DAY_OF_MONTH, false)
+            DataFragment.Scalings.Month -> CustomDatabaseUtils.calculateOffsetValue(1, Calendar.MONTH, false)
         }
     }
 
@@ -96,21 +97,22 @@ class DataViewModel : ViewModel() {
         startValue = currentLock
         while (currentLock < toLong) {
             _currentProgress.postValue(activity.getString(R.string.current_progress_date) + " " +
-                    convertDateWithScaling(CustomDatabaseUtils.longToCalendar(currentLock, true), scale) + " — " +
-                    convertDateWithScaling(CustomDatabaseUtils.longToCalendar(currentLock + staticOffset, true), scale) + " (" + calculatePercentage(currentLock, toLong) + "%)")
+                    convertDateWithScaling(CustomDatabaseUtils.longToCalendar(currentLock, true)) + " — " +
+                    convertDateWithScaling(CustomDatabaseUtils.longToCalendar(currentLock + staticOffset, true)) +
+                    " (" + calculatePercentage(currentLock, toLong) + "%)")
 
             if (cancelled) {
                 fullCancel(); return@flow
             }
             var results: Cursor? = null
             when (dataType) {
-                DataView.DataTypes.HR -> {
+                DataFragment.DataTypes.HR -> {
                     results = if (grouping)
                         HRRecordsTable.extractFuncOnInterval(currentLock, CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false), database)
                     else
                         HRRecordsTable.extractRecords(currentLock, CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false), database)
                 }
-                DataView.DataTypes.Calories -> {
+                DataFragment.DataTypes.Calories -> {
                     results = if (grouping)
                         MainRecordsTable.extractFuncOnIntervalCalories(currentLock, CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false), database)
                     else
@@ -118,7 +120,7 @@ class DataViewModel : ViewModel() {
                                 CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false),
                                 database, scale)
                 }
-                DataView.DataTypes.Steps -> {
+                DataFragment.DataTypes.Steps -> {
                     results = if (grouping)
                         MainRecordsTable.extractFuncOnIntervalSteps(currentLock,
                                 CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false),
@@ -151,7 +153,7 @@ class DataViewModel : ViewModel() {
 
 
     fun fetchDataStageA(From: Calendar, To: Calendar,
-                        scale: DataView.Scalings, DataType: DataView.DataTypes,
+                        scale: DataFragment.Scalings, DataType: DataFragment.DataTypes,
                         tableAdapter: MyTableViewAdapter, activity: Activity) {
         this.cancelled = false
         this.database = DatabaseController.getDCObject(activity).readableDatabase
@@ -160,7 +162,7 @@ class DataViewModel : ViewModel() {
         currentLock = this.fromLong
         this.dataType = DataType
         this.scale = scale
-        grouping = scale != DataView.Scalings.Day
+        grouping = scale != DataFragment.Scalings.Day
         _loading.postValue(View.VISIBLE)
         _infoBlockVisible.postValue(View.VISIBLE)
         setOffset()
@@ -179,14 +181,21 @@ class DataViewModel : ViewModel() {
         }
     }
 
+    fun onCancelClick(v: View?) {
+        cancelled = true
+        if (manualHRRequesting) {
+            fetchCurrentHR(null, true)
+            unsubscribe()
+        }
+    }
+
 //endregion
 
     private lateinit var observer: androidx.lifecycle.Observer<HRRecord>
     private var firstHR = -2
 
-    // TODO SDF to consts
-// TODO Animation. Progress into check
-    private fun initObserver(context: AppCompatActivity) {
+    // TODO Animation. Progress into check
+    private fun initObserver(context: Context) {
         if (this::observer.isInitialized) return
         observer = androidx.lifecycle.Observer<HRRecord> {
             if (firstHR == -2) firstHR = it.hr
@@ -196,7 +205,7 @@ class DataViewModel : ViewModel() {
                         + SimpleDateFormat(Utils.SDFPatterns.DayScaling.pattern, Locale.getDefault()).format(it.recordTime.time))
                 val dummy: Queue<Record> = LinkedList<Record>()
                 val rec = Record(null, CustomDatabaseUtils.calendarToLong(it.recordTime, true),
-                        false, DataView.Scalings.Day)
+                        false, DataFragment.Scalings.Day)
                 rec.mainValue = it.hr
                 dummy.add(rec)
                 _result.postValue(dummy)
@@ -212,15 +221,14 @@ class DataViewModel : ViewModel() {
     }
 
 
-    fun fetchCurrentHR(context: AppCompatActivity, cancel: Boolean = false) {
-        initObserver(context)
+    fun fetchCurrentHR(context: AppCompatActivity?, cancel: Boolean = false) {
         if (cancel) {
             manualHRRequesting = false
-            CommandInterpreter.getInterpreter(context).requestManualHRMeasure(true)
+            CommandInterpreter.getInterpreter(ApplicationStarter.appContext).requestManualHRMeasure(true)
             _loading.postValue(View.GONE)
             _infoBlockVisible.postValue(View.GONE)
-        } else {
-
+        } else if (context != null) {
+            initObserver(context)
             if (!CommandInterpreter.getInterpreter(context).hRRealTimeControlSupport) {
                 _loading.postValue(View.VISIBLE)
                 _infoBlockVisible.postValue(View.VISIBLE)
@@ -234,7 +242,7 @@ class DataViewModel : ViewModel() {
 }
 
 @ExperimentalStdlibApi
-class Record(Result: Cursor?, var recordDate: Long, isGrouping: Boolean, private val scale: DataView.Scalings) {
+class Record(Result: Cursor?, var recordDate: Long, isGrouping: Boolean, private val scale: DataFragment.Scalings) {
     private var whenCalendar: Calendar = Calendar.getInstance()
     var mainValue: Int = -1// AVG + Default
     var minValue: Int = -1
@@ -243,9 +251,9 @@ class Record(Result: Cursor?, var recordDate: Long, isGrouping: Boolean, private
     private val dateString: String
         get() {
             return when (scale) {
-                DataView.Scalings.Day -> SimpleDateFormat(Utils.SDFPatterns.DayScaling.pattern, Locale.getDefault()).format(CustomDatabaseUtils.longToCalendar(recordDate, true).time)
-                DataView.Scalings.Week -> SimpleDateFormat(Utils.SDFPatterns.WeekScaling.pattern, Locale.getDefault()).format(CustomDatabaseUtils.longToCalendar(recordDate, true).time)
-                DataView.Scalings.Month -> SimpleDateFormat(Utils.SDFPatterns.WeekScaling.pattern, Locale.getDefault()).format(CustomDatabaseUtils.longToCalendar(recordDate, true).time)
+                DataFragment.Scalings.Day -> SimpleDateFormat(Utils.SDFPatterns.DayScaling.pattern, Locale.getDefault()).format(CustomDatabaseUtils.longToCalendar(recordDate, true).time)
+                DataFragment.Scalings.Week -> SimpleDateFormat(Utils.SDFPatterns.WeekScaling.pattern, Locale.getDefault()).format(CustomDatabaseUtils.longToCalendar(recordDate, true).time)
+                DataFragment.Scalings.Month -> SimpleDateFormat(Utils.SDFPatterns.WeekScaling.pattern, Locale.getDefault()).format(CustomDatabaseUtils.longToCalendar(recordDate, true).time)
             }
         }
 
@@ -283,7 +291,7 @@ class Record(Result: Cursor?, var recordDate: Long, isGrouping: Boolean, private
 
     companion object {
         fun getTestRecord(): Record {
-            val result = Record(null, 202007070707, false, DataView.Scalings.Day)
+            val result = Record(null, 202007070707, false, DataFragment.Scalings.Day)
             result.mainValue = random().toInt() % 1000
             result.whenCalendar = Calendar.getInstance(); result.whenCalendar.add(Calendar.MINUTE, -1 * (random().toInt() % 10000))
             return result

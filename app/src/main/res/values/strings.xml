@@ -186,4 +186,6 @@
     <string name="end_time">End time</string>
     <string name="unlimited_monitor">&#160;set equal time for unlimited monitoring</string>
     <string name="confirmneeded">This action requires confirmation</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>

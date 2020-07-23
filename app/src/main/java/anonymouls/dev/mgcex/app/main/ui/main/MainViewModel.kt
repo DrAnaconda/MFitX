@@ -21,7 +21,7 @@ import anonymouls.dev.mgcex.app.backend.Algorithm
 import anonymouls.dev.mgcex.app.backend.CommandCallbacks
 import anonymouls.dev.mgcex.app.backend.CommandInterpreter
 import anonymouls.dev.mgcex.app.backend.InsertTask
-import anonymouls.dev.mgcex.app.data.DataView
+import anonymouls.dev.mgcex.app.data.DataFragment
 import anonymouls.dev.mgcex.app.data.MultitaskActivity
 import anonymouls.dev.mgcex.app.main.*
 import anonymouls.dev.mgcex.databaseProvider.HRRecord
@@ -175,11 +175,11 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel() {
             false
     }
 
-    private fun launchDataGraph(Data: String) {
-        val newIntent = Intent(activity, DataView::class.java)
-        newIntent.putExtra(DataView.ExtraViewMode, 1)
-        newIntent.putExtra(DataView.ExtraDataToLoad, Data)
-        launchActivity(newIntent)
+    private fun launchDataGraph(Data: DataFragment.DataTypes) {
+        val transaction = activity.supportFragmentManager.beginTransaction()
+        transaction.addToBackStack(null)
+        transaction.replace(R.id.container, DataFragment.newInstance(Data))
+        transaction.commit()
     }
 
     private fun launchActivity(newIntent: Intent) {
@@ -218,8 +218,8 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel() {
                     Algorithm.SelfPointer?.thread?.interrupt()
                 }
             }
-            R.id.HRContainer -> launchDataGraph("HR")
-            R.id.StepsContainer -> launchDataGraph("STEPS")
+            R.id.HRContainer -> launchDataGraph(DataFragment.DataTypes.HR)
+            R.id.StepsContainer -> launchDataGraph(DataFragment.DataTypes.Steps)
             //R.id.CaloriesContainer -> launchDataGraph("CALORIES") TODO haxui nada?
             R.id.SettingContainer -> changeFragment(SettingsFragment())
             R.id.ReportContainer -> changeFragment(MultitaskFragment())

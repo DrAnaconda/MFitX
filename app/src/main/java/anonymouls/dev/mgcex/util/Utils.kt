@@ -16,6 +16,7 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.PRIORITY_MIN
+import androidx.preference.PreferenceManager
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
 import anonymouls.dev.mgcex.app.main.SettingsActivity
@@ -55,7 +56,7 @@ object Utils {
 
     fun getSharedPrefs(context: Context): SharedPreferences {
         if (!Utils::SharedPrefs.isInitialized) {
-            SharedPrefs = context.getSharedPreferences("MainPrefs", Context.MODE_PRIVATE)
+            SharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
             SleepRecordsTable.GlobalSettings.ignoreLightSleepData = SharedPrefs.getBoolean(SettingsActivity.lightSleepIgnore, true)
             if (!SharedPrefs.contains(Analytics.UserID))
                 SharedPrefs.edit().putString(Analytics.UserID, UUID.randomUUID().toString()).apply()
@@ -271,7 +272,7 @@ object Utils {
         dialog.setTitle("Warning")
         dialog.setIcon(android.R.drawable.ic_dialog_alert)
         dialog.setMessage(message)
-        dialog.setPositiveButton(android.R.string.ok) { dial, _ -> taskforce; dial.cancel(); }
+        dialog.setPositiveButton(android.R.string.ok) { dial, _ -> taskforce.invoke(); dial.cancel(); }
         dialog.setNegativeButton(android.R.string.cancel) { dial, _ -> dial.cancel(); }
         dialog.create().show()
     }

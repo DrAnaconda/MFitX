@@ -77,7 +77,8 @@ class MultitaskFragment : Fragment() {
         to.set(Calendar.HOUR_OF_DAY, 23)
         to.set(Calendar.MINUTE, 59)
         val data = initDataBlock(from, to)
-        Analytics.getInstance(savedContext)?.sendHRData(data.MinHR, data.AvgHR, data.MaxHR)
+        if (this::savedContext.isInitialized)
+            Analytics.getInstance(savedContext)?.sendHRData(data.MinHR, data.AvgHR, data.MaxHR)
 
         val SDF = SimpleDateFormat(Utils.SDFPatterns.OverallStats.pattern, Locale.getDefault())
         from.add(Calendar.DAY_OF_MONTH, -7)
