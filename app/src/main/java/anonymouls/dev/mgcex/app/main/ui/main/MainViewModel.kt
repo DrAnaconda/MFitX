@@ -10,11 +10,8 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.*
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import anonymouls.dev.mgcex.app.AlarmActivity
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.backend.Algorithm
@@ -248,7 +245,15 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel(), Comma
         }
     }
 
-
+    fun removeObservers(owner: LifecycleOwner){
+        currentStatus.removeObservers(owner)
+        currentHR.removeObservers(owner)
+        currentBattery.removeObservers(owner)
+        currentCcals.removeObservers(owner)
+        currentSteps.removeObservers(owner)
+        hrVisibility.removeObservers(owner)
+        workInProgress.removeObservers(owner)
+    }
     fun reInit() {
         if (demoMode()) return
         activity.runOnUiThread {

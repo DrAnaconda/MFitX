@@ -108,7 +108,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
         val steps = buffer.short
         Algorithm.SelfPointer?.baseContext?.let {
             Utils.getSharedPrefs(it).edit()
-                    .putInt(PreferenceListener.Companion.PrefsConsts.targetSteps, steps.toInt()).apply()
+                    .putString(PreferenceListener.Companion.PrefsConsts.targetSteps, steps.toString()).apply()
         }
     }
 

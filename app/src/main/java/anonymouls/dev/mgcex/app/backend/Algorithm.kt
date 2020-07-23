@@ -364,7 +364,8 @@ class Algorithm : Service() {
     //endregion
 
     private fun manualHRHack() {
-        if (StatusCode.value!!.code == StatusCodes.Dead.code || !ci.hRRealTimeControlSupport) return
+        if (StatusCode.value!!.code == StatusCodes.Dead.code
+                || ci.hRRealTimeControlSupport) return
         val startString = prefs.getString(PreferenceListener.Companion.PrefsConsts.hrMeasureStart, "00:00")
         val endString = prefs.getString(PreferenceListener.Companion.PrefsConsts.hrMeasureEnd, "00:00")
         var targetString = Utils.subIntegerConversionCheck(Calendar.getInstance().get(Calendar.HOUR_OF_DAY).toString())
@@ -416,7 +417,7 @@ class Algorithm : Service() {
     }
 
 }
-
+// TODO Wipe data on disconnect
 // TODO Fix filters in settings (duplicates, also there is no enabled records). Fix database readlock
 // TODO Maybe add Jobs instead of service? but there are API 23 required
 // TODO CRITICAL. Looper is slow, some operations is slow

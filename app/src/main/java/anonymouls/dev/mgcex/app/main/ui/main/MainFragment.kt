@@ -18,17 +18,33 @@ class MainFragment : Fragment() {
     private lateinit var viewModel: MainViewModel
     private lateinit var binding: MainFragmentBinding
 
+    private fun optimizeObservers(){
+        if (this::viewModel.isInitialized){
+            viewModel.removeObservers(this)
+        }
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View {
         binding = MainFragmentBinding.inflate(inflater, container, false)
-        binding.lifecycleOwner = this.requireActivity()
+        binding.lifecycleOwner = this
         return binding.root
     }
 
     override fun onResume() {
         super.onResume()
-        if (this::viewModel.isInitialized) viewModel.restore()
+        if (this::viewModel.isInitialized)
+            viewModel.restore()
     }
+    override fun onPause() {
+        super.onPause()
+        optimizeObservers()
+    }
+    override fun onDetach() {
+        super.onDetach()
+        optimizeObservers()
+    }
+
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         viewModel = ViewModelProviders.of(this,
