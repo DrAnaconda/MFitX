@@ -16,10 +16,9 @@ import androidx.lifecycle.MutableLiveData
 import anonymouls.dev.mgcex.app.AlarmProvider
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.backend.ApplicationStarter.Companion.commandHandler
-import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
-import anonymouls.dev.mgcex.app.main.DeviceControllerViewModel
-import anonymouls.dev.mgcex.app.main.SettingsActivity
+import anonymouls.dev.mgcex.app.main.ui.main.MainViewModel
 import anonymouls.dev.mgcex.databaseProvider.*
+import anonymouls.dev.mgcex.util.PreferenceListener
 import anonymouls.dev.mgcex.util.ReplaceTable
 import anonymouls.dev.mgcex.util.Utils
 import kotlinx.coroutines.Dispatchers
@@ -71,7 +70,7 @@ class Algorithm : Service() {
                             Locale.getDefault()).format(nextSyncMain.time)
 
 
-            if (nextSyncHR != null && prefs.getBoolean(SettingsActivity.hrMonitoringEnabled, false)) {
+            if (nextSyncHR != null && prefs.getBoolean(PreferenceListener.Companion.PrefsConsts.hrMonitoringEnabled, false)) {
                 result += "\n" + getString(R.string.hr_data_requested) +
                         SimpleDateFormat(Utils.SDFPatterns.TimeOnly.pattern,
                                 Locale.getDefault()).format(nextSyncHR?.time)
@@ -130,6 +129,7 @@ class Algorithm : Service() {
 
     private fun run() {
         Thread.currentThread().name = "AASyncer"
+        Thread.currentThread().priority = Thread.MIN_PRIORITY
         while (IsActive) {
             workInProgress = true
             uartService.probeConnection()
@@ -148,7 +148,7 @@ class Algorithm : Service() {
     private fun checkDisconnectedTime(): Boolean {
         val now = System.currentTimeMillis() / 1000 / 60
         val startInMin = disconnectedTimestamp / 1000 / 60
-        if (now - startInMin > prefs.getInt(SettingsActivity.disconnectedMonitoring, 5)) { // TODO: Public value
+        if (now - startInMin > prefs.getInt(PreferenceListener.Companion.PrefsConsts.disconnectedMonitoring, 5)) { // TODO: Public value
             StatusCode.postValue(StatusCodes.Dead)
             return false
         }
@@ -157,7 +157,7 @@ class Algorithm : Service() {
 
     private fun executeMainAlgo() {
         if (!uartService.probeConnection()) return
-        val syncPeriod = prefs.getInt(SettingsActivity.mainSyncMinutes, 5) * 60 * 1000
+        val syncPeriod = prefs.getString(PreferenceListener.Companion.PrefsConsts.mainSyncMinutes, "5")!!.toInt() * 60 * 1000
         nextSyncMain = Calendar.getInstance()
         nextSyncMain.add(Calendar.MILLISECOND, syncPeriod)
 
@@ -166,7 +166,7 @@ class Algorithm : Service() {
             currentAlgoStatus.postValue(getString(R.string.connected_syncing))
             executeForceSync()
             if ((!ci.hRRealTimeControlSupport && isFirstTime
-                            && prefs.contains(SettingsActivity.hrMeasureInterval))
+                            && prefs.contains(PreferenceListener.Companion.PrefsConsts.hrMeasureInterval))
                     || ci.hRRealTimeControlSupport) {
                 forceSyncHR()
                 manualHRHack()
@@ -175,21 +175,24 @@ class Algorithm : Service() {
             buildStatusMessage()
         }
         buildStatusMessage()
-        workInProgress = false; DeviceControllerViewModel.instance?.workInProgress?.postValue(View.GONE)
+        workInProgress = false; MainViewModel.publicModel?.workInProgress?.postValue(View.GONE)
         Utils.safeThreadSleep(syncPeriod.toLong(), false)
-        workInProgress = true; DeviceControllerViewModel.instance?.workInProgress?.postValue(View.VISIBLE)
+        workInProgress = true; MainViewModel.publicModel?.workInProgress?.postValue(View.VISIBLE)
     }
 
     private fun bluetoothDisabledAlgo() {
         isFirstTime = true
 
-        if (DeviceControllerActivity.instance == null) {
-            if (this::wakeLock.isInitialized) wakeLock.release()
-            IsActive = false
-            return
-        } else {
-            if (Utils.getSharedPrefs(this).getBoolean(SettingsActivity.permitWakeLock, true))
+        if (Utils.getSharedPrefs(this).getBoolean(PreferenceListener.Companion.PrefsConsts.permitWakeLock, true)) {
+            if (this::wakeLock.isInitialized)
                 wakeLock.acquire()
+            else {
+                wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
+                    newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MFitX::Tag").apply {
+                        acquire()
+                    }
+                }
+            }
         }
 
         if (Utils.bluetoothEngaging(this))
@@ -244,8 +247,8 @@ class Algorithm : Service() {
     }
 
     private fun checkPowerAlgo(): Boolean {
-        return if (Utils.getSharedPrefs(this).getBoolean(SettingsActivity.batterySaverEnabled, true)) {
-            val threshold = Utils.getSharedPrefs(this).getInt(SettingsActivity.batteryThreshold, 20)
+        return if (Utils.getSharedPrefs(this).getBoolean(PreferenceListener.Companion.PrefsConsts.batterySaverEnabled, true)) {
+            val threshold = Utils.getSharedPrefs(this).getInt(PreferenceListener.Companion.PrefsConsts.batteryThreshold, 20)
             savedBattery !in 0..threshold
         } else true
     }
@@ -260,6 +263,7 @@ class Algorithm : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        if (this::inserter.isInitialized) inserter.stopInserter()
         SelfPointer = null
         sendBroadcast(Intent(MultitaskListener.restartAction))
     }
@@ -269,14 +273,9 @@ class Algorithm : Service() {
         GlobalScope.launch(Dispatchers.Default) { init() }
     }
 
-    override fun onTrimMemory(level: Int) {
-        DeviceControllerActivity.instance?.finish()
-        DeviceControllerActivity.instance = null
-
-    }
-
     override fun stopService(name: Intent?): Boolean {
         IsActive = false
+        inserter.stopInserter()
         StatusCode.postValue(StatusCodes.Dead)
         SelfPointer = null
         thread?.interrupt()
@@ -303,16 +302,15 @@ class Algorithm : Service() {
     }
 
     fun init() {
-        synchronized(isFirstTime) {
-            if (!Utils.getSharedPrefs(this).contains(SettingsActivity.bandAddress)) {
+        synchronized(IsActive) {
+            if (!Utils.getSharedPrefs(this).contains(PreferenceListener.Companion.PrefsConsts.bandAddress)) {
                 stopSelf()
                 return
             } else {
                 StatusCode.postValue(StatusCodes.Disconnected)
             }
-            if (SelfPointer == null
-                    || thread == null
-                    || (thread != null && !thread!!.isAlive)) {
+            if (SelfPointer == null) {
+                SelfPointer = this
                 isFirstTime = true
                 ReplaceTable.replaceString("", this)
                 ci = CommandInterpreter.getInterpreter(this)
@@ -326,28 +324,26 @@ class Algorithm : Service() {
                 uartService = UartService(this)
                 ServiceRessurecter.startJob(this)
 
-                val dCAct = Intent(this, DeviceControllerActivity::class.java)
-                dCAct.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 val service = Intent(this, NotificationService::class.java)
                 if (!NotificationService.IsActive) {
                     Utils.serviceStartForegroundMultiAPI(service, this)
                 }
                 if (!isNotifyServiceAlive(this))
                     tryForceStartListener(this)
-                lockedAddress = Utils.getSharedPrefs(this).getString(SettingsActivity.bandAddress, "").toString()
-                if (lockedAddress.isEmpty()) return
-                wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
-                    newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MFitX::Tag").apply {
-                        acquire()
+                lockedAddress = Utils.getSharedPrefs(this).getString(PreferenceListener.Companion.PrefsConsts.bandAddress, "").toString()
+                if (this::lockedAddress.isInitialized && lockedAddress.isNotEmpty()) {
+                    if (Utils.getSharedPrefs(this).getBoolean(PreferenceListener.Companion.PrefsConsts.permitWakeLock, false)) {
+                        wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
+                            newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MFitX::Tag").apply {
+                                acquire()
+                            }
+                        }
                     }
-                }
-
+                } else return
                 thread = Thread(Runnable {
                     run()
                 })
                 thread?.start()
-
-                SelfPointer = this
 
                 getLastHRSync()
                 getLastMainSync()
@@ -368,19 +364,19 @@ class Algorithm : Service() {
     //endregion
 
     private fun manualHRHack() {
-        if (StatusCode.value!!.code == StatusCodes.Dead.code) return
-        val startString = prefs.getString(SettingsActivity.hrMeasureStart, "00:00")
-        val endString = prefs.getString(SettingsActivity.hrMeasureEnd, "00:00")
+        if (StatusCode.value!!.code == StatusCodes.Dead.code || !ci.hRRealTimeControlSupport) return
+        val startString = prefs.getString(PreferenceListener.Companion.PrefsConsts.hrMeasureStart, "00:00")
+        val endString = prefs.getString(PreferenceListener.Companion.PrefsConsts.hrMeasureEnd, "00:00")
         var targetString = Utils.subIntegerConversionCheck(Calendar.getInstance().get(Calendar.HOUR_OF_DAY).toString())
         targetString += ":"
         targetString += Utils.subIntegerConversionCheck(Calendar.getInstance().get(Calendar.MINUTE).toString())
         val isActive = if (startString == endString) true; else Utils.isTimeInInterval(startString!!, endString!!, targetString)
-        if (isActive && prefs.getBoolean(SettingsActivity.hrMonitoringEnabled, false)
+        if (isActive && prefs.getBoolean(PreferenceListener.Companion.PrefsConsts.hrMonitoringEnabled, false)
                 && checkPowerAlgo()
                 && StatusCode.value!!.code >= StatusCodes.GattReady.code) {
             ci.requestManualHRMeasure(false)
         }
-        val interval = prefs.getInt(SettingsActivity.hrMeasureInterval, 5)
+        val interval = prefs.getString(PreferenceListener.Companion.PrefsConsts.hrMeasureInterval, "5")!!.toInt()
         this.nextSyncHR = Calendar.getInstance(); this.nextSyncHR?.add(Calendar.MINUTE, interval)
         Handler(commandHandler.looper).postDelayed({ manualHRHack() }, interval.toLong() * 60 * 1000)
         buildStatusMessage()

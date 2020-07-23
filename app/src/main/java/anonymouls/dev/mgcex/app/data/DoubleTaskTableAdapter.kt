@@ -2,27 +2,33 @@ package anonymouls.dev.mgcex.app.data
 
 import android.app.Activity
 import android.content.res.Configuration
+import android.database.sqlite.SQLiteDatabase
 import android.graphics.Point
+import android.graphics.drawable.Drawable
 import android.os.Build
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.ColorInt
+import androidx.appcompat.widget.SwitchCompat
 import anonymouls.dev.mgcex.app.R
+import anonymouls.dev.mgcex.databaseProvider.NotifyFilterTable
 import com.evrencoskun.tableview.adapter.AbstractTableAdapter
 import com.evrencoskun.tableview.adapter.recyclerview.holder.AbstractViewHolder
 
+abstract class Cell
 
-open class Cell(val data: String) {
+open class TextCell(val data: String):Cell() {
     companion object {
-        fun <T> listToCells(list: Array<String>, isHeader: Boolean): ArrayList<T> {
+        fun <T> listTextRowToCells(list: Array<String>, isHeader: Boolean): ArrayList<T> {
             val result = ArrayList<T>()
             for (x in list.indices) {
                 if (!isHeader)
-                    result.add(Cell(list[x].toString()) as T)
+                    result.add(TextCell(list[x].toString()) as T)
                 else
                     result.add(ColumnHeader(list[x].toString()) as T)
             }
@@ -31,25 +37,49 @@ open class Cell(val data: String) {
     }
 }
 
-class ColumnHeader(data: String) : Cell(data)
-class RowHeader(data: String) : Cell(data)
+open class ImageCell(val image: Drawable): Cell()
+open class SwitchCell(val isActive: Boolean): Cell()
 
-class MyTableViewAdapter(private val context: Activity) : AbstractTableAdapter<ColumnHeader?, RowHeader?, Cell?>() {
+@ExperimentalStdlibApi
+open class ApplicationRow(private val pack: String,
+                          val image: Drawable,
+                          val name: String,
+                          var isActive: Boolean) : Cell(), IExtractable {
+    override fun getCellsList(): MutableList<Cell> {
+        val result = ArrayList<Cell>()
+        result.add(ImageCell(image))
+        result.add(TextCell(name))
+        result.add(SwitchCell(isActive))
+        return result
+    }
+    fun updateInfo(isActive: Boolean, db: SQLiteDatabase){
+        this.isActive = isActive
+        NotifyFilterTable.insertRecord(this.pack, this.isActive, db)
+    }
+}
+
+
+class ColumnHeader(data: String) : TextCell(data)
+class RowHeader(data: String) : TextCell(data)
+
+class DoubleTaskTableViewAdapter(private val context: Activity,
+                                 private val DataType: DataTypes) : AbstractTableAdapter<ColumnHeader?, RowHeader?, Cell?>() {
+
+    enum class DataTypes(val code: Int) {TextOnly(0), ApplicationMode(1)}
 
     var countRows = 0
+    lateinit var callback: ((v: View, row: Int, column: Int) -> Any)
+
 
     /**
      * This is sample CellViewHolder class
      * This viewHolder must be extended from AbstractViewHolder class instead of RecyclerView.ViewHolder.
      */
     internal inner class MyCellViewHolder(itemView: View) : AbstractViewHolder(itemView) {
-        val cell_container: LinearLayout
-        val cell_textview: TextView
-
-        init {
-            cell_container = itemView.findViewById(R.id.cell_container)
-            cell_textview = itemView.findViewById(R.id.cell_data)
-        }
+        val cell_container: LinearLayout = itemView.findViewById(R.id.cell_container)
+        val cell_textview: TextView? = itemView.findViewById(R.id.cell_data)
+        val cell_image: ImageView? = itemView.findViewById(R.id.cell_image)
+        val cell_switch: SwitchCompat? = itemView.findViewById(R.id.cell_switch)
     }
 
     /**
@@ -64,18 +94,23 @@ class MyTableViewAdapter(private val context: Activity) : AbstractTableAdapter<C
      */
     override fun onCreateCellViewHolder(parent: ViewGroup, viewType: Int): AbstractViewHolder {
         // Get cell xml layout
-        val layout = LayoutInflater.from(parent.context)
-                .inflate(R.layout.table_view_cell_layout, parent, false)
+        var layout = LayoutInflater.from(parent.context)
+                .inflate(R.layout.table_view_simple_cell, parent, false)
+        when(DataType){
+            DataTypes.ApplicationMode->{
+                when(viewType){
+                    0-> layout = LayoutInflater.from(parent.context)
+                            .inflate(R.layout.table_view_image_cell, parent, false)
+                    2-> layout = LayoutInflater.from(parent.context)
+                            .inflate(R.layout.table_view_switch_cell, parent, false)
+                }
+            }
+            else -> {} // ignore
+        }
         // Create a Custom ViewHolder for a Cell item.
         return MyCellViewHolder(layout)
     }
-
-    override fun onBindCellViewHolder(holder: AbstractViewHolder, cellItemModel: Cell?, columnPosition: Int, rowPosition: Int) {
-        val cell = cellItemModel as Cell
-        // Get the holder to update cell item text
-        val viewHolder = holder as MyCellViewHolder
-        viewHolder.cell_textview.text = cell.data
-
+    private fun bindNightCompat(viewHolder: MyCellViewHolder){
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val typedValue = TypedValue()
             val theme = context.theme
@@ -85,16 +120,38 @@ class MyTableViewAdapter(private val context: Activity) : AbstractTableAdapter<C
                 Configuration.UI_MODE_NIGHT_YES -> {
                     viewHolder.setBackgroundColor(color)
                     viewHolder.cell_container.setBackgroundColor(color)
-                    viewHolder.cell_textview.setBackgroundColor(color)
-                    viewHolder.cell_textview.setTextColor(context.getColor(android.R.color.white))
+                    viewHolder.cell_textview?.setTextColor(context.getColor(android.R.color.white))
+                    viewHolder.cell_switch?.setBackgroundColor(color)
+                    viewHolder.cell_image?.setBackgroundColor(color)
                 }
             }
         }
+    }
+    private fun initCallback(view: View, col: Int, row: Int){
+        if (this::callback.isInitialized)
+            this.callback.invoke(view, row, col)
+    }
+
+    override fun onBindCellViewHolder(holder: AbstractViewHolder, cellItemModel: Cell?, columnPosition: Int, rowPosition: Int) {
+        val viewHolder = holder as MyCellViewHolder
+        bindNightCompat(viewHolder)
+        when(cellItemModel){
+            is TextCell -> viewHolder.cell_textview?.text = cellItemModel.data
+            is ImageCell -> viewHolder.cell_image?.setImageDrawable(cellItemModel.image)
+            is SwitchCell -> {
+                viewHolder.cell_switch?.isChecked = cellItemModel.isActive
+                viewHolder.cell_switch?.setOnClickListener { v ->  initCallback(v, columnPosition, rowPosition) } // TODO
+            }
+        }
+
         // If your TableView should have auto resize for cells & columns.
         // Then you should consider the below lines. Otherwise, you can ignore them.
 
         // It is necessary to remeasure itself.
-        calculateSize(viewHolder.cell_textview, columnPosition, this.mColumnHeaderItems.size - 1)
+        if (DataType != DataTypes.ApplicationMode)
+            calculateSizeFirstBiggerOrSmaller(viewHolder.cell_container, columnPosition, this.mColumnHeaderItems.size - 1, true)
+        else
+            calculateSizeForApplication(viewHolder.cell_container, columnPosition)
     }
 
     fun removeEverything() {
@@ -106,13 +163,32 @@ class MyTableViewAdapter(private val context: Activity) : AbstractTableAdapter<C
         this.setAllItems(null, null, null)
     }
 
-    private fun calculateSize(holder: View, position: Int, otherColumns: Int) {
-        var size: Point = Point(1, 1)
+
+    private fun calculateSizeForApplication(holder: View, position: Int){
+        val size: Point = Point(1, 1)
         context.windowManager.defaultDisplay.getSize(size)
-        if (position == 0)
-            holder.layoutParams.width = (size.x / 2)
+        if (position == 0 || position == 2)
+                holder.layoutParams.width = (size.x / 5)
         else
-            holder.layoutParams.width = ((size.x / 2) / otherColumns)
+                holder.layoutParams.width = size.x - ((size.x / 5)*2)
+
+        holder.requestLayout()
+    }
+    private fun calculateSizeFirstBiggerOrSmaller(holder: View, position: Int, otherColumns: Int,
+            firstBigger: Boolean) {
+        val size: Point = Point(1, 1)
+        context.windowManager.defaultDisplay.getSize(size)
+        if (position == 0) {
+            if (firstBigger)
+                holder.layoutParams.width = (size.x / 2)
+            else
+                holder.layoutParams.width = (size.x / 6)
+        }else {
+            if (firstBigger)
+                holder.layoutParams.width = ((size.x / 2) / otherColumns)
+            else
+                holder.layoutParams.width = (size.x - (size.x / 6)) / otherColumns
+        }
         holder.requestLayout()
     }
 
@@ -137,13 +213,9 @@ class MyTableViewAdapter(private val context: Activity) : AbstractTableAdapter<C
      * This viewHolder must be extended from AbstractViewHolder class instead of RecyclerView.ViewHolder.
      */
     internal inner class MyColumnHeaderViewHolder(itemView: View) : AbstractViewHolder(itemView) {
-        val column_header_container: LinearLayout
-        val cell_textview: TextView
+        val column_header_container: LinearLayout = itemView.findViewById(R.id.column_header_container)
+        val cell_textview: TextView = itemView.findViewById(R.id.column_header_textView)
 
-        init {
-            column_header_container = itemView.findViewById(R.id.column_header_container)
-            cell_textview = itemView.findViewById(R.id.column_header_textView)
-        }
     }
 
     /**
@@ -157,11 +229,13 @@ class MyTableViewAdapter(private val context: Activity) : AbstractTableAdapter<C
      * @see .getColumnHeaderItemViewType
      */
     override fun onCreateColumnHeaderViewHolder(parent: ViewGroup, viewType: Int): AbstractViewHolder {
-
-        // Get Column Header xml Layout
         val layout = LayoutInflater.from(parent.context)
                 .inflate(R.layout.table_view_column_header, parent, false)
-
+        if (DataType == DataTypes.ApplicationMode){
+            layout.visibility = View.GONE
+            parent.visibility = View.GONE
+        }
+        // Get Column Header xml Layout
         // Create a ColumnHeader ViewHolder
         return MyColumnHeaderViewHolder(layout)
     }
@@ -173,7 +247,12 @@ class MyTableViewAdapter(private val context: Activity) : AbstractTableAdapter<C
         val columnHeaderViewHolder = holder as MyColumnHeaderViewHolder
         columnHeaderViewHolder.cell_textview.text = columnHeader.data
 
-        calculateSize(columnHeaderViewHolder.column_header_container, columnPosition, this.mColumnHeaderItems.size - 1)
+        if (DataType != DataTypes.ApplicationMode)
+            calculateSizeFirstBiggerOrSmaller(columnHeaderViewHolder.column_header_container, columnPosition, this.mColumnHeaderItems.size - 1, true)
+        else {
+            columnHeaderViewHolder.column_header_container.visibility = View.GONE
+            calculateSizeForApplication(columnHeaderViewHolder.column_header_container, columnPosition)
+        }
     }
 
     /**
@@ -197,11 +276,7 @@ class MyTableViewAdapter(private val context: Activity) : AbstractTableAdapter<C
      * This viewHolder must be extended from AbstractViewHolder class instead of RecyclerView.ViewHolder.
      */
     internal inner class MyRowHeaderViewHolder(itemView: View) : AbstractViewHolder(itemView) {
-        val cell_textview: TextView
-
-        init {
-            cell_textview = itemView.findViewById(R.id.cell_data)
-        }
+        val cell_textview: TextView = itemView.findViewById(R.id.cell_data)
     }
 
     /**
@@ -270,10 +345,17 @@ class MyTableViewAdapter(private val context: Activity) : AbstractTableAdapter<C
     }
 
     override fun getCellItemViewType(columnPosition: Int): Int {
-        // The unique ID for this type of cell item
-        // If you have different items for Cell View by X (Column) position,
-        // then you should fill this method to be able create different
-        // type of CellViewHolder on "onCreateCellViewHolder"
-        return 0
+        return when(DataType){
+            DataTypes.ApplicationMode -> columnPosition
+            else -> 0
+        }
+    }
+
+    companion object{
+        fun emptyHeader(rows: Int): MutableList<ColumnHeader>{
+            val result = ArrayList<ColumnHeader>()
+            for(x in 0 until rows) result.add(ColumnHeader(""))
+            return result
+        }
     }
 }

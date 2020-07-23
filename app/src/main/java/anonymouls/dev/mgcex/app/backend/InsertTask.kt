@@ -10,6 +10,8 @@ import kotlin.collections.ArrayDeque
 @ExperimentalStdlibApi
 class InsertTask(private var ci: CommandInterpreter) : AsyncTask<Void, Void, Void>() {
 
+    private var isActive = true
+
     @ExperimentalStdlibApi
     val dataToHandle = ArrayDeque<SimpleRecord>()
     lateinit var thread: Thread
@@ -17,8 +19,9 @@ class InsertTask(private var ci: CommandInterpreter) : AsyncTask<Void, Void, Voi
     @ExperimentalStdlibApi
     override fun doInBackground(vararg params: Void?): Void? {
         Thread.currentThread().name = "AADatabaseInserter"
+        Thread.currentThread().priority = Thread.MIN_PRIORITY
         thread = Thread.currentThread()
-        while (true) {
+        while (isActive) {
             if (dataToHandle.size > 0) _insertedRunning.postValue(true)
             while (dataToHandle.size > 0) {
                 try {
@@ -37,6 +40,11 @@ class InsertTask(private var ci: CommandInterpreter) : AsyncTask<Void, Void, Voi
             _insertedRunning.postValue(false)
             Utils.safeThreadSleep(5 * 60 * 1000, false)
         }
+        return null
+    }
+    fun stopInserter(){
+        isActive = false
+        if (this::thread.isInitialized) thread.interrupt()
     }
 
     companion object {

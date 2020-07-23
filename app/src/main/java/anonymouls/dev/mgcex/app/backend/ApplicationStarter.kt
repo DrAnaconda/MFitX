@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.HandlerThread
 import android.os.StrictMode
 import anonymouls.dev.mgcex.app.BuildConfig
+import anonymouls.dev.mgcex.util.Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -33,8 +34,9 @@ class ApplicationStarter : Application() {
         }
         super.onCreate()
         if (appContext == null) appContext = applicationContext
+        MultitaskListener.ressurectService(appContext)
         GlobalScope.launch(Dispatchers.Default) {
-            anonymouls.dev.mgcex.util.Utils.getSharedPrefs(applicationContext)
+            Utils.getSharedPrefs(applicationContext)
             MultitaskListener.ressurectService(appContext)
         }
     }

@@ -12,9 +12,10 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.annotation.RequiresApi
 import anonymouls.dev.mgcex.app.backend.ApplicationStarter.Companion.commandHandler
-import anonymouls.dev.mgcex.app.main.SettingsActivity
+
 import anonymouls.dev.mgcex.databaseProvider.DatabaseController
 import anonymouls.dev.mgcex.databaseProvider.NotifyFilterTable
+import anonymouls.dev.mgcex.util.PreferenceListener
 import anonymouls.dev.mgcex.util.ReplaceTable
 import anonymouls.dev.mgcex.util.Utils
 import kotlinx.coroutines.Dispatchers
@@ -118,7 +119,7 @@ class NotificationService : NotificationListenerService() {
             this.ID = sbn.id
             if (commandHandler != null)
                 Handler(commandHandler.looper).postDelayed({ this.ready = true },
-                        sharedPrefs!!.getInt(SettingsActivity.secondsNotify, 5).toLong() * 500)
+                        sharedPrefs!!.getInt(PreferenceListener.Companion.PrefsConsts.secondsNotify, 5).toLong() * 500)
         }
 
         private fun checkIsActive(): Boolean {
@@ -162,7 +163,7 @@ class NotificationService : NotificationListenerService() {
         fun findAndDeleteByID(ID: Int?) {
             for (CN in PendingList.elements()) {
                 if (CN.ID == ID
-                        || CN.repeats >= sharedPrefs!!.getInt(SettingsActivity.repeatsNumbers, 5)
+                        || CN.repeats >= sharedPrefs!!.getInt(PreferenceListener.Companion.PrefsConsts.repeatsNumbers, 5)
                         || CN.cancelled)
                     PendingList.remove(CN.AppText)
             }
@@ -178,13 +179,13 @@ class NotificationService : NotificationListenerService() {
                     if (Settings.Global.getInt(contentResolver, "zen_mode") == 0) {
                         for (CN in PendingList.elements()) {
                             CN.sendToDevice()
-                            if (CN.repeats >= sharedPrefs!!.getInt(SettingsActivity.repeatsNumbers, 3))
+                            if (CN.repeats >= sharedPrefs!!.getInt(PreferenceListener.Companion.PrefsConsts.repeatsNumbers, 3))
                                 PendingList.remove(CN.AppText)
                             Utils.safeThreadSleep(3000, false)
                         }
                     } else PendingList.clear()
 
-                    Utils.safeThreadSleep((sharedPrefs!!.getInt(SettingsActivity.secondsNotify, 5) * 1000).toLong(), false)
+                    Utils.safeThreadSleep((sharedPrefs!!.getInt(PreferenceListener.Companion.PrefsConsts.secondsNotify, 5) * 1000).toLong(), false)
                 }
                 return true
             }

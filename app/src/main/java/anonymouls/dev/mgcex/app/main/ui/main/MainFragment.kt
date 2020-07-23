@@ -21,9 +21,14 @@ class MainFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View {
         binding = MainFragmentBinding.inflate(inflater, container, false)
+        binding.lifecycleOwner = this.requireActivity()
         return binding.root
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (this::viewModel.isInitialized) viewModel.restore()
+    }
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         viewModel = ViewModelProviders.of(this,

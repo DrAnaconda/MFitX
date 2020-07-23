@@ -8,7 +8,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
-import anonymouls.dev.mgcex.app.main.SettingsActivity
+
+import anonymouls.dev.mgcex.util.PreferenceListener
 import anonymouls.dev.mgcex.util.Utils
 
 @ExperimentalStdlibApi
@@ -27,7 +28,7 @@ class ServiceRessurecter : JobService() {
                 val pendingJob = JobInfo.Builder(JobID, component)
                 pendingJob.setPeriodic(
                         Utils.getSharedPrefs(context).getInt(
-                                SettingsActivity.disconnectedMonitoring, 5).toLong() * 1000 * 60)
+                                PreferenceListener.Companion.PrefsConsts.disconnectedMonitoring, 5).toLong() * 1000 * 60)
 
                 val jobScheduler = context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
                 val test = jobScheduler.schedule(pendingJob.build())

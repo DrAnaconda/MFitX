@@ -178,7 +178,7 @@
     <string name="summary_analytics">Send data about app performance and usage activity</string>
     <string name="summary_light_sleep">Application will record light sleep phase, but will not proceed in analytics algos</string>
     <string name="summary_cpualive">WARNING: This function drains battery</string>
-    <string name="sync_setting">Sync main data every X time</string>
+    <string name="sync_setting">Sync main data every X minutes</string>
     <string name="summary_reset">Click to send reset command</string>
     <string name="summary_erase">Click to wipe data on smartwatch</string>
     <string name="summart_hrmonitor">Will automatically send request for HR measure</string>
@@ -186,6 +186,5 @@
     <string name="end_time">End time</string>
     <string name="unlimited_monitor">&#160;set equal time for unlimited monitoring</string>
     <string name="confirmneeded">This action requires confirmation</string>
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="warning">Warning</string>
 </resources>

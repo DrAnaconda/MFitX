@@ -6,7 +6,8 @@ import android.content.Context
 import android.nfc.FormatException
 import android.widget.Toast
 import anonymouls.dev.mgcex.app.R
-import anonymouls.dev.mgcex.app.main.SettingsActivity
+import anonymouls.dev.mgcex.util.PreferenceListener
+
 import anonymouls.dev.mgcex.util.Utils
 import java.util.*
 
@@ -40,8 +41,8 @@ abstract class CommandInterpreter {
         @ExperimentalUnsignedTypes
         fun getInterpreter(context: Context): CommandInterpreter {
             if (ActiveInterpreter == null) {
-                if (Utils.getSharedPrefs(context).contains(SettingsActivity.bandIDConst)) {
-                    when (Utils.getSharedPrefs(context).getString(SettingsActivity.bandIDConst, "")?.toUpperCase()) {
+                if (Utils.getSharedPrefs(context).contains(PreferenceListener.Companion.PrefsConsts.bandIDConst)) {
+                    when (Utils.getSharedPrefs(context).getString(PreferenceListener.Companion.PrefsConsts.bandIDConst, "")?.toUpperCase()) {
                         MGCOOL4CommandInterpreter.CodeName -> ActiveInterpreter = MGCOOL4CommandInterpreter()
                         LM517CommandInterpreter.CodeName -> ActiveInterpreter = LM517CommandInterpreter()
                         else -> Toast.makeText(context,

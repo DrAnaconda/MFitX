@@ -12,7 +12,6 @@ import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import android.view.*
 import android.widget.ListView
 import android.widget.ProgressBar
@@ -21,11 +20,15 @@ import androidx.core.app.ActivityCompat.invalidateOptionsMenu
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import anonymouls.dev.mgcex.app.R
-import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
-import anonymouls.dev.mgcex.app.main.SettingsActivity
+import anonymouls.dev.mgcex.app.backend.MultitaskListener
 import anonymouls.dev.mgcex.app.main.ui.main.MainFragment
 import anonymouls.dev.mgcex.util.Analytics
+import anonymouls.dev.mgcex.util.DialogHelpers
+import anonymouls.dev.mgcex.util.PreferenceListener
 import anonymouls.dev.mgcex.util.Utils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.util.*
 
 @ExperimentalStdlibApi
@@ -75,6 +78,10 @@ class ScanFragment : Fragment() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        mBManager =  context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setHasOptionsMenu(true)
@@ -151,7 +158,7 @@ class ScanFragment : Fragment() {
             val item = mDeviceAdapter.getItem(position)
             if (item != null) {
                 stopScan()
-                switchToDeviceControl(item.address, item.name)
+                GlobalScope.launch(Dispatchers.Default) {  switchToDeviceControl(item.address, item.name)}
             }
         }
     }
@@ -162,53 +169,59 @@ class ScanFragment : Fragment() {
 
     private fun switchToDeviceControl(LockedAddress: String?, DeviceName: String?) {
         if (DeviceName != null) {
-            Utils.getSharedPrefs(this.requireContext()).edit().putString(SettingsActivity.bandIDConst, DeviceName).apply()
+            Utils.getSharedPrefs(this.requireContext()).edit().putString(PreferenceListener.Companion.PrefsConsts.bandIDConst, DeviceName).apply()
         }
         if (LockedAddress != null)
-            Utils.getSharedPrefs(this.requireContext()).edit().putString(SettingsActivity.bandAddress, LockedAddress).apply()
+            Utils.getSharedPrefs(this.requireContext()).edit().putString(PreferenceListener.Companion.PrefsConsts.bandAddress, LockedAddress).apply()
         else
-            Utils.getSharedPrefs(this.requireContext()).edit().remove(SettingsActivity.bandIDConst).apply()
+            Utils.getSharedPrefs(this.requireContext()).edit().remove(PreferenceListener.Companion.PrefsConsts.bandIDConst).apply()
         val frag = MainFragment()
         val transaction = this.requireActivity().supportFragmentManager.beginTransaction()
         val fm = this.requireActivity().supportFragmentManager
         fm.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
         transaction.disallowAddToBackStack()
         transaction.replace(R.id.container, frag)
-        transaction.commitNow()
+        MultitaskListener.ressurectService(requireContext())
+        this.requireActivity().runOnUiThread { transaction.commitNow() }
+    }
+
+    private fun requestEnableLocationServices(){
+
     }
 
     private fun checkLocationEnabled(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (this.requireContext().checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                Utils.requestPermissionsDefault(this.requireActivity(), arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION))
+                Utils.reqPermWithRationalize(Manifest.permission.ACCESS_BACKGROUND_LOCATION, requireActivity())
+                return false
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (this.requireContext().checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                Utils.reqPermWithRationalize(Manifest.permission.ACCESS_COARSE_LOCATION, requireActivity())
                 return false
             }
         }
-        // TODO upgrade dialogs
         val service = this.requireContext().getSystemService(Context.LOCATION_SERVICE) as LocationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             if (!service.isLocationEnabled) {
-                DeviceControllerActivity.ViewDialog(getString(R.string.enable_location_services),
-                        DeviceControllerActivity.ViewDialog.DialogTask.Intent,
-                        Settings.ACTION_LOCATION_SOURCE_SETTINGS).showDialog(this.requireActivity())
+                DialogHelpers.promptSimpleDialog(requireActivity(), getString(R.string.info),
+                        getString(R.string.enable_location_services), android.R.drawable.ic_menu_info_details) { requestEnableLocationServices() }
                 return false
             }
         } else {
-            if (!service.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                DeviceControllerActivity.ViewDialog(getString(R.string.enable_location_services),
-                        DeviceControllerActivity.ViewDialog.DialogTask.Intent,
-                        Settings.ACTION_LOCATION_SOURCE_SETTINGS).showDialog(this.requireActivity())
-                return false
-            }
+            DialogHelpers.promptSimpleDialog(requireActivity(), getString(R.string.info),
+                    getString(R.string.enable_location_services), android.R.drawable.ic_dialog_info) { requestEnableLocationServices() }
+            return false
         }
         return true
     }
 
     private fun startScan() {
         if (!checkLocationEnabled()) return
-        if (this::mBManager.isInitialized && mBManager.adapter.isEnabled) {
+        if (this::mBManager.isInitialized) {
             this.activity?.findViewById<ProgressBar>(R.id.scanInProgress)?.visibility = View.VISIBLE
             mBTAdapter = mBManager.adapter
+            if (!mBTAdapter.isEnabled) mBTAdapter.enable()
             if (!this::mScanner.isInitialized) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     mScanner = mBTAdapter.bluetoothLeScanner

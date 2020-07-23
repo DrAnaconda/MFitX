@@ -24,21 +24,13 @@ object NotifyFilterTable {
                 val CV = ContentValues()
                 CV.put(ColumnNames[1], Package)
                 CV.put(ColumnNames[2], IsEnabled)
-                try {
+                if (!isEnabled(Package, Operator)){
                     Operator.insert(DatabaseController.NotifyFilterTableName, null, CV)
-                } catch (ex: Exception) {
-                    CV.put(ColumnNames[2], IsEnabled)
-                    Operator.update(DatabaseController.NotifyFilterTableName, CV, ColumnNames[1] + " = '" + Package + "'", null)
+                } else {
+                    Operator.delete(DatabaseController.NotifyFilterTableName, "${ColumnNames[1]} = \"$Package\"" ,null)
                 }
             }
         }
-    }
-
-    fun UpdateRecord(Package: String, IsEnable: Boolean, Operator: SQLiteDatabase) {
-        val CV = ContentValues()
-        CV.put(ColumnNames[2], IsEnable)
-        Operator.update(DatabaseController.NotifyFilterTableName, CV, ColumnNames[1]
-                + " = \"" + Package + "\"", null)
     }
 
     fun dropRecord(Package: String, Operator: SQLiteDatabase) {

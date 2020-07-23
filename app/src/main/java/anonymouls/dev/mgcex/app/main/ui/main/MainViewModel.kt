@@ -22,10 +22,14 @@ import anonymouls.dev.mgcex.app.backend.CommandCallbacks
 import anonymouls.dev.mgcex.app.backend.CommandInterpreter
 import anonymouls.dev.mgcex.app.backend.InsertTask
 import anonymouls.dev.mgcex.app.data.DataFragment
-import anonymouls.dev.mgcex.app.data.MultitaskActivity
-import anonymouls.dev.mgcex.app.main.*
+import anonymouls.dev.mgcex.app.main.MultitaskFragment
+import anonymouls.dev.mgcex.app.main.SettingsFragment
 import anonymouls.dev.mgcex.databaseProvider.HRRecord
+import anonymouls.dev.mgcex.util.PreferenceListener
 import anonymouls.dev.mgcex.util.Utils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.util.*
 import kotlin.system.exitProcess
 
@@ -39,7 +43,7 @@ class MyViewModelFactory(private val activity: FragmentActivity) : ViewModelProv
 }
 
 @ExperimentalStdlibApi
-class MainViewModel(private val activity: FragmentActivity) : ViewModel() {
+class MainViewModel(private val activity: FragmentActivity) : ViewModel(), CommandInterpreter.CommandReaction {
     val workInProgress = MutableLiveData(View.GONE)
     val _batteryHolder = MutableLiveData(-1)
     val _lastHearthRateIncomed = MutableLiveData<HRRecord>(HRRecord(Calendar.getInstance(), -1))
@@ -52,7 +56,7 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel() {
         get() {
             return _lastStepsIncomed
         }
-    private val currentHR: LiveData<HRRecord>
+    val currentHR: LiveData<HRRecord>
         get() {
             return _lastHearthRateIncomed
         }
@@ -81,8 +85,11 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel() {
     private var firstLaunch = true
 
     init {
-        reInit()
+        publicModel = this
+        GlobalScope.launch(Dispatchers.Default) { reInit() }
     }
+
+    //region Observes
 
     private fun createStatusObserver() {
         Algorithm.StatusCode.observe(activity, Observer {
@@ -116,8 +123,7 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel() {
                 } else
                     activity.findViewById<TextView>(R.id.BatteryStatus)?.visibility = View.INVISIBLE
                 when {
-                    it < 5 -> {
-                    }
+                    it < 5 -> {}
                     it < 33 ->
                         activity.findViewById<ImageView>(R.id.batteryIcon)?.setImageDrawable(activity.getDrawable(R.drawable.chargelow_icon))
                     it < 66 ->
@@ -126,8 +132,7 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel() {
                 }
             } else {
                 when {
-                    it < 5 -> {
-                    }
+                    it < 5 -> {}
                     it < 33 ->
                         activity.findViewById<ImageView>(R.id.batteryIcon)
                                 ?.setImageResource(R.drawable.chargelow_icon)
@@ -164,10 +169,12 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel() {
         createTextObserverUniversal(R.id.CaloriesValue, currentCcals)
     }
 
+    //endregion
+
     private fun demoMode(): Boolean {
-        return if (!Utils.getSharedPrefs(activity).contains(SettingsActivity.bandAddress)) {
+        return if (!Utils.getSharedPrefs(activity).contains(PreferenceListener.Companion.PrefsConsts.bandAddress)) {
             _currentStatus.postValue(activity.getString(R.string.demo_mode))
-            _currentStatus.value = activity.getString(R.string.demo_mode)
+            activity.runOnUiThread { _currentStatus.value = activity.getString(R.string.demo_mode) }
             _hrVisibility.postValue(View.GONE)
             workInProgress.postValue(View.GONE)
             true
@@ -210,8 +217,7 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel() {
                 exitProcess(0)
             }
             R.id.SyncNowContainer -> {
-                if (DeviceControllerViewModel.instance == null || DeviceControllerViewModel.instance?.workInProgress == null
-                        || DeviceControllerViewModel.instance?.workInProgress!!.value == View.VISIBLE) {
+                if (this.workInProgress.value!! != View.GONE) {
                     Toast.makeText(activity, activity.getString(R.string.wait_untill_complete), Toast.LENGTH_LONG).show()
                 } else {
                     Algorithm.SelfPointer?.bluetoothRejected = false; Algorithm.SelfPointer?.bluetoothRequested = false
@@ -220,7 +226,7 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel() {
             }
             R.id.HRContainer -> launchDataGraph(DataFragment.DataTypes.HR)
             R.id.StepsContainer -> launchDataGraph(DataFragment.DataTypes.Steps)
-            //R.id.CaloriesContainer -> launchDataGraph("CALORIES") TODO haxui nada?
+            R.id.CaloriesContainer -> launchDataGraph(DataFragment.DataTypes.Calories)
             R.id.SettingContainer -> changeFragment(SettingsFragment())
             R.id.ReportContainer -> changeFragment(MultitaskFragment())
             R.id.AlarmContainer -> if (Algorithm.IsAlarmingTriggered) {
@@ -236,25 +242,20 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel() {
             } else {
                 launchActivity(Intent(activity, AlarmActivity::class.java))
             }
-            R.id.InfoContainer -> DeviceControllerActivity.ViewDialog(
-                    activity.getString(R.string.info_text),
-                    DeviceControllerActivity.ViewDialog.DialogTask.About).showDialog(activity)
-            R.id.SleepContainer -> {
-                val reportIntent = Intent(activity, MultitaskActivity::class.java)
-                reportIntent.putExtra(MultitaskActivity.TaskTypeIntent, 1)
-                reportIntent.putExtra(MultitaskActivity.TextIntent, activity.getString(R.string.sleep_not_ready))
-                launchActivity(reportIntent)
-            }
+            //R.id.InfoContainer -> // TODO About dialog
+            // TODO one day R.id.SleepContainer ->
             R.id.BatteryContainer -> Toast.makeText(activity, activity.getString(R.string.battery_health_not_ready), Toast.LENGTH_LONG).show()
         }
     }
 
 
-    private fun reInit() {
+    fun reInit() {
         if (demoMode()) return
-        createValuesObserver()
-        createBatteryObserver()
-        createStatusObserver()
+        activity.runOnUiThread {
+            createValuesObserver()
+            createBatteryObserver()
+            createStatusObserver()
+        }
 
         Algorithm.SelfPointer?.thread?.interrupt()
 
@@ -263,18 +264,51 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel() {
             _hrVisibility.postValue(View.VISIBLE)
         else
             _hrVisibility.postValue(View.GONE)
+    }
+    fun restore(){
+        GlobalScope.launch(Dispatchers.Default) {
+            if (CommandCallbacks.getCallback(activity).savedCCals != 0)
+                _lastCcalsIncomed.postValue(CommandCallbacks.getCallback(activity).savedCCals)
+            if (CommandCallbacks.getCallback(activity).savedSteps != 0)
+                _lastStepsIncomed.postValue(CommandCallbacks.getCallback(activity).savedSteps)
+            if (CommandCallbacks.getCallback(activity).savedBattery != 0)
+                _batteryHolder.postValue(CommandCallbacks.getCallback(activity).savedBattery)
+            if (CommandCallbacks.getCallback(activity).savedHR.hr > -1)
+                _lastHearthRateIncomed.postValue(CommandCallbacks.getCallback(activity).savedHR)
+            if (CommandCallbacks.getCallback(activity).savedStatus.isNotEmpty())
+                _currentStatus.postValue(CommandCallbacks.getCallback(activity).savedStatus)
+        }
+    }
 
+    //region Command Reaction
 
-        if (CommandCallbacks.getCallback(activity).savedCCals != 0)
-            _lastCcalsIncomed.postValue(CommandCallbacks.getCallback(activity).savedCCals)
-        if (CommandCallbacks.getCallback(activity).savedSteps != 0)
-            _lastStepsIncomed.postValue(CommandCallbacks.getCallback(activity).savedSteps)
-        if (CommandCallbacks.getCallback(activity).savedBattery != 0)
-            _batteryHolder.postValue(CommandCallbacks.getCallback(activity).savedBattery)
-        if (CommandCallbacks.getCallback(activity).savedHR.hr > -1)
-            _lastHearthRateIncomed.postValue(CommandCallbacks.getCallback(activity).savedHR)
-        if (CommandCallbacks.getCallback(activity).savedStatus.isNotEmpty())
-            _currentStatus.postValue(CommandCallbacks.getCallback(activity).savedStatus)
+    override fun mainInfo(Steps: Int, Calories: Int) {
+        _lastStepsIncomed.postValue(Steps); _lastCcalsIncomed.postValue(Calories)
+    }
 
+    override fun batteryInfo(Charge: Int) {
+        _batteryHolder.postValue(Charge)
+    }
+
+    override fun hrIncome(Time: Calendar, HRValue: Int) {
+        _lastHearthRateIncomed.postValue(HRRecord(Time, HRValue))
+    }
+
+    override fun hrHistoryRecord(Time: Calendar, HRValue: Int) {
+        hrIncome(Time, HRValue)
+    }
+
+    override fun mainHistoryRecord(Time: Calendar, Steps: Int, Calories: Int) {
+        //ignore
+    }
+
+    override fun sleepHistoryRecord(Time: Calendar, Duration: Int, Type: Int) {
+        //ignore
+    }
+
+    //endregion
+
+    companion object{
+        var  publicModel: MainViewModel? = null
     }
 }

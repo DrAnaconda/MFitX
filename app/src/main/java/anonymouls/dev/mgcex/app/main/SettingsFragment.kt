@@ -12,8 +12,10 @@ import androidx.preference.PreferenceManager
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.backend.Algorithm
 import anonymouls.dev.mgcex.app.backend.CommandInterpreter
+import anonymouls.dev.mgcex.app.data.DataFragment
 import anonymouls.dev.mgcex.app.scanner.ScanFragment
-import anonymouls.dev.mgcex.util.Utils.promptSimpleDialog
+import anonymouls.dev.mgcex.util.DialogHelpers.promptSimpleDialog
+import anonymouls.dev.mgcex.util.PreferenceListener
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -39,19 +41,26 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
     private fun createApproval(taskforce: ()->Any){
         promptSimpleDialog(this.requireActivity(),
-                this.requireActivity().getString(R.string.confirmneeded), taskforce)
+                getString(R.string.warning),
+                this.requireActivity().getString(R.string.confirmneeded), android.R.drawable.stat_sys_warning, taskforce)
+    }
+    private fun switchToDataFragment(){
+        val transaction = this.requireActivity().supportFragmentManager.beginTransaction()
+        transaction.addToBackStack(null)
+        transaction.replace(R.id.container, DataFragment.newInstance(DataFragment.DataTypes.Applications))
+        transaction.commit()
     }
     private fun clickListenerUniversal(key: String){
         when(key){
-            SettingsActivity.bandAddress -> createApproval(deAuthDevice)
+            PreferenceListener.Companion.PrefsConsts.bandAddress -> createApproval(deAuthDevice)
             "ResetToDefault" -> createApproval(sendResetCommand)
             "WipeSmartData" -> createApproval(sendEraseDatabaseCommand)
-            // TODO List fragment +_notify filter
+            "NFilter" -> switchToDataFragment()
         }
     }
     private fun proceedStaticContent(){
-        findPreference<Preference>(SettingsActivity.bandAddress)?.setOnPreferenceClickListener {
-            clickListenerUniversal(SettingsActivity.bandAddress); true
+        findPreference<Preference>(PreferenceListener.Companion.PrefsConsts.bandAddress)?.setOnPreferenceClickListener {
+            clickListenerUniversal(PreferenceListener.Companion.PrefsConsts.bandAddress); true
         }
         findPreference<Preference>("ResetToDefault")?.setOnPreferenceClickListener {
             clickListenerUniversal("ResetToDefault"); true
@@ -68,9 +77,9 @@ class SettingsFragment : PreferenceFragmentCompat() {
     }
     private fun proceedDynamicContent(){
         ci = CommandInterpreter.getInterpreter(this.requireContext())
-        findPreference<Preference>(SettingsActivity.vibrationSetting)?.isVisible = ci.vibrationSupport
-        findPreference<Preference>(SettingsActivity.targetSteps)?.isVisible = ci.stepsTargetSettingSupport
-        findPreference<Preference>(SettingsActivity.longSittingSetting)?.isVisible = ci.sittingReminderSupport
+        findPreference<Preference>(PreferenceListener.Companion.PrefsConsts.vibrationSetting)?.isVisible = ci.vibrationSupport
+        findPreference<Preference>(PreferenceListener.Companion.PrefsConsts.targetSteps)?.isVisible = ci.stepsTargetSettingSupport
+        findPreference<Preference>(PreferenceListener.Companion.PrefsConsts.longSittingSetting)?.isVisible = ci.sittingReminderSupport
         findPreference<PreferenceCategory>("HRMon")?.isVisible = !ci.hRRealTimeControlSupport
     }
 
@@ -82,8 +91,8 @@ class SettingsFragment : PreferenceFragmentCompat() {
     //region actions
 
     private val deAuthDevice = {
-        prefs.edit().remove(SettingsActivity.bandAddress).apply()
-        prefs.edit().remove(SettingsActivity.bandIDConst).apply()
+        prefs.edit().remove(PreferenceListener.Companion.PrefsConsts.bandAddress).apply()
+        prefs.edit().remove(PreferenceListener.Companion.PrefsConsts.bandIDConst).apply()
         Algorithm.IsActive = false
         Algorithm.updateStatusCode(Algorithm.StatusCodes.Dead)
         val frag = ScanFragment()

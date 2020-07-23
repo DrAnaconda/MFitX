@@ -6,6 +6,7 @@
     android:layout_height="wrap_content"
     android:theme="@style/Theme.AppCompat.DayNight"
     android:gravity="center"
+    android:layout_gravity="center"
     android:orientation="vertical">
 
     <TextView
@@ -17,6 +18,7 @@
         android:layout_marginStart="2dp"
         android:layout_marginEnd="2dp"
         android:gravity="center"
+        android:foregroundGravity="center"
         android:maxLines="1"
         tools:text="Cell Data" />
 </LinearLayout>

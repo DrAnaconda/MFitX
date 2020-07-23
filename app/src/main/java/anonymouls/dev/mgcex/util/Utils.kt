@@ -11,15 +11,12 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
 import android.os.PowerManager
-import android.provider.Settings
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.PRIORITY_MIN
 import androidx.preference.PreferenceManager
 import anonymouls.dev.mgcex.app.R
-import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
-import anonymouls.dev.mgcex.app.main.SettingsActivity
 import anonymouls.dev.mgcex.databaseProvider.SleepRecordsTable
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -57,7 +54,7 @@ object Utils {
     fun getSharedPrefs(context: Context): SharedPreferences {
         if (!Utils::SharedPrefs.isInitialized) {
             SharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
-            SleepRecordsTable.GlobalSettings.ignoreLightSleepData = SharedPrefs.getBoolean(SettingsActivity.lightSleepIgnore, true)
+            SleepRecordsTable.GlobalSettings.ignoreLightSleepData = SharedPrefs.getBoolean(PreferenceListener.Companion.PrefsConsts.lightSleepIgnore, true)
             if (!SharedPrefs.contains(Analytics.UserID))
                 SharedPrefs.edit().putString(Analytics.UserID, UUID.randomUUID().toString()).apply()
         }
@@ -76,8 +73,6 @@ object Utils {
     fun isDeviceSupported(context: Activity): Boolean {
         return if (!context.packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)
                 || !context.packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH)) {
-            //DeviceControllerActivity.ViewDialog("Your device not supported. You must have Bluetooth adapter and BLE technology",
-            //DeviceControllerActivity.ViewDialog.DialogTask.Intent, null)
             Toast.makeText(context, "Your device not supported. You must have Bluetooth adapter and BLE technology.", Toast.LENGTH_LONG).show()
             false
         } else true
@@ -98,40 +93,55 @@ object Utils {
         }
         return false
     }
-
-    fun requestPermissionsAdvanced(activity: Activity) {
+    private fun requestSinglePermission(activity: Activity, perm: String, reqID: Int){
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (activity.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                    && activity.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
-                DeviceControllerActivity.ViewDialog(activity.getString(R.string.location_perm_req), DeviceControllerActivity.ViewDialog.DialogTask.Permission, Manifest.permission.ACCESS_COARSE_LOCATION).showDialog(activity)
-                return
-            }
-            if (activity.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
-                    && activity.shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                val dialog = DeviceControllerActivity.ViewDialog(activity.getString(R.string.storage_perm_request), DeviceControllerActivity.ViewDialog.DialogTask.Permission, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                dialog.showDialog(activity)
-                return
-            }
-            if (activity.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED
-                    && activity.shouldShowRequestPermissionRationale(Manifest.permission.READ_PHONE_STATE)) {
-                val dialog = DeviceControllerActivity.ViewDialog(activity.getString(R.string.phonestate_perm_req), DeviceControllerActivity.ViewDialog.DialogTask.Permission, Manifest.permission.READ_PHONE_STATE)
-                dialog.showDialog(activity)
-                return
+            activity.requestPermissions(arrayOf(perm), reqID)
+        }
+    }
+
+    fun reqPermWithRationalize(perm: String, context: Activity){
+        var message = ""
+        when(perm){
+            Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION ->
+                message = context.getString(R.string.location_perm_req)
+            Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE ->
+                message = context.getString(R.string.storage_perm_request)
+            Manifest.permission.READ_PHONE_STATE ->
+                message = context.getString(R.string.phonestate_perm_req)
+            Manifest.permission.READ_CONTACTS ->
+                message = context.getString(R.string.contacts_perm_req)
+            Manifest.permission.READ_CALL_LOG ->
+                message = context.getString(R.string.incoming_number_perm)
+        }
+
+        DialogHelpers.promptSimpleDialog(context, context.getString(R.string.info),
+                message, android.R.drawable.ic_menu_info_details
+        ) { requestSinglePermission(context, perm, PermsAdvancedRequest);   }
+    }
+
+    fun requestPermissionsAdvanced(context: Activity) {
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                if (context.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED
+                        && context.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
+                    reqPermWithRationalize(Manifest.permission.ACCESS_BACKGROUND_LOCATION, context)
+                }
+            } else {
+                if (context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                        && context.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+                    reqPermWithRationalize(Manifest.permission.ACCESS_COARSE_LOCATION, context)
+                    return
+                }
             }
 
-            if (activity.checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED
-                    && activity.shouldShowRequestPermissionRationale(Manifest.permission.READ_CONTACTS)) {
-                val dialog = DeviceControllerActivity.ViewDialog(activity.getString(R.string.contacts_perm_req), DeviceControllerActivity.ViewDialog.DialogTask.Permission, Manifest.permission.READ_CONTACTS)
-                dialog.showDialog(activity)
-                return
-            }
-
-            if (activity.checkSelfPermission(Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED
-                    && activity.shouldShowRequestPermissionRationale(Manifest.permission.READ_CONTACTS)) {
-                val dialog = DeviceControllerActivity.ViewDialog(activity.getString(R.string.incoming_number_perm),
-                        DeviceControllerActivity.ViewDialog.DialogTask.Permission, Manifest.permission.READ_CONTACTS)
-                dialog.showDialog(activity)
-                return
+            for (x in UsedPerms){
+                if (context.checkSelfPermission(x) != PackageManager.PERMISSION_GRANTED
+                        && context.shouldShowRequestPermissionRationale(x)){
+                    reqPermWithRationalize(x, context)
+                    return
+                }
             }
         }
     }
@@ -149,8 +159,6 @@ object Utils {
                 ContextActivity.requestPermissions(array, PermsRequest)
             }
         }
-
-        // TODO Request ignore
     }
 
     private fun requestIgnoreBatteryOptimization(context: Activity) {
@@ -158,11 +166,8 @@ object Utils {
 
             if (!(context.getSystemService(Context.POWER_SERVICE) as PowerManager)
                             .isIgnoringBatteryOptimizations(context.packageName)
-                    && Utils.getSharedPrefs(context).getBoolean(SettingsActivity.permitWakeLock, true)) {
-                val Dialog = DeviceControllerActivity.ViewDialog("Disabled power optimization recommended for reliable connection",
-                        DeviceControllerActivity.ViewDialog.DialogTask.Intent, Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                        context, true, SettingsActivity.permitWakeLock)
-                Dialog.showDialog(context)
+                    && Utils.getSharedPrefs(context).getBoolean(PreferenceListener.Companion.PrefsConsts.permitWakeLock, true)) {
+                // TODO dialog intent "Disabled power optimization recommended for reliable connection"
             }
 
         }
@@ -228,10 +233,6 @@ object Utils {
         return false
     }
 
-    fun startActivityUniversal() {
-
-    }
-
     fun startSyncingService(service: Intent, context: Context) {
         service.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or
                 Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION or
@@ -245,7 +246,7 @@ object Utils {
     }
 
     fun serviceStartForegroundMultiAPI(service: Intent, context: Service) {
-        if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForeground(66, buildForegroundNotification(context))
             context.startForegroundService(service)
         } else {
@@ -265,16 +266,6 @@ object Utils {
                     break
             }
         }
-    }
-
-    fun promptSimpleDialog(activity: Activity, message: String, taskforce: ()-> Any){
-        val dialog = AlertDialog.Builder(activity)
-        dialog.setTitle("Warning")
-        dialog.setIcon(android.R.drawable.ic_dialog_alert)
-        dialog.setMessage(message)
-        dialog.setPositiveButton(android.R.string.ok) { dial, _ -> taskforce.invoke(); dial.cancel(); }
-        dialog.setNegativeButton(android.R.string.cancel) { dial, _ -> dial.cancel(); }
-        dialog.create().show()
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -307,6 +298,18 @@ object Utils {
                 //.setCategory(Notification.CATEGORY_SERVICE)
                 .build()
         return notification
+    }
+}
+
+object DialogHelpers{
+    fun promptSimpleDialog(activity: Activity, title: String, message: String, drawable: Int, taskforce: ()-> Any){
+        val dialog = AlertDialog.Builder(activity)
+        if (title.isNotEmpty()) dialog.setTitle(title)
+        if (drawable != Int.MIN_VALUE) dialog.setIcon(drawable)
+        dialog.setMessage(message)
+        dialog.setPositiveButton(android.R.string.ok) { dial, _ -> taskforce.invoke(); dial.cancel(); }
+        dialog.setNegativeButton(android.R.string.cancel) { dial, _ -> dial.cancel(); }
+        dialog.create().show()
     }
 }
 

@@ -6,7 +6,8 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import anonymouls.dev.mgcex.app.backend.ApplicationStarter
 import anonymouls.dev.mgcex.app.data.DataFragment
-import anonymouls.dev.mgcex.app.main.SettingsActivity
+import anonymouls.dev.mgcex.util.PreferenceListener
+
 import anonymouls.dev.mgcex.util.Utils
 import java.lang.Math.abs
 import java.util.*
@@ -117,7 +118,7 @@ object MainRecordsTable {
     }
 
     fun extractFuncOnIntervalSteps(Where: Long, To: Long, Operator: SQLiteDatabase): Cursor {
-        //val tableName = if (scaling == DataView.Scalings.Day) MainRecordsTable.TableName+"COPY" else MainRecordsTable.TableName
+        //val tableName = if (scaling == Scalings.Day) MainRecordsTable.TableName+"COPY" else MainRecordsTable.TableName
         val Record = Operator.query(
                 TableName,
                 arrayOf("AVG(Steps)", "MIN(Steps)", "MAX(Steps)"),
@@ -197,9 +198,9 @@ object MainRecordsTable {
         init {
             passedKm =
                     if (context != null)
-                        Utils.getSharedPrefs(ApplicationStarter.appContext).getString(SettingsActivity.stepsSize, "0.5")!!.replace(',', '.').toFloat() * stepsCount
+                        Utils.getSharedPrefs(ApplicationStarter.appContext).getString(PreferenceListener.Companion.PrefsConsts.stepsSize, "0.5")!!.replace(',', '.').toFloat() * stepsCount
                     else
-                        Utils.getSharedPrefs(ApplicationStarter.appContext).getString(SettingsActivity.stepsSize, "0.5")!!.replace(',', '.').toFloat() * stepsCount
+                        Utils.getSharedPrefs(ApplicationStarter.appContext).getString(PreferenceListener.Companion.PrefsConsts.stepsSize, "0.5")!!.replace(',', '.').toFloat() * stepsCount
         }
     }
 

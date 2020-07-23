@@ -4,7 +4,8 @@ import android.bluetooth.BluetoothAdapter
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import anonymouls.dev.mgcex.app.main.SettingsActivity
+import anonymouls.dev.mgcex.util.PreferenceListener
+
 import anonymouls.dev.mgcex.util.Utils
 
 @ExperimentalStdlibApi
@@ -30,7 +31,7 @@ class MultitaskListener : BroadcastReceiver() {
         const val restartAction = "SVSR"
 
         fun ressurectService(context: Context) {
-            if (Utils.getSharedPrefs(context).contains(SettingsActivity.bandAddress))
+            if (Utils.getSharedPrefs(context).contains(PreferenceListener.Companion.PrefsConsts.bandAddress))
                 Utils.startSyncingService(Intent(context, Algorithm::class.java),
                         context)
         }

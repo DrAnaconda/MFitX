@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.AsyncTask
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import android.widget.LinearLayout
 import com.google.android.gms.ads.*
 import kotlinx.coroutines.GlobalScope
@@ -27,7 +28,10 @@ object AdsController {
 
 
     fun initAdBanned(adObject: AdView, activity: Activity) {
-        if (adFree) return
+        if (adFree) {
+            adObject.visibility = View.GONE
+            return
+        }
         GlobalScope.launch { MobileAds.initialize(activity) }
         savedContext = activity
         //adObject.adListener = defaultListener

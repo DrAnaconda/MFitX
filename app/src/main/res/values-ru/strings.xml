@@ -163,4 +163,17 @@
     <string name="summary_filters">Уведомления от указанных приложений будут отправлены на устройство</string>
     <string name="summary_call">Отправит уведомление на устройство при входящем звонке</string>
     <string name="summary_idle">Отправит уведомление при длительной бездеятельности</string>
+    <string name="notify_delay">Повтор/задержка уведомления (секунды)</string>
+    <string name="summary_analytics">Отправлять данные производительности и использования</string>
+    <string name="summary_light_sleep">Данные быстрой фазы сна будут записываться, но не будут обрабатываться</string>
+    <string name="summary_cpualive">ВНИМАНИЕ: Эта функция увеличивает расход аккумулятора</string>
+    <string name="sync_setting">Синхронизировать данные кадые Х минут</string>
+    <string name="summary_reset">Кликните для сброса смартбраслета</string>
+    <string name="summary_erase">Кликните для очистки данных на смартбраслете</string>
+    <string name="summart_hrmonitor">Будет автоматически мониторить ЧСС</string>
+    <string name="start_time">Начало</string>
+    <string name="end_time">Конец</string>
+    <string name="unlimited_monitor">&#160;установите одиннаковое время для круглосуточного мониторинга</string>
+    <string name="confirmneeded">Это действие требует подтверждения</string>
+    <string name="warning">Внимание</string>
 </resources>

@@ -13,7 +13,6 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.*
 import androidx.constraintlayout.widget.ConstraintLayout
-import anonymouls.dev.mgcex.app.main.DeviceControllerActivity
 import anonymouls.dev.mgcex.databaseProvider.AlarmsTable
 import anonymouls.dev.mgcex.databaseProvider.DatabaseController
 import anonymouls.dev.mgcex.util.Utils
@@ -300,9 +299,7 @@ class AlarmActivity : Activity() {
                     initView()
                 }
             }
-            R.id.infoBtn -> {
-                DeviceControllerActivity.ViewDialog(getString(R.string.alarms_info_message), DeviceControllerActivity.ViewDialog.DialogTask.Intent).showDialog(this)
-            }
+            //TODO R.id.infoBtn -> DeviceControllerActivity.ViewDialog(getString(R.string.alarms_info_message), DeviceControllerActivity.ViewDialog.DialogTask.Intent).showDialog(this)
 
         }
         return super.onOptionsItemSelected(item)

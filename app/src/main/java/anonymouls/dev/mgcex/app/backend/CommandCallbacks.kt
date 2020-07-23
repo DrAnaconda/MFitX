@@ -2,12 +2,12 @@ package anonymouls.dev.mgcex.app.backend
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
-import anonymouls.dev.mgcex.app.main.DeviceControllerViewModel
+import anonymouls.dev.mgcex.app.main.ui.main.MainViewModel
 import anonymouls.dev.mgcex.databaseProvider.*
 import java.util.*
 
 @ExperimentalStdlibApi
-class CommandCallbacks(context: Context) : CommandInterpreter.CommandReaction {
+open class CommandCallbacks(context: Context) : CommandInterpreter.CommandReaction {
 
     private val database: SQLiteDatabase = DatabaseController.getDCObject(context).writableDatabase
     private var lastSyncMain: Long = -1
@@ -22,8 +22,9 @@ class CommandCallbacks(context: Context) : CommandInterpreter.CommandReaction {
     override fun mainInfo(Steps: Int, Calories: Int) {
         try {
             lastSyncMain = CustomDatabaseUtils.calendarToLong(Calendar.getInstance(), true)
-            DeviceControllerViewModel.instance?._lastStepsIncomed?.postValue(Steps); savedSteps = Steps
-            DeviceControllerViewModel.instance?._lastCcalsIncomed?.postValue(Calories); savedCCals = Calories
+            MainViewModel.publicModel?._lastStepsIncomed?.postValue(Steps); savedSteps = Steps
+            MainViewModel.publicModel?._lastCcalsIncomed?.postValue(Calories); savedCCals = Calories
+            MainViewModel.publicModel?.mainInfo(savedSteps, savedCCals)
             MainRecordsTable.insertRecordV2(Calendar.getInstance(), Steps, Calories, database)
         } catch (Ex: Exception) {
 
@@ -33,7 +34,7 @@ class CommandCallbacks(context: Context) : CommandInterpreter.CommandReaction {
     override fun batteryInfo(Charge: Int) {
         try {
             if (Charge > 5) {
-                DeviceControllerViewModel.instance?._batteryHolder?.postValue(Charge)
+                MainViewModel.publicModel?._batteryHolder?.postValue(Charge)
                 savedBattery = Charge
             }
             // TODO Power consumption and battery health
@@ -46,10 +47,12 @@ class CommandCallbacks(context: Context) : CommandInterpreter.CommandReaction {
         if (Time.time > Calendar.getInstance().time) return
         var ResultHR = HRValue
         if (ResultHR < 0) ResultHR = (ResultHR and 0xFF)
+        if (ResultHR > 220 || ResultHR < 6) return
         if (lastSyncHR <= CustomDatabaseUtils.calendarToLong(Time, true)) {
             val record = HRRecord(Time, ResultHR)
-            savedHR = record; DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(record)
+            savedHR = record; MainViewModel.publicModel?._lastHearthRateIncomed?.postValue(record)
             lastSyncHR = CustomDatabaseUtils.calendarToLong(Time, true)
+            MainViewModel.publicModel?.hrIncome(Time, HRValue)
         }
     }
 
@@ -62,8 +65,9 @@ class CommandCallbacks(context: Context) : CommandInterpreter.CommandReaction {
             if (lastSyncHR < CustomDatabaseUtils.calendarToLong(Time, true)) {
                 val record = HRRecord(Time, ResultHR)
                 savedHR = record
-                DeviceControllerViewModel.instance?._lastHearthRateIncomed?.postValue(record)
+                MainViewModel.publicModel?._lastHearthRateIncomed?.postValue(record)
                 lastSyncHR = CustomDatabaseUtils.calendarToLong(Time, true)
+                MainViewModel.publicModel?.hrHistoryRecord(Time, HRValue)
             }
         } catch (Ex: Exception) {
 
@@ -77,9 +81,10 @@ class CommandCallbacks(context: Context) : CommandInterpreter.CommandReaction {
             if (MainRecordsTable.insertRecordV2(Time, Steps, Calories, database) > 0) {
                 val current = CustomDatabaseUtils.calendarToLong(Time, true)
                 if (current > lastSyncMain) {
-                    savedCCals = Calories; DeviceControllerViewModel.instance?._lastCcalsIncomed?.postValue(Calories)
-                    savedSteps = Steps; DeviceControllerViewModel.instance?._lastStepsIncomed?.postValue(Steps)
+                    savedCCals = Calories; MainViewModel.publicModel?._lastCcalsIncomed?.postValue(Calories)
+                    savedSteps = Steps; MainViewModel.publicModel?._lastStepsIncomed?.postValue(Steps)
                     lastSyncMain = CustomDatabaseUtils.calendarToLong(Time, true)
+                    MainViewModel.publicModel?.mainHistoryRecord(Time, Steps, Calories)
                 }
             }
         } catch (Ex: Exception) {

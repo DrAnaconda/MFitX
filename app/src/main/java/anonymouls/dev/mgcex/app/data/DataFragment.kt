@@ -20,7 +20,7 @@ import java.util.*
 @ExperimentalStdlibApi
 class DataFragment(private val DataType: DataTypes) : Fragment() {
 
-    enum class DataTypes { HR, Steps, Calories, Main }
+    enum class DataTypes { HR, Steps, Calories, Main, Applications }
     enum class Scalings { Day, Week, Month }
 
     companion object {
@@ -36,8 +36,7 @@ class DataFragment(private val DataType: DataTypes) : Fragment() {
     private lateinit var mainCaloriesColumns: Array<String>
     private lateinit var mainStepsColumns: Array<String>
     private lateinit var mainColumns: Array<String>
-    private lateinit var customAdapter: MyTableViewAdapter
-    private lateinit var selectedScaling: Scalings
+    private lateinit var customAdapter: DoubleTaskTableViewAdapter
 
     private lateinit var requestBtn: MenuItem
     private lateinit var manualHRRequestBtn: MenuItem
@@ -62,14 +61,19 @@ class DataFragment(private val DataType: DataTypes) : Fragment() {
         GlobalScope.launch(Dispatchers.Default) { loadData(todayStart, todayEnd, Scalings.Day) }
     }
 
+
+
     private fun loadData(From: Calendar, To: Calendar, scale: Scalings) {
         when (DataType) {
             DataTypes.HR -> executeTableCreation(From, To, DataTypes.HR, scale)
             DataTypes.Steps -> executeTableCreation(From, To, DataTypes.Steps, scale)
             DataTypes.Calories -> executeTableCreation(From, To, DataTypes.Calories, scale)
+            DataTypes.Applications -> viewModel.load(this.requireActivity(), customAdapter)
             else -> throw NotImplementedError("WTF, man")
         }
     }
+
+    //region Stats
 
     private fun headerChooser(scale: Scalings): Array<String> {
         return if (scale == Scalings.Day) {
@@ -87,7 +91,7 @@ class DataFragment(private val DataType: DataTypes) : Fragment() {
 
     private fun executeTableCreation(From: Calendar, To: Calendar, DataType: DataTypes, scale: Scalings) {
         customAdapter.removeEverything()
-        customAdapter.setColumnHeaderItems(Cell.listToCells<ColumnHeader>(headerChooser(scale), true) as List<ColumnHeader?>?)
+        customAdapter.setColumnHeaderItems(TextCell.listTextRowToCells<ColumnHeader>(headerChooser(scale), true) as List<ColumnHeader?>?)
         GlobalScope.launch { viewModel.fetchDataStageA(From, To, scale, DataType, customAdapter, requireActivity()) }
     }
 
@@ -148,6 +152,8 @@ class DataFragment(private val DataType: DataTypes) : Fragment() {
         builder.create().show()
     }
 
+    //endregion
+
     private fun requestCurrentHR() {
         if (this.viewModel.loading.value!! == View.VISIBLE) {
             Toast.makeText(requireContext(), getString(R.string.wait_untill_complete), Toast.LENGTH_LONG).show()
@@ -158,21 +164,26 @@ class DataFragment(private val DataType: DataTypes) : Fragment() {
 
     private fun initBindings() {
         viewModel = ViewModelProviders.of(this).get(DataViewModel::class.java)
-        customAdapter = MyTableViewAdapter(this.requireActivity())
         binding.viewmodel = viewModel
         binding.lifecycleOwner = this
-        binding.mainTable.setAdapter(customAdapter)
         binding.mainTable.rowHeaderWidth = 0
         binding.mainTable.setHasFixedWidth(true)
+        customAdapter = when(DataType){
+            DataTypes.Applications -> DoubleTaskTableViewAdapter(requireActivity(), DoubleTaskTableViewAdapter.DataTypes.ApplicationMode)
+            else -> DoubleTaskTableViewAdapter(requireActivity(), DoubleTaskTableViewAdapter.DataTypes.TextOnly)
+        }
+        binding.mainTable.setAdapter(customAdapter)
         AdsController.initAdBanned(binding.dataAD, requireActivity())
     }
 
     //endregion
 
+    //region Default Android
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setHasOptionsMenu(true)
+        if (this.DataType != DataTypes.Applications)
+            setHasOptionsMenu(true)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,

@@ -2,8 +2,9 @@ package anonymouls.dev.mgcex.app.backend
 
 import android.os.Handler
 import anonymouls.dev.mgcex.app.backend.ApplicationStarter.Companion.commandHandler
-import anonymouls.dev.mgcex.app.main.SettingsActivity
+
 import anonymouls.dev.mgcex.databaseProvider.SleepRecordsTable
+import anonymouls.dev.mgcex.util.PreferenceListener
 import anonymouls.dev.mgcex.util.Utils
 import java.nio.ByteBuffer
 import java.util.*
@@ -107,7 +108,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
         val steps = buffer.short
         Algorithm.SelfPointer?.baseContext?.let {
             Utils.getSharedPrefs(it).edit()
-                    .putInt(SettingsActivity.targetSteps, steps.toInt()).apply()
+                    .putInt(PreferenceListener.Companion.PrefsConsts.targetSteps, steps.toInt()).apply()
         }
     }
 

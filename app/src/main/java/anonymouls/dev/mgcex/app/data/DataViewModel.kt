@@ -1,37 +1,63 @@
 package anonymouls.dev.mgcex.app.data
-
+// TODO Warning. Optimizations needed. Есть костыли, которые фиксят дублирование данных, однако надо вырезать костыли нахрен
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import android.graphics.drawable.Drawable
+import android.os.Build
 import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SwitchCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.backend.ApplicationStarter
 import anonymouls.dev.mgcex.app.backend.CommandInterpreter
-import anonymouls.dev.mgcex.app.main.DeviceControllerViewModel
+import anonymouls.dev.mgcex.app.main.ui.main.MainViewModel
 import anonymouls.dev.mgcex.databaseProvider.*
 import anonymouls.dev.mgcex.util.Utils
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.launch
 import java.lang.Math.random
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.collections.HashSet
 
 
 @ExperimentalStdlibApi
 class DataViewModel : ViewModel() {
 
-    private lateinit var database: SQLiteDatabase
+    //region Main Properties
+
+    private val loader = CoroutineScope(Job())
+
+    private val _loading = MutableLiveData(View.VISIBLE)
+    val loading: LiveData<Int>
+        get() = _loading
+
+    private val _result = MutableLiveData<Queue<IExtractable>>()
+    val data: LiveData<Queue<IExtractable>>
+        get() {
+            return _result
+        }
+
+    //endregion
+
+    //region Stats Full
+
+    //region Stats Properties
+
+    private lateinit var readableDatabase: SQLiteDatabase
+    private lateinit var writableDatabase: SQLiteDatabase
     private var fromLong: Long = -1
     private var toLong: Long = -1
     private var currentLock: Long = 0
@@ -40,17 +66,8 @@ class DataViewModel : ViewModel() {
     private var dataType: DataFragment.DataTypes = DataFragment.DataTypes.HR
     private var scale: DataFragment.Scalings = DataFragment.Scalings.Day
     var manualHRRequesting = false
-    var cancelled = false
 
-    private val _loading = MutableLiveData(View.VISIBLE)
-    val loading: LiveData<Int>
-        get() = _loading
 
-    private val _result = MutableLiveData<Queue<Record>>()
-    val data: LiveData<Queue<Record>>
-        get() {
-            return _result
-        }
 
     private val _currentProgress = MutableLiveData<String>("")
     val currentProgress: LiveData<String>
@@ -62,7 +79,9 @@ class DataViewModel : ViewModel() {
     val infoBlockVisible: LiveData<Int>
         get() = _infoBlockVisible
 
-//region Stats
+    //endregion
+
+    //region Stats
 
     private var startValue: Long = 0
     private fun calculatePercentage(currentProgress: Long, endProgress: Long): String {
@@ -88,7 +107,7 @@ class DataViewModel : ViewModel() {
         }
     }
 
-    private fun fullCancel() {
+    private fun jobFinished(){
         _infoBlockVisible.postValue(View.GONE)
         _loading.postValue(View.GONE)
     }
@@ -100,35 +119,31 @@ class DataViewModel : ViewModel() {
                     convertDateWithScaling(CustomDatabaseUtils.longToCalendar(currentLock, true)) + " — " +
                     convertDateWithScaling(CustomDatabaseUtils.longToCalendar(currentLock + staticOffset, true)) +
                     " (" + calculatePercentage(currentLock, toLong) + "%)")
-
-            if (cancelled) {
-                fullCancel(); return@flow
-            }
             var results: Cursor? = null
             when (dataType) {
                 DataFragment.DataTypes.HR -> {
                     results = if (grouping)
-                        HRRecordsTable.extractFuncOnInterval(currentLock, CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false), database)
+                        HRRecordsTable.extractFuncOnInterval(currentLock, CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false), readableDatabase)
                     else
-                        HRRecordsTable.extractRecords(currentLock, CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false), database)
+                        HRRecordsTable.extractRecords(currentLock, CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false), readableDatabase)
                 }
                 DataFragment.DataTypes.Calories -> {
                     results = if (grouping)
-                        MainRecordsTable.extractFuncOnIntervalCalories(currentLock, CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false), database)
+                        MainRecordsTable.extractFuncOnIntervalCalories(currentLock, CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false), readableDatabase)
                     else
                         MainRecordsTable.extractRecords(currentLock,
                                 CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false),
-                                database, scale)
+                                readableDatabase, scale)
                 }
                 DataFragment.DataTypes.Steps -> {
                     results = if (grouping)
                         MainRecordsTable.extractFuncOnIntervalSteps(currentLock,
                                 CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false),
-                                database)
+                                readableDatabase)
                     else
                         MainRecordsTable.extractRecords(currentLock,
                                 CustomDatabaseUtils.sumLongs(currentLock, staticOffset + 1, false),
-                                database, scale)
+                                readableDatabase, scale)
                 }
             }
             try {
@@ -141,22 +156,22 @@ class DataViewModel : ViewModel() {
             } catch (E: Exception) {
                 Log.e("fetchDataStageB", E.toString() + ":" + E.message)
             } catch (e: CancellationException) {
-                fullCancel()
+                jobFinished()
                 return@flow
             } finally {
                 results?.close()
                 currentLock = CustomDatabaseUtils.sumLongs(currentLock, staticOffset, false)
+
             }
         }
-        fullCancel()
+        jobFinished()
     }
 
 
     fun fetchDataStageA(From: Calendar, To: Calendar,
                         scale: DataFragment.Scalings, DataType: DataFragment.DataTypes,
-                        tableAdapter: MyTableViewAdapter, activity: Activity) {
-        this.cancelled = false
-        this.database = DatabaseController.getDCObject(activity).readableDatabase
+                        tableAdapter: DoubleTaskTableViewAdapter, activity: Activity) {
+        this.readableDatabase = DatabaseController.getDCObject(activity).readableDatabase
         this.fromLong = CustomDatabaseUtils.calendarToLong(From, true)
         this.toLong = CustomDatabaseUtils.calendarToLong(To, true)
         currentLock = this.fromLong
@@ -167,7 +182,7 @@ class DataViewModel : ViewModel() {
         _infoBlockVisible.postValue(View.VISIBLE)
         setOffset()
         val hashCodes = HashSet<String>()
-        viewModelScope.launch(Dispatchers.Default) {
+        loader.launch(Dispatchers.Default) {
             fetchDataStageB(activity).collect {
                 if (it != null) {
                     if (!hashCodes.contains(it.toString())) {
@@ -182,7 +197,7 @@ class DataViewModel : ViewModel() {
     }
 
     fun onCancelClick(v: View?) {
-        cancelled = true
+        loader.cancel(null)
         if (manualHRRequesting) {
             fetchCurrentHR(null, true)
             unsubscribe()
@@ -190,6 +205,8 @@ class DataViewModel : ViewModel() {
     }
 
 //endregion
+
+    //region Manual HR
 
     private lateinit var observer: androidx.lifecycle.Observer<HRRecord>
     private var firstHR = -2
@@ -203,7 +220,7 @@ class DataViewModel : ViewModel() {
                 _currentProgress.postValue(context.getString(R.string.measuredHR)
                         + it.hr + context.getString(R.string.at)
                         + SimpleDateFormat(Utils.SDFPatterns.DayScaling.pattern, Locale.getDefault()).format(it.recordTime.time))
-                val dummy: Queue<Record> = LinkedList<Record>()
+                val dummy: Queue<IExtractable> = LinkedList<IExtractable>()
                 val rec = Record(null, CustomDatabaseUtils.calendarToLong(it.recordTime, true),
                         false, DataFragment.Scalings.Day)
                 rec.mainValue = it.hr
@@ -217,10 +234,8 @@ class DataViewModel : ViewModel() {
     }
 
     private fun unsubscribe() {
-        DeviceControllerViewModel.instance?.currentHR?.removeObserver(observer)
+        MainViewModel.publicModel?.currentHR?.removeObserver(observer)
     }
-
-
     fun fetchCurrentHR(context: AppCompatActivity?, cancel: Boolean = false) {
         if (cancel) {
             manualHRRequesting = false
@@ -235,14 +250,97 @@ class DataViewModel : ViewModel() {
                 _currentProgress.postValue(context.getString(R.string.waiting_for_result_HR))
                 CommandInterpreter.getInterpreter(context).requestManualHRMeasure(manualHRRequesting)
                 manualHRRequesting = !manualHRRequesting
-                DeviceControllerViewModel.instance?.currentHR?.observe(context, observer)
+                MainViewModel.publicModel?.currentHR?.observe(context, observer)
             }
         }
     }
+
+    //endregion
+
+    //endregion
+
+    // region Application Filter Full
+
+    //region Filter Properties
+
+    private val preloaded = ArrayList<ApplicationRow>()
+    private var loaded = false
+
+    //endregion
+
+    //region Application filter
+
+    private fun pushArrayToAdapter(context: Activity, adapter: DoubleTaskTableViewAdapter){
+        loader.launch {
+            while (!loaded)
+                continue
+            adapter.removeEverything()
+            for (x in preloaded) {
+                context.runOnUiThread {
+                    adapter.addRow(adapter.countRows++,
+                            null, x.getCellsList() as MutableList<Cell?>)
+                }
+            }
+        }
+    }
+    private fun loadIcon(packageManager: PackageManager, pack: ResolveInfo, context: Activity): Drawable {
+        return try {
+            packageManager.getApplicationIcon(pack.activityInfo.packageName)
+        } catch (ex: Exception) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                context.getDrawable(android.R.drawable.ic_menu_help)!!
+            } else{
+                ContextCompat.getDrawable(context, android.R.drawable.ic_menu_help)!!
+            }
+        }
+    }
+    private val switchCallback = { v: View, r: Int, c: Int ->
+        preloaded[r].updateInfo((v as SwitchCompat).isChecked, this.writableDatabase)
+    }
+    fun load(context: Activity, adapter: DoubleTaskTableViewAdapter) {
+        val reqIntent = Intent(Intent.ACTION_MAIN, null)
+        adapter.callback = switchCallback
+        reqIntent.addCategory(Intent.CATEGORY_LAUNCHER)
+        val packList = context.packageManager.queryIntentActivities(reqIntent, 0)
+        context.runOnUiThread{ adapter.setColumnHeaderItems(DoubleTaskTableViewAdapter.emptyHeader(3) as List<ColumnHeader?>?)}
+        if (!loaded && preloaded.size == 0) {
+            loader.launch(Dispatchers.IO) {
+                val jobs = ArrayList<Job>()
+                for (Pack in packList) {
+                    this@DataViewModel.readableDatabase = DatabaseController.getDCObject(context).readableDatabase
+                    this@DataViewModel.writableDatabase = DatabaseController.getDCObject(context).writableDatabase
+                    jobs.add(launch(Dispatchers.IO) {
+                        val ar = ApplicationRow(Pack.activityInfo.packageName,
+                                loadIcon(context.packageManager, Pack, context),
+                                Pack.loadLabel(context.packageManager).toString(),
+                                NotifyFilterTable.isEnabled(Pack.activityInfo.packageName, this@DataViewModel.readableDatabase))
+                        preloaded.add(ar)
+                        context.runOnUiThread {
+                            adapter.addRow(adapter.countRows++, null,
+                                    ar.getCellsList() as MutableList<Cell?>)
+                        }
+                    })
+                    jobs.joinAll()
+                    loaded = true
+                }
+            }
+        } else if (loaded) pushArrayToAdapter(context, adapter)
+    }
+
+    //endregion
+
+    //endregion
+
+}
+
+//region Helper classes
+
+interface IExtractable{
+    fun getCellsList(): MutableList<Cell>
 }
 
 @ExperimentalStdlibApi
-class Record(Result: Cursor?, var recordDate: Long, isGrouping: Boolean, private val scale: DataFragment.Scalings) {
+class Record(Result: Cursor?, var recordDate: Long, isGrouping: Boolean, private val scale: DataFragment.Scalings): IExtractable {
     private var whenCalendar: Calendar = Calendar.getInstance()
     var mainValue: Int = -1// AVG + Default
     var minValue: Int = -1
@@ -273,15 +371,15 @@ class Record(Result: Cursor?, var recordDate: Long, isGrouping: Boolean, private
         }
     }
 
-    fun getCellsList(): MutableList<Cell> {
+    override fun getCellsList(): MutableList<Cell> {
         val size = if (maxValue > 0) 4 else 2
         val result = MutableList<Cell>(size) {
-            Cell("")
+            TextCell("")
         }
-        result[0] = (Cell(dateString))
-        if (minValue > 0) result[1] = (Cell(minValue.toString()))
-        if (minValue > 0) result[2] = (Cell(mainValue.toString())) else result[1] = Cell(mainValue.toString())
-        if (maxValue > 0) result[3] = Cell(maxValue.toString())
+        result[0] = (TextCell(dateString))
+        if (minValue > 0) result[1] = (TextCell(minValue.toString()))
+        if (minValue > 0) result[2] = (TextCell(mainValue.toString())) else result[1] = TextCell(mainValue.toString())
+        if (maxValue > 0) result[3] = TextCell(maxValue.toString())
         return result
     }
 
@@ -298,3 +396,5 @@ class Record(Result: Cursor?, var recordDate: Long, isGrouping: Boolean, private
         }
     }
 }
+
+//endregion

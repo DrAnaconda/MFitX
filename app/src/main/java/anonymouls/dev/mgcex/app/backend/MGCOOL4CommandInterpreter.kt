@@ -2,7 +2,8 @@ package anonymouls.dev.mgcex.app.backend
 
 import android.os.Handler
 import anonymouls.dev.mgcex.app.backend.ApplicationStarter.Companion.commandHandler
-import anonymouls.dev.mgcex.app.main.SettingsActivity
+import anonymouls.dev.mgcex.util.PreferenceListener
+
 import anonymouls.dev.mgcex.util.Utils
 import java.nio.ByteBuffer
 import java.util.*
@@ -40,7 +41,7 @@ class MGCOOL4CommandInterpreter : CommandInterpreter() {
         UartService.RX_SERVICE_UUID = UUID.fromString(UARTRXServiceUUIDString)
         UartService.TXServiceDesctiptor = UUID.fromString(UARTDescriptor)
         if (Algorithm.SelfPointer != null)
-            Utils.getSharedPrefs(Algorithm.SelfPointer!!.baseContext).edit().remove(SettingsActivity.targetSteps).apply()
+            Utils.getSharedPrefs(Algorithm.SelfPointer!!.baseContext).edit().remove(PreferenceListener.Companion.PrefsConsts.targetSteps).apply()
     }
 
     override fun getMainInfoRequest() {
