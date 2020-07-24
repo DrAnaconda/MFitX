@@ -187,4 +187,6 @@
     <string name="unlimited_monitor">&#160;set equal time for unlimited monitoring</string>
     <string name="confirmneeded">This action requires confirmation</string>
     <string name="warning">Warning</string>
+    <string name="grant_perm">Grant permission</string>
+    <string name="summary_notifyListener">This function requires permission to listen notification. Click here and fix problem</string>
 </resources>

@@ -44,13 +44,16 @@ class NotificationService : NotificationListenerService() {
             Repeater = AsyncRepeater()
             Repeater!!.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
         }
+        Utils.getSharedPrefs(this@NotificationService).edit().putBoolean("bindNotifyService", true).apply()
         super.onListenerConnected()
     }
 
     override fun onListenerDisconnected() {
         IsActive = false
+        instance = null
         Repeater?.cancel(false)
         Repeater = null
+        Utils.getSharedPrefs(this@NotificationService).edit().putBoolean("bindNotifyService", false).apply()
         super.onListenerDisconnected()
     }
 
@@ -152,7 +155,6 @@ class NotificationService : NotificationListenerService() {
 
     companion object {
 
-        val NotifyAction = "ExternalNotify"
         var Repeater: AsyncRepeater? = null
         var instance: NotificationService? = null
         var IsActive: Boolean = false
@@ -185,7 +187,7 @@ class NotificationService : NotificationListenerService() {
                         }
                     } else PendingList.clear()
 
-                    Utils.safeThreadSleep((sharedPrefs!!.getInt(PreferenceListener.Companion.PrefsConsts.secondsNotify, 5) * 1000).toLong(), false)
+                    Utils.safeThreadSleep((sharedPrefs!!.getString(PreferenceListener.Companion.PrefsConsts.secondsNotify, "5")!!.toInt() * 1000).toLong(), false)
                 }
                 return true
             }

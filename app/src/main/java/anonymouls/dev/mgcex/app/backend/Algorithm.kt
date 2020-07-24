@@ -122,6 +122,7 @@ class Algorithm : Service() {
 
     private fun deadAlgo() {
         uartService.disconnect()
+        this.stopForeground(true)
         this.stopSelf()
         SelfPointer = null
         IsActive = false
@@ -201,18 +202,6 @@ class Algorithm : Service() {
             StatusCode.postValue(StatusCodes.BluetoothDisabled)
         }
         uartService.forceEnableBluetooth()
-        /*
-        if (DeviceControllerActivity.instance != null && !bluetoothRejected && !bluetoothRequested) {
-            bluetoothRequested = true
-            if (Utils.bluetoothEngaging(DeviceControllerActivity.instance!!)) {
-                StatusCode.postValue(StatusCodes.Disconnected)
-                currentAlgoStatus.postValue(getString(R.string.status_engaging))
-            }
-        } else if (bluetoothRejected) {
-            workInProgress = false
-            StatusCode.postValue(StatusCodes.BluetoothDisabled)
-            currentAlgoStatus.postValue(getString(R.string.BluetoothRequiredMsg))
-        }*/
     }
 
     private fun deviceDisconnectedAlgo() {
@@ -264,6 +253,7 @@ class Algorithm : Service() {
     override fun onDestroy() {
         super.onDestroy()
         if (this::inserter.isInitialized) inserter.stopInserter()
+        this.stopForeground(true)
         SelfPointer = null
         sendBroadcast(Intent(MultitaskListener.restartAction))
     }
@@ -280,6 +270,7 @@ class Algorithm : Service() {
         SelfPointer = null
         thread?.interrupt()
         thread = null
+        this.stopForeground(true)
         return super.stopService(name)
     }
 
@@ -304,7 +295,8 @@ class Algorithm : Service() {
     fun init() {
         synchronized(IsActive) {
             if (!Utils.getSharedPrefs(this).contains(PreferenceListener.Companion.PrefsConsts.bandAddress)) {
-                stopSelf()
+                this.stopForeground(true)
+                this.stopSelf()
                 return
             } else {
                 StatusCode.postValue(StatusCodes.Disconnected)

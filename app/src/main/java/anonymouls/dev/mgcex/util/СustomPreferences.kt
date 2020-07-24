@@ -3,11 +3,13 @@ package anonymouls.dev.mgcex.util
 import android.app.TimePickerDialog
 import android.content.Context
 import android.content.res.TypedArray
+import android.text.InputType
 import android.util.AttributeSet
 import androidx.preference.EditTextPreference
 import androidx.preference.Preference
 import androidx.preference.SwitchPreferenceCompat
 import anonymouls.dev.mgcex.app.R
+import anonymouls.dev.mgcex.app.backend.NotificationService
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -64,7 +66,28 @@ class TimePreference(context: Context, attrs: AttributeSet) : Preference(context
 
 }
 
+@ExperimentalStdlibApi
 class RedifinedEditTextPreference(context: Context, attrs: AttributeSet): EditTextPreference(context, attrs){
+
+    val defValue = Utils.getSharedPrefs(context).getString(this.key, null)
+
+    init {
+        this.setOnBindEditTextListener {
+            if (defValue != null) {
+                if (defValue.contains(',') || defValue.contains('.'))
+                    it.inputType = (InputType.TYPE_CLASS_NUMBER + InputType.TYPE_NUMBER_FLAG_DECIMAL)
+                if (checkOnlyNumbers()) it.inputType = InputType.TYPE_CLASS_NUMBER
+                it.setSelectAllOnFocus(true)
+            }
+        }
+    }
+
+    private fun checkOnlyNumbers(): Boolean{
+        if (defValue == null) return false
+        for(x in defValue) if (!x.isDigit()) return false
+        return true
+    }
+
     override fun onDependencyChanged(dependency: Preference?, disableDependent: Boolean) {
         this.isVisible = !disableDependent
     }
@@ -77,7 +100,26 @@ class RedifinedSwitchPreference(context: Context, attrs: AttributeSet): SwitchPr
 }
 
 class RedifinedPreference(context: Context, attrs: AttributeSet) : Preference(context, attrs){
+
+
     override fun onDependencyChanged(dependency: Preference?, disableDependent: Boolean) {
         this.isVisible = !disableDependent
     }
+}
+
+@ExperimentalStdlibApi
+class SingleTimePreference(context: Context, attrs: AttributeSet): SwitchPreferenceCompat(context, attrs){
+    init {
+        isVisible = !Utils.getSharedPrefs(context).getBoolean(this.key, false)
+        this.widgetLayoutResource = R.layout.empty
+        this.setOnPreferenceChangeListener { preference, newValue ->
+            val realBool =
+                    Utils.getSharedPrefs(context).getBoolean(this.key, false)
+                            && NotificationService.instance != null
+            preference.isVisible = !realBool
+            realBool
+        }
+    }
+
+
 }

@@ -83,13 +83,16 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel(), Comma
 
     init {
         publicModel = this
-        GlobalScope.launch(Dispatchers.Default) { reInit() }
     }
 
     //region Observes
 
-    private fun createStatusObserver() {
-        Algorithm.StatusCode.observe(activity, Observer {
+    private fun createStatusObserver(owner: LifecycleOwner) {
+        if (Algorithm.StatusCode.hasActiveObservers()
+                && Algorithm.currentAlgoStatus.hasActiveObservers()
+                && InsertTask.insertedRunning.hasActiveObservers()) return
+
+        Algorithm.StatusCode.observe(owner, Observer {
             if (it.code < Algorithm.StatusCodes.GattReady.code) {
                 _hrVisibility.postValue(View.GONE)
                 workInProgress.postValue(View.VISIBLE)
@@ -103,16 +106,17 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel(), Comma
             }
         })
 
-        Algorithm.currentAlgoStatus.observe(activity, Observer {
+        Algorithm.currentAlgoStatus.observe(owner, Observer {
             _currentStatus.postValue(it)
         })
-        InsertTask.insertedRunning.observe(activity, Observer {
+        InsertTask.insertedRunning.observe(owner, Observer {
             if (it) workInProgress.postValue(View.VISIBLE) else workInProgress.postValue(View.GONE)
         })
     }
 
-    private fun createBatteryObserver() {
-        currentBattery.observe(activity, Observer {
+    private fun createBatteryObserver(owner: LifecycleOwner) {
+        if (currentBattery.hasActiveObservers()) return
+        currentBattery.observe(owner, Observer {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 if (it > 5) {
                     activity.findViewById<TextView>(R.id.BatteryStatus)?.visibility = View.VISIBLE
@@ -144,8 +148,9 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel(), Comma
         })
     }
 
-    private fun <T> createTextObserverUniversal(id: Int, dataToObserve: LiveData<T>) {
-        dataToObserve.observe(activity, Observer {
+    private fun <T> createTextObserverUniversal(id: Int, dataToObserve: LiveData<T>, owner: LifecycleOwner) {
+        if (dataToObserve.hasActiveObservers()) return
+        dataToObserve.observe(owner, Observer {
             var string = ""
             string = when (it) {
                 is HRRecord -> it.hr.toString()
@@ -160,10 +165,10 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel(), Comma
         })
     }
 
-    private fun createValuesObserver() {
-        createTextObserverUniversal(R.id.HRValue, currentHR)
-        createTextObserverUniversal(R.id.StepsValue, currentSteps)
-        createTextObserverUniversal(R.id.CaloriesValue, currentCcals)
+    private fun createValuesObserver(owner: LifecycleOwner) {
+        createTextObserverUniversal(R.id.HRValue, currentHR, owner)
+        createTextObserverUniversal(R.id.StepsValue, currentSteps, owner)
+        createTextObserverUniversal(R.id.CaloriesValue, currentCcals, owner)
     }
 
     //endregion
@@ -254,12 +259,12 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel(), Comma
         hrVisibility.removeObservers(owner)
         workInProgress.removeObservers(owner)
     }
-    fun reInit() {
+    fun reInit(owner: LifecycleOwner) {
         if (demoMode()) return
         activity.runOnUiThread {
-            createValuesObserver()
-            createBatteryObserver()
-            createStatusObserver()
+            createValuesObserver(owner)
+            createBatteryObserver(owner)
+            createStatusObserver(owner)
         }
 
         Algorithm.SelfPointer?.thread?.interrupt()
@@ -269,6 +274,7 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel(), Comma
             _hrVisibility.postValue(View.VISIBLE)
         else
             _hrVisibility.postValue(View.GONE)
+        restore()
     }
     fun restore(){
         GlobalScope.launch(Dispatchers.Default) {

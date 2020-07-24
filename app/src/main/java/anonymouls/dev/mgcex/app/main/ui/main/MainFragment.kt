@@ -7,6 +7,9 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProviders
 import anonymouls.dev.mgcex.app.databinding.MainFragmentBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 @ExperimentalStdlibApi
 class MainFragment : Fragment() {
@@ -33,8 +36,12 @@ class MainFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        if (this::viewModel.isInitialized)
-            viewModel.restore()
+        if (this::viewModel.isInitialized) {
+            GlobalScope.launch(Dispatchers.Default) {
+                viewModel.reInit(this@MainFragment)
+                viewModel.restore()
+            }
+        }
     }
     override fun onPause() {
         super.onPause()

@@ -176,4 +176,6 @@
     <string name="unlimited_monitor">&#160;установите одиннаковое время для круглосуточного мониторинга</string>
     <string name="confirmneeded">Это действие требует подтверждения</string>
     <string name="warning">Внимание</string>
+    <string name="grant_perm">Предоставить разрешение</string>
+    <string name="summary_notifyListener">Эта функция требует специальное разрешение. Кликнете, чтобы предоставить его</string>
 </resources>

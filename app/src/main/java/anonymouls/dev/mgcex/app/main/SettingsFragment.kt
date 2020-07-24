@@ -12,6 +12,7 @@ import androidx.preference.PreferenceManager
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.backend.Algorithm
 import anonymouls.dev.mgcex.app.backend.CommandInterpreter
+import anonymouls.dev.mgcex.app.backend.NotificationService
 import anonymouls.dev.mgcex.app.data.DataFragment
 import anonymouls.dev.mgcex.app.scanner.ScanFragment
 import anonymouls.dev.mgcex.util.DialogHelpers.promptSimpleDialog
@@ -32,11 +33,23 @@ class SettingsFragment : PreferenceFragmentCompat() {
         proceedStaticContent()
     }
 
+    override fun onActivityCreated(savedInstanceState: Bundle?) {
+        super.onActivityCreated(savedInstanceState)
+        GlobalScope.launch(Dispatchers.Default) {
+            proceedDynamicContent()
+        }
+    }
     override fun onAttach(context: Context) {
         super.onAttach(context)
         GlobalScope.launch(Dispatchers.Default) {
-            prefs = PreferenceManager.getDefaultSharedPreferences(context)
-            proceedDynamicContent(); }
+                prefs = PreferenceManager.getDefaultSharedPreferences(context)
+                ci = CommandInterpreter.getInterpreter(context)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        proceedNotify()
     }
 
     private fun createApproval(taskforce: ()->Any){
@@ -71,16 +84,21 @@ class SettingsFragment : PreferenceFragmentCompat() {
         findPreference<Preference>("NFilter")?.setOnPreferenceClickListener {
             clickListenerUniversal("NFilter"); true
         }
-        if (prefs.contains("BandAddress"))
-            findPreference<Preference>("BandAddress")?.title = this.requireContext().getString(R.string.current_connection) + prefs.getString("BandAddress", null)
         // TODO Extract strings???
     }
     private fun proceedDynamicContent(){
-        ci = CommandInterpreter.getInterpreter(this.requireContext())
+        while(!this::ci.isInitialized || !this::prefs.isInitialized) continue
+        if (prefs.contains("BandAddress"))
+            findPreference<Preference>("BandAddress")?.title = this.requireContext().getString(R.string.current_connection) + prefs.getString("BandAddress", null)
         findPreference<Preference>(PreferenceListener.Companion.PrefsConsts.vibrationSetting)?.isVisible = ci.vibrationSupport
         findPreference<Preference>(PreferenceListener.Companion.PrefsConsts.targetSteps)?.isVisible = ci.stepsTargetSettingSupport
         findPreference<Preference>(PreferenceListener.Companion.PrefsConsts.longSittingSetting)?.isVisible = ci.sittingReminderSupport
         findPreference<PreferenceCategory>("HRMon")?.isVisible = !ci.hRRealTimeControlSupport
+        proceedNotify()
+    }
+    private fun proceedNotify(){
+        prefs.edit().putBoolean("bindNotifyService",NotificationService.instance != null).apply()
+        findPreference<Preference>("bindNotifyService")?.isVisible = NotificationService.instance == null
     }
 
     private fun showNotConnectedErrorToast() {
@@ -88,7 +106,8 @@ class SettingsFragment : PreferenceFragmentCompat() {
     }
 
 
-    //region actions
+
+    //region Bracelet Actions
 
     private val deAuthDevice = {
         prefs.edit().remove(PreferenceListener.Companion.PrefsConsts.bandAddress).apply()

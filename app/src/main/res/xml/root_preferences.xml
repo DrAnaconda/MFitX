@@ -37,10 +37,12 @@
             app:key="LongSittingReminder"
             app:summary="@string/summary_idle" />
 
-        <EditTextPreference
+        <anonymouls.dev.mgcex.util.RedifinedEditTextPreference
             android:maxLength="2"
             android:title="@string/target_steps_count"
+            android:digits="0123456789"
             app:defaultValue="5000"
+            android:inputType="number"
             app:key="TargetStepsSetting"
             app:useSimpleSummaryProvider="true" />
 
@@ -56,6 +58,8 @@
         <anonymouls.dev.mgcex.util.RedifinedEditTextPreference
             android:inputType="number"
             app:defaultValue="20"
+            android:digits="0123456789"
+            android:maxLength="2"
             app:dependency="BSE"
             app:key="attachment"
             app:title="@string/battery_charge_level_threshold"
@@ -73,6 +77,8 @@
     <anonymouls.dev.mgcex.util.RedifinedEditTextPreference app:defaultValue="5"
         app:dependency="HRMEn"
         app:key="HRMI"
+        android:digits="0123456789"
+        android:inputType="number"
         app:title="@string/collect_every"
         app:useSimpleSummaryProvider="true"/>
 
@@ -88,10 +94,20 @@
 
     </PreferenceCategory>
 
-    <PreferenceCategory app:title="@string/smart_notification_settings">
+    <PreferenceCategory android:key="Notifies" app:title="@string/smart_notification_settings">
 
-        <SwitchPreferenceCompat
+        <anonymouls.dev.mgcex.util.SingleTimePreference
+            android:defaultValue="false"
+            app:key="bindNotifyService"
+            app:summary="@string/summary_notifyListener"
+            app:title="@string/grant_perm">
+            <intent
+                android:action="android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS" />
+        </anonymouls.dev.mgcex.util.SingleTimePreference>
+
+        <anonymouls.dev.mgcex.util.RedifinedSwitchPreference
             app:key="NotificationsEnabled"
+            app:dependency="bindNotifyService"
             app:summary="@string/summary_notifications"
             app:title="@string/receive_notifications" />
 
@@ -104,12 +120,14 @@
             android:inputType="number"
             app:title="@string/repeat_notification"
             app:defaultValue="3"
+            android:digits="0123456789"
             app:key="repeatsNumber"
             app:useSimpleSummaryProvider="true" />
 
         <anonymouls.dev.mgcex.util.RedifinedEditTextPreference app:dependency="NotificationsEnabled"
             app:title="@string/notify_delay"
             android:inputType="number"
+            android:digits="0123456789"
             app:defaultValue="5"
             app:key="secondsRepeat"
             app:useSimpleSummaryProvider="true" />
@@ -133,16 +151,18 @@
         app:summary="@string/summary_cpualive"
         app:title="@string/keep_cpu_alive" />
 
-    <EditTextPreference
+    <anonymouls.dev.mgcex.util.RedifinedEditTextPreference
         android:inputType="number"
         app:defaultValue="5"
+        android:digits="0123456789"
         app:key="AutoSyncInterval"
         app:title="@string/sync_setting"
         app:useSimpleSummaryProvider="true"/>
 
-    <EditTextPreference
+    <anonymouls.dev.mgcex.util.RedifinedEditTextPreference
         android:inputType="numberDecimal"
         app:defaultValue="0,66"
+        android:digits="0123456789"
         app:key="Step_Size"
         app:title="@string/step_size_centimeters"
         app:useSimpleSummaryProvider="true"/>

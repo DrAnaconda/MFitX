@@ -18,7 +18,8 @@ class ApplicationStarter : Application() {
     }
 
     override fun onCreate() {
-        if (BuildConfig.DEBUG) {
+        // TODO TEST
+        if (false && BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.Builder()
                     .detectAll()
                     .penaltyLog().penaltyDialog()
