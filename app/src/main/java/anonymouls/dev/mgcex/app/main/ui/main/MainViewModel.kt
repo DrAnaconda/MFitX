@@ -286,8 +286,8 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel(), Comma
                 _batteryHolder.postValue(CommandCallbacks.getCallback(activity).savedBattery)
             if (CommandCallbacks.getCallback(activity).savedHR.hr > -1)
                 _lastHearthRateIncomed.postValue(CommandCallbacks.getCallback(activity).savedHR)
-            if (CommandCallbacks.getCallback(activity).savedStatus.isNotEmpty())
-                _currentStatus.postValue(CommandCallbacks.getCallback(activity).savedStatus)
+            if (Algorithm.SelfPointer != null)
+                _currentStatus.postValue(Algorithm.currentAlgoStatus.value!!)
         }
     }
 

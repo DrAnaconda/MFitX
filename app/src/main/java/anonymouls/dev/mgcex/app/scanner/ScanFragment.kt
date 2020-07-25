@@ -22,8 +22,8 @@ import androidx.fragment.app.FragmentManager
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.backend.MultitaskListener
 import anonymouls.dev.mgcex.app.main.ui.main.MainFragment
-import anonymouls.dev.mgcex.util.Analytics
 import anonymouls.dev.mgcex.util.DialogHelpers
+import anonymouls.dev.mgcex.util.FireAnalytics
 import anonymouls.dev.mgcex.util.PreferenceListener
 import anonymouls.dev.mgcex.util.Utils
 import kotlinx.coroutines.Dispatchers
@@ -72,7 +72,7 @@ class ScanFragment : Fragment() {
                 Utils.requestPermissionsAdvanced(requireActivity())
         } else {
             if (grantResults.contains(PackageManager.PERMISSION_DENIED)) {
-                Analytics.getInstance(requireContext())?.sendCustomEvent(permissions[0], "rejected")
+                FireAnalytics.getInstance(requireContext()).sendCustomEvent(permissions[0], "rejected")
             }
         }
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)

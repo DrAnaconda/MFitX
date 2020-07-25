@@ -92,27 +92,27 @@ object AdsController {
 
     private val defaultListener = object : AdListener() {
         override fun onAdLoaded() {
-                Analytics.getInstance(ApplicationStarter.appContext).sendCustomEvent(AdLoadedEvent, null)
+                FireAnalytics.getInstance(ApplicationStarter.appContext).sendCustomEvent(AdLoadedEvent, null)
         }
 
         override fun onAdFailedToLoad(errorCode: Int) {
-                Analytics.getInstance(ApplicationStarter.appContext).sendCustomEvent(AdFailedLoadEvent, errorCode.toString())
+                FireAnalytics.getInstance(ApplicationStarter.appContext).sendCustomEvent(AdFailedLoadEvent, errorCode.toString())
         }
 
         override fun onAdOpened() {
-                Analytics.getInstance(ApplicationStarter.appContext).sendCustomEvent(AdOpenedEvent, null)
+                FireAnalytics.getInstance(ApplicationStarter.appContext).sendCustomEvent(AdOpenedEvent, null)
         }
 
         override fun onAdClicked() {
-                Analytics.getInstance(ApplicationStarter.appContext).sendCustomEvent(AdClickedEvent, null)
+                FireAnalytics.getInstance(ApplicationStarter.appContext).sendCustomEvent(AdClickedEvent, null)
         }
 
         override fun onAdLeftApplication() {
-                Analytics.getInstance(ApplicationStarter.appContext).sendCustomEvent(AdLeftEvent, null)
+                FireAnalytics.getInstance(ApplicationStarter.appContext).sendCustomEvent(AdLeftEvent, null)
         }
 
         override fun onAdClosed() {
-                Analytics.getInstance(ApplicationStarter.appContext).sendCustomEvent(AdClosedEvent, null)
+                FireAnalytics.getInstance(ApplicationStarter.appContext).sendCustomEvent(AdClosedEvent, null)
         }
     }
 

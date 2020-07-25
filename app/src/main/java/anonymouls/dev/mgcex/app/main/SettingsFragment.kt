@@ -11,6 +11,7 @@ import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.backend.Algorithm
+import anonymouls.dev.mgcex.app.backend.CommandCallbacks
 import anonymouls.dev.mgcex.app.backend.CommandInterpreter
 import anonymouls.dev.mgcex.app.backend.NotificationService
 import anonymouls.dev.mgcex.app.data.DataFragment
@@ -154,27 +155,29 @@ class SettingsFragment : PreferenceFragmentCompat() {
     //region Bracelet Actions
 
     private val deAuthDevice = {
-        prefs.edit().remove(PreferenceListener.Companion.PrefsConsts.bandAddress).apply()
-        prefs.edit().remove(PreferenceListener.Companion.PrefsConsts.bandIDConst).apply()
-        Algorithm.IsActive = false
-        Algorithm.updateStatusCode(Algorithm.StatusCodes.Dead)
-        val frag = ScanFragment()
-        val transaction = this.requireActivity().supportFragmentManager.beginTransaction()
-        val fm = this.requireActivity().supportFragmentManager
-        fm.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
-        transaction.disallowAddToBackStack()
-        transaction.replace(R.id.container, frag)
-        transaction.commit()
+        GlobalScope.launch(Dispatchers.Default) {
+            CommandCallbacks.wipeSaved()
+            Algorithm.updateStatusCode(Algorithm.StatusCodes.Dead)
+            prefs.edit().remove(PreferenceListener.Companion.PrefsConsts.bandAddress).apply()
+            prefs.edit().remove(PreferenceListener.Companion.PrefsConsts.bandIDConst).apply()
+            val frag = ScanFragment()
+            val transaction = this@SettingsFragment.requireActivity().supportFragmentManager.beginTransaction()
+            val fm = this@SettingsFragment.requireActivity().supportFragmentManager
+            fm.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
+            transaction.disallowAddToBackStack()
+            transaction.replace(R.id.container, frag)
+            this@SettingsFragment.requireActivity().runOnUiThread { transaction.commit() }
+        }
     }
     private val sendEraseDatabaseCommand = {
-        if (Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.Connected.code) {
+        if (Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.GattReady.code) {
              ci.eraseDatabase()
         } else {
             showNotConnectedErrorToast()
         }
     }
     private val sendResetCommand = {
-        if (Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.Connected.code) {
+        if (Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.GattReady.code) {
             ci.restoreToDefaults()
         } else {
             showNotConnectedErrorToast()

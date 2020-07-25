@@ -113,5 +113,13 @@ open class CommandCallbacks(private val context: Context) : CommandInterpreter.C
                 SelfPointer = CommandCallbacks(context)
             return SelfPointer
         }
+        fun wipeSaved(){
+            if (this::SelfPointer.isInitialized){
+                SelfPointer.savedCCals = 0
+                SelfPointer.savedSteps = 0
+                SelfPointer.savedHR = HRRecord(Calendar.getInstance(), -20)
+                SelfPointer.savedBattery = 0
+            }
+        }
     }
 }

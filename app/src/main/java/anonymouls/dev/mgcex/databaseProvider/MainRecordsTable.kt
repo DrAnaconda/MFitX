@@ -7,9 +7,10 @@ import android.database.sqlite.SQLiteDatabase
 import anonymouls.dev.mgcex.app.backend.ApplicationStarter
 import anonymouls.dev.mgcex.app.data.DataFragment
 import anonymouls.dev.mgcex.util.PreferenceListener
-
 import anonymouls.dev.mgcex.util.Utils
-import java.lang.Math.abs
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.util.*
 
 @ExperimentalStdlibApi
@@ -41,21 +42,7 @@ object MainRecordsTable {
                 ");"
     }
 
-//region data inserting
-
-    fun getDeltaInMinutes(currentTime: Calendar, Operator: SQLiteDatabase): Long {
-        val curs = Operator.query(MainRecordsTable.TableName,
-                arrayOf(ColumnNames[1]), null, null, null, null, ColumnNames[1] + " DESC", "1")
-        curs.moveToFirst()
-        if (curs.count > 0) {
-            val nearestCalendar = CustomDatabaseUtils.longToCalendar(curs.getLong(0), true)
-            curs.close()
-            val diff: Long = currentTime.timeInMillis - nearestCalendar.timeInMillis
-            val seconds = diff / 1000
-            val minutes = seconds / 60
-            return abs(minutes)
-        } else return -1
-    }
+    //region Data inserting
 
     private fun checkIsExistsToday(TimeRecord: Calendar, Operator: SQLiteDatabase, Steps: Int, Calories: Int): Long? {
         TimeRecord.set(Calendar.HOUR_OF_DAY, 0)
@@ -93,9 +80,9 @@ object MainRecordsTable {
         return try {
             val checker = checkIsExistsToday(TimeRecord, Operator, Steps, Calories)
             if (checker == null)
-                Operator.insert(MainRecordsTable.TableName, null, Values)
+                Operator.insert(TableName, null, Values)
             else {
-                updateExisting(Values, checker, Operator)
+                updateExisting(Values, checker)
                 checker
             }
         } catch (ex: Exception) {
@@ -103,11 +90,14 @@ object MainRecordsTable {
         }
     }
 
-    private fun updateExisting(values: ContentValues, targetTime: Long, Operator: SQLiteDatabase) {
-        Operator.update(MainRecordsTable.TableName, values, " " + ColumnNames[1] + " = ?", arrayOf(targetTime.toString()))
+    private fun updateExisting(values: ContentValues, targetTime: Long) {
+        DatabaseController.getDCObject(ApplicationStarter.appContext).writableDatabase
+            .update(TableName, values, " " + ColumnNames[1] + " = ?", arrayOf(targetTime.toString()))
     }
 
-//endregion
+    //endregion
+
+    //region Batch Data Extract
 
     fun extractRecords(From: Long, To: Long, Operator: SQLiteDatabase, scaling: DataFragment.Scalings): Cursor {
         val tableName = if (scaling == DataFragment.Scalings.Day) MainRecordsTable.TableName + "COPY" else MainRecordsTable.TableName
@@ -157,7 +147,46 @@ object MainRecordsTable {
         return result
     }
 
-//region advanced tracking
+    fun getUnAnalyzedInInterval(To: Long): Queue<MainRecord> {
+        DatabaseController.getDCObject(ApplicationStarter.appContext).readableDatabase.use {
+            it.query(TableName + "COPY", ColumnsForExtraction, "${ColumnNamesCloneAdditional[0]} = 0 AND ${ColumnsForExtraction[0]} < ?",
+                    arrayOf(To.toString()), null, null, "${ColumnsForExtraction[0]} ASC").use {
+                return if (it.count > 0){
+                    val result: Queue<MainRecord> = LinkedList()
+                    it.moveToFirst()
+                    do{
+                        result.add(MainRecord(CustomDatabaseUtils.longToCalendar(it.getLong(0), true),
+                                it.getInt(1), it.getInt(2)))
+                    }while (it.moveToNext())
+                    result
+                } else LinkedList()
+            }
+        }
+    }
+
+    //endregion
+
+    //region Single Data Extract
+
+    fun getTopUnAnalyzed(): MainRecord? {
+        DatabaseController.getDCObject(ApplicationStarter.appContext).readableDatabase.use {
+            val cursor = it.query(TableName+"COPY", ColumnsForExtraction,
+                    "${ColumnNamesCloneAdditional[0]} = 0",
+                    null, null, null, "${ColumnsForExtraction[0]} DESC", "1")
+            cursor.use {
+                it.moveToFirst()
+                return if (it.count > 0)
+                    MainRecord(CustomDatabaseUtils.longToCalendar(it.getLong(0), true),
+                            it.getInt(1), it.getInt(2))
+                else
+                    null
+            }
+        }
+    }
+
+    //endregion
+
+    //region Advanced Tracking
 
     private fun extractFreshRecord(limiter: Long, db: SQLiteDatabase): MainRecord {
         val curs = db.query(MainRecordsTable.TableName, ColumnsForExtraction,
@@ -177,16 +206,31 @@ object MainRecordsTable {
         val deltaMinutes = kotlin.math.abs(Utils.getDeltaCalendar(freshData.RTime, newData.RTime, Calendar.MINUTE))
         val deltaSteps = newData.Steps - freshData.Steps
         val speed = if (deltaMinutes.toInt() != 0) deltaSteps.toDouble() / deltaMinutes else deltaSteps.toDouble() / 1
-        if (deltaSteps > 0 && (deltaMinutes in 5..120)) {
+        if (deltaSteps >= 0 && (deltaMinutes in 1..120)) {
             AdvancedActivityTracker.insertRecord(freshData.RTime, deltaMinutes.toInt(), speed, db)
             HRRecordsTable.updateAnalyticalViaMainInfo(deltaMinutes, speed,
-                    CustomDatabaseUtils.calendarToLong(freshData.RTime, true), db)
+                    CustomDatabaseUtils.calendarToLong(freshData.RTime, true))
         } else {
             AdvancedActivityTracker.insertRecord(newData.RTime, -1, -1.0, db)
         }
     }
 
 //endregion
+
+    //region Updating
+
+    fun markAsAnalyzed(From: Calendar, To: Calendar){
+        GlobalScope.launch(Dispatchers.IO) {
+            val from = CustomDatabaseUtils.calendarToLong(From, true)
+            val to = CustomDatabaseUtils.calendarToLong(To, true)-1
+            val cv = ContentValues(); cv.put(ColumnNamesCloneAdditional[0], 1)
+            DatabaseController.getDCObject(ApplicationStarter.appContext).writableDatabase
+                    .update(TableName + "COPY", cv, "${ColumnsForExtraction[0]} BETWEEN $from AND $to",
+                            null)
+        }
+    }
+
+    //endregion
 
     class MainRecord(val RTime: Calendar, val Steps: Int, val Calories: Int)
 

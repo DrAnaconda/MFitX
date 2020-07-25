@@ -360,9 +360,14 @@ class DoubleTaskTableViewAdapter(private val context: Activity,
     }
 
     companion object{
-        fun emptyHeader(rows: Int): MutableList<ColumnHeader>{
+        fun simpleHeader(rows: Int, message:String): MutableList<ColumnHeader>{
             val result = ArrayList<ColumnHeader>()
-            for(x in 0 until rows) result.add(ColumnHeader(""))
+            for(x in 0 until rows) {
+                if (x == (rows/2))
+                    result.add(ColumnHeader(message))
+                else
+                    result.add(ColumnHeader(""))
+            }
             return result
         }
     }

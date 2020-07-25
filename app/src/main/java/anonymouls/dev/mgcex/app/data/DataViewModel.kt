@@ -309,7 +309,8 @@ class DataViewModel : ViewModel() {
         adapter.callback = switchCallback
         reqIntent.addCategory(Intent.CATEGORY_LAUNCHER)
         val packList = context.packageManager.queryIntentActivities(reqIntent, 0)
-        context.runOnUiThread{ adapter.setColumnHeaderItems(DoubleTaskTableViewAdapter.emptyHeader(3) as List<ColumnHeader?>?)}
+        context.runOnUiThread{ adapter.setColumnHeaderItems(DoubleTaskTableViewAdapter.simpleHeader(3, 
+                context.getString(R.string.app_filter)) as List<ColumnHeader?>?)}
         if (!loaded && preloaded.size == 0) {
             loader.launch(Dispatchers.IO) {
                 val jobs = ArrayList<Job>()

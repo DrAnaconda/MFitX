@@ -102,9 +102,9 @@ class Algorithm : Service() {
         Handler(commandHandler.looper).postDelayed({ ci.requestSettings() }, 200)
         Handler(commandHandler.looper).postDelayed({ ci.requestBatteryStatus() }, 500)
         Handler(commandHandler.looper).postDelayed({ ci.syncTime(Calendar.getInstance()) }, 800)
-        Handler(commandHandler.looper).postDelayed({ ci.getMainInfoRequest() }, 1200)
+        Handler(commandHandler.looper).postDelayed({ ci.requestHRHistory(getLastHRSync()) }, 1200)
         Handler(commandHandler.looper).postDelayed({ ci.requestSleepHistory(getLastSleepSync()) }, 1600)
-        Handler(commandHandler.looper).postDelayed({ ci.requestHRHistory(getLastHRSync()) }, 2200)
+        Handler(commandHandler.looper).postDelayed({ ci.getMainInfoRequest() }, 2200)
         if (isFirstTime) forceSyncHR()
         //if (IsAlarmingTriggered && !IsFromActivity) alarmTriggerDecider(0)
     }
@@ -120,37 +120,37 @@ class Algorithm : Service() {
     //region Background Taskforce
 
     private fun deadAlgo() {
+        StatusCode.postValue(StatusCodes.Dead)
+        IsActive = false
+        inserter.stopInserter()
+        SelfPointer = null
         uartService.disconnect()
+        SelfPointer = null
+        while (thread != null && thread?.state != Thread.State.TERMINATED
+                && thread?.name != Thread.currentThread().name) {
+            thread?.interrupt()
+            Utils.safeThreadSleep(1000, true)
+        }
+        thread = null
+        currentAlgoStatus.postValue(this.getString(R.string.status_label))
         this.stopForeground(true)
         this.stopSelf()
-        SelfPointer = null
-        IsActive = false
     }
 
     private fun run() {
         while (IsActive) {
             workInProgress = true
-            uartService.probeConnection()
             when (StatusCode.value!!) {
+                StatusCodes.DeviceLost -> Utils.safeThreadSleep(5*60*1000, false)
                 StatusCodes.GattConnected -> connectedAlgo()
                 StatusCodes.GattReady -> executeMainAlgo()
                 StatusCodes.BluetoothDisabled -> bluetoothDisabledAlgo()
                 StatusCodes.Connected, StatusCodes.Disconnected,
-                StatusCodes.DeviceLost, StatusCodes.Connecting -> deviceDisconnectedAlgo()
+                StatusCodes.Connecting -> deviceDisconnectedAlgo()
                 StatusCodes.GattConnecting, StatusCodes.GattDiscovering -> connectionAlgos()
                 StatusCodes.Dead -> deadAlgo()
             }
         }
-    }
-
-    private fun checkDisconnectedTime(): Boolean {
-        val now = System.currentTimeMillis() / 1000 / 60
-        val startInMin = disconnectedTimestamp / 1000 / 60
-        if (now - startInMin > prefs.getString(PreferenceListener.Companion.PrefsConsts.disconnectedMonitoring, "5")!!.toInt()) { // TODO: Public value
-            StatusCode.postValue(StatusCodes.Dead)
-            return false
-        }
-        return true
     }
 
     private fun executeMainAlgo() {
@@ -202,24 +202,23 @@ class Algorithm : Service() {
     }
 
     private fun deviceDisconnectedAlgo() {
-        if (StatusCode.value!!.code < StatusCodes.Connecting.code) {
+        if (StatusCode.value!!.code < StatusCodes.GattConnecting.code) {
             connectionTries = System.currentTimeMillis()
             disconnectedTimestamp = System.currentTimeMillis()
             currentAlgoStatus.postValue(getString(R.string.conntecting_status))
             if (uartService.connect(lockedAddress)) {
-                Utils.safeThreadSleep(21000, false)
+                StatusCode.postValue(StatusCodes.GattConnecting)
             }
         }
     }
 
     private fun connectionAlgos() {
-        if (!checkDisconnectedTime()) return
         if (System.currentTimeMillis() > connectionTries + 20000) {
+            StatusCode.postValue(StatusCodes.Disconnected)
             uartService.disconnect()
             connectionTries = 0
-            StatusCode.postValue(StatusCodes.Disconnected)
         } else
-            Utils.safeThreadSleep(10000, true)
+            Utils.safeThreadSleep(25000, false)
     }
 
     private fun connectedAlgo() {
@@ -249,6 +248,7 @@ class Algorithm : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        deadAlgo()
         if (this::inserter.isInitialized) inserter.stopInserter()
         this.stopForeground(true)
         SelfPointer = null
@@ -261,13 +261,7 @@ class Algorithm : Service() {
     }
 
     override fun stopService(name: Intent?): Boolean {
-        IsActive = false
-        inserter.stopInserter()
-        StatusCode.postValue(StatusCodes.Dead)
-        SelfPointer = null
-        thread?.interrupt()
-        thread = null
-        this.stopForeground(true)
+        deadAlgo()
         return super.stopService(name)
     }
 
@@ -289,6 +283,24 @@ class Algorithm : Service() {
         }
     }
 
+    fun killWakeLock() {
+        if (this::wakeLock.isInitialized) wakeLock.release()
+    }
+
+    fun sendData(Data: ByteArray): Boolean {
+        return if (this::uartService.isInitialized) {
+            this.uartService.writeRXCharacteristic(Data)
+        } else false
+    }
+
+    //endregion
+
+    //region Interacting
+
+    fun killService(){
+        deadAlgo()
+    }
+
     fun init() {
         synchronized(IsActive) {
             if (!Utils.getSharedPrefs(this).contains(PreferenceListener.Companion.PrefsConsts.bandAddress)) {
@@ -301,6 +313,7 @@ class Algorithm : Service() {
             if (SelfPointer == null) {
                 SelfPointer = this
                 isFirstTime = true
+                IsActive = true
                 ReplaceTable.replaceString("", this)
                 ci = CommandInterpreter.getInterpreter(this)
                 ci.callback = CommandCallbacks.getCallback(this)
@@ -320,6 +333,7 @@ class Algorithm : Service() {
                 if (!isNotifyServiceAlive(this))
                     tryForceStartListener(this)
                 lockedAddress = Utils.getSharedPrefs(this).getString(PreferenceListener.Companion.PrefsConsts.bandAddress, "").toString()
+                Handler(Looper.getMainLooper()).post { StatusCode.value = StatusCodes.Disconnected }
                 if (this::lockedAddress.isInitialized && lockedAddress.isNotEmpty()) {
                     if (Utils.getSharedPrefs(this).getBoolean(PreferenceListener.Companion.PrefsConsts.permitWakeLock, false)) {
                         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
@@ -340,16 +354,6 @@ class Algorithm : Service() {
                 getLastMainSync()
             }
         }
-    }
-
-    fun killWakeLock() {
-        if (this::wakeLock.isInitialized) wakeLock.release()
-    }
-
-    fun sendData(Data: ByteArray): Boolean {
-        return if (this::uartService.isInitialized) {
-            this.uartService.writeRXCharacteristic(Data)
-        } else false
     }
 
     //endregion
@@ -379,7 +383,7 @@ class Algorithm : Service() {
         var SelfPointer: Algorithm? = null
         var StatusCode = MutableLiveData(StatusCodes.Disconnected)
 
-        val currentAlgoStatus = MutableLiveData<String>()
+        val currentAlgoStatus = MutableLiveData<String>(ApplicationStarter.appContext.getString(R.string.status_label))
 
         var ApproachingAlarm: AlarmProvider? = null
         var IsAlarmWaiting = false
@@ -402,18 +406,18 @@ class Algorithm : Service() {
         }
 
         fun updateStatusCode(newStatus: StatusCodes) {
-            StatusCode.postValue(newStatus)
-            SelfPointer?.thread?.interrupt()
+            if (newStatus == StatusCodes.Dead) SelfPointer?.killService()
+            if (StatusCode.value!!.code == StatusCodes.Dead.code) {
+                return
+            } else {
+                StatusCode.postValue(newStatus)
+                SelfPointer?.thread?.interrupt()
+            }
         }
     }
 
 }
-// TODO Wipe data on disconnect
-// TODO Fix filters in settings (duplicates, also there is no enabled records). Fix database readlock
-// TODO Maybe add Jobs instead of service? but there are API 23 required
-// TODO CRITICAL. Looper is slow, some operations is slow
-// TODO Filter loading, icons slow downs app - investigate
-// TODO Speed up activities transitions or upgrade to fragments.
+
 // TODO Integrate data sleep visualization
 // TODO Integrate 3d party services
 // TODO Battery health tracker

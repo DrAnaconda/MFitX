@@ -6,6 +6,7 @@ import androidx.lifecycle.MutableLiveData
 import anonymouls.dev.mgcex.util.Utils
 import java.util.*
 import kotlin.collections.ArrayDeque
+import kotlin.random.Random
 
 @ExperimentalStdlibApi
 class InsertTask(private var ci: CommandInterpreter) : AsyncTask<Void, Void, Void>() {
@@ -18,7 +19,7 @@ class InsertTask(private var ci: CommandInterpreter) : AsyncTask<Void, Void, Voi
 
     @ExperimentalStdlibApi
     override fun doInBackground(vararg params: Void?): Void? {
-        Thread.currentThread().name = "AADatabaseInserter"
+        Thread.currentThread().name = "AADatabaseInserter"+(Random.nextInt()%150).toString()
         Thread.currentThread().priority = Thread.MIN_PRIORITY
         thread = Thread.currentThread()
         while (isActive) {
@@ -42,9 +43,16 @@ class InsertTask(private var ci: CommandInterpreter) : AsyncTask<Void, Void, Voi
         }
         return null
     }
+
+    override fun onPostExecute(result: Void?) {
+        super.onPostExecute(result)
+        _insertedRunning.postValue(false)
+    }
     fun stopInserter(){
         isActive = false
-        if (this::thread.isInitialized) thread.interrupt()
+        if (this::thread.isInitialized) {
+            thread.interrupt()
+        }
     }
 
     companion object {

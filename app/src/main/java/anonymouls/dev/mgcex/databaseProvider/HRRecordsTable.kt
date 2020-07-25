@@ -3,6 +3,7 @@ package anonymouls.dev.mgcex.databaseProvider
 import android.content.ContentValues
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import anonymouls.dev.mgcex.app.backend.ApplicationStarter
 import anonymouls.dev.mgcex.util.HRAnalyzer
 import java.util.*
 
@@ -63,16 +64,17 @@ object HRRecordsTable {
     }
 
 
-    fun updateAnalyticalViaMainInfo(deltaMin: Int, stepsMin: Double, from: Long,
-                                    db: SQLiteDatabase) {
+    fun updateAnalyticalViaMainInfo(deltaMin: Int, stepsMin: Double, from: Long) {
         val calendarTo = CustomDatabaseUtils.longToCalendar(from, true)
         calendarTo.add(Calendar.MINUTE, deltaMin)
-        val to = CustomDatabaseUtils.calendarToLong(calendarTo, true) + 1
+        val to = CustomDatabaseUtils.calendarToLong(calendarTo, true)
         val arctificalCoeff = 1 + (deltaMin - 5) * ((3 - 1) / (60 - 5))
         val mutatedSteps = stepsMin * arctificalCoeff
         val content = ContentValues()
-        content.put(ColumnsNames[3], HRAnalyzer.physicalStressDetermining(mutatedSteps).type)
-        db.update(TableName, content, ColumnsNames[1] + " BETWEEN ? AND ?",
+        val stressLevel = HRAnalyzer.physicalStressDetermining(mutatedSteps).type
+        content.put(ColumnsNames[3], stressLevel)
+        DatabaseController.getDCObject(ApplicationStarter.appContext).writableDatabase
+                .update(TableName, content, "${ColumnsNames[1]} BETWEEN ? AND ? AND ${ColumnsNames[3]} = 0",
                 arrayOf((from - 1).toString(), to.toString()))
     }
 

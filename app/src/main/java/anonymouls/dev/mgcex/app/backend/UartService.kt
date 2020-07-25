@@ -17,41 +17,46 @@ class UartService(private val context: Context) {
     private lateinit var mBluetoothDeviceAddress: String
     private var discoveringPending = false
     private var device: BluetoothDevice? = null
-    private var bluetoothServiceBusy = Any()
     private var isConnected = false
     private var isDiscovered = false
     private var existsUnclosedConnection = false
 
     private val mGattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
-            synchronized(bluetoothServiceBusy) {
-                Thread.currentThread().name = "AAConnecter" + (Random().nextInt() % 50)
-                when (newState) {
-                    BluetoothProfile.STATE_CONNECTED -> {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-                            gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
-                        discoveringPending = true; isConnected = true; isDiscovered = false
-                        gatt.discoverServices()
-                        if (Algorithm.StatusCode.value!!.code < Algorithm.StatusCodes.GattDiscovering.code)
-                            Algorithm.updateStatusCode(Algorithm.StatusCodes.GattDiscovering)
-                        Algorithm.SelfPointer?.thread?.interrupt()
+            Thread.currentThread().name = "AAConnecter" + (Random().nextInt() % 50)
+            synchronized(this@UartService::class) {
+                if (status == BluetoothGatt.GATT_SUCCESS || status == 8) {
+                    when (newState) {
+                        BluetoothProfile.STATE_CONNECTED -> {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+                                gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
+                            discoveringPending = true; isConnected = true; isDiscovered = false
+                            gatt.discoverServices()
+                            if (Algorithm.StatusCode.value!!.code < Algorithm.StatusCodes.GattDiscovering.code)
+                                Algorithm.updateStatusCode(Algorithm.StatusCodes.GattDiscovering)
+                            Algorithm.SelfPointer?.thread?.interrupt()
+                        }
+                        BluetoothProfile.STATE_DISCONNECTING, BluetoothProfile.STATE_DISCONNECTED -> {
+                            isConnected = false; isDiscovered = false
+                            if (!existsUnclosedConnection) { gatt.close(); mBluetoothGatt = null }
+                            if (!isDiscovered)
+                                Algorithm.updateStatusCode(Algorithm.StatusCodes.Disconnected)
+                            else
+                                Algorithm.updateStatusCode(Algorithm.StatusCodes.DeviceLost)
+                        }
+                        BluetoothProfile.STATE_CONNECTING -> Algorithm.updateStatusCode(Algorithm.StatusCodes.Connecting)
+                        else -> {
+                        } // ignore
                     }
-                    BluetoothProfile.STATE_DISCONNECTING, BluetoothProfile.STATE_DISCONNECTED -> {
-                        gatt.connect()
-                        isConnected = false; isDiscovered = false //existsUnclosedConnection = false;
-                        //mBluetoothGatt = null
-                        //device = null
-                        Algorithm.updateStatusCode(Algorithm.StatusCodes.Disconnected)
-                    }
-                    BluetoothProfile.STATE_CONNECTING -> Algorithm.updateStatusCode(Algorithm.StatusCodes.Connecting)
-                    else -> {
-                    } // ignore
+                } else {
+                    gatt.close()
+                    mBluetoothGatt = null; isConnected = false; isDiscovered = false; existsUnclosedConnection = false
                 }
             }
         }
 
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
-            synchronized(bluetoothServiceBusy) {
+            synchronized(this::class) {
                 if (status == BluetoothGatt.GATT_SUCCESS) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
                         gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_LOW_POWER)
@@ -63,6 +68,7 @@ class UartService(private val context: Context) {
                     Algorithm.updateStatusCode(Algorithm.StatusCodes.GattConnected)
                 }
                 discoveringPending = false
+                Algorithm.SelfPointer?.thread?.interrupt()
             }
         }
 
@@ -85,12 +91,16 @@ class UartService(private val context: Context) {
     }
 
     fun connect(address: String): Boolean {
-        synchronized(bluetoothServiceBusy) {
-            if (isConnected) {
+        synchronized(this::class) {
+            mBluetoothAdapter.startDiscovery()
+            if (existsUnclosedConnection){
+                return true
+            }
+            if (isConnected && mBluetoothGatt != null) {
                 if (Algorithm.StatusCode.value!!.code < Algorithm.StatusCodes.GattConnected.code)
                     Algorithm.updateStatusCode(Algorithm.StatusCodes.GattConnected)
                 return true
-            }
+            } else { isConnected = false }
 
             if (this::mBluetoothDeviceAddress.isInitialized
                     && address == mBluetoothDeviceAddress
@@ -112,7 +122,7 @@ class UartService(private val context: Context) {
             return if (mBluetoothGatt != null) {
                 existsUnclosedConnection = true
                 mBluetoothDeviceAddress = address
-                //retryDiscovering()
+                mBluetoothGatt?.connect()
                 if (Algorithm.StatusCode.value!!.code < Algorithm.StatusCodes.GattConnecting.code)
                     Algorithm.updateStatusCode(Algorithm.StatusCodes.GattConnecting)
                 true
@@ -123,10 +133,11 @@ class UartService(private val context: Context) {
     }
 
     fun disconnect() {
-        synchronized(bluetoothServiceBusy) {
+        synchronized(this::class) {
             mBluetoothGatt?.disconnect()
             mBluetoothGatt?.close()
             mBluetoothGatt = null
+            existsUnclosedConnection = false
         }
     }
 
@@ -163,7 +174,7 @@ class UartService(private val context: Context) {
     }
 
     fun retryDiscovery() {
-        synchronized(bluetoothServiceBusy) {
+        synchronized(this::class) {
             if (discoveringPending) return
             if (mBluetoothGatt == null) {
                 //connect(mBluetoothDeviceAddress)

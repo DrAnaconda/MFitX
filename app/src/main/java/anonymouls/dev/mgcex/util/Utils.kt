@@ -55,8 +55,8 @@ object Utils {
         if (!Utils::SharedPrefs.isInitialized) {
             SharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
             SleepRecordsTable.GlobalSettings.ignoreLightSleepData = SharedPrefs.getBoolean(PreferenceListener.Companion.PrefsConsts.lightSleepIgnore, true)
-            if (!SharedPrefs.contains(Analytics.UserID))
-                SharedPrefs.edit().putString(Analytics.UserID, UUID.randomUUID().toString()).apply()
+            if (!SharedPrefs.contains(FireAnalytics.UserID))
+                SharedPrefs.edit().putString(FireAnalytics.UserID, UUID.randomUUID().toString()).apply()
         }
         return SharedPrefs
     }
@@ -198,7 +198,7 @@ object Utils {
         val diff: Long = A.timeInMillis - B.timeInMillis
         return when (Field) {
             Calendar.SECOND -> (diff.toDouble() / 1000).roundToInt()
-            Calendar.MINUTE -> (diff.toDouble() / 1000 / 60).roundToInt() + 1
+            Calendar.MINUTE -> (diff.toDouble() / 1000 / 60).roundToInt()
             Calendar.HOUR_OF_DAY, Calendar.HOUR -> (diff.toDouble() / 1000 / 60 / 60).roundToInt()
             else -> (diff.toDouble() / 1000 / 60 / 60 / 24).roundToInt()
         }

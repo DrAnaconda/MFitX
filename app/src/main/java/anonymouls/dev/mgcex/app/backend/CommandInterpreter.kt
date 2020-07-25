@@ -113,7 +113,9 @@ abstract class CommandInterpreter {
     fun postCommand(Request: ByteArray) {
         synchronized(blocker) {
             try {
-                while (!Algorithm.SelfPointer!!.sendData(Request)) {
+                while (Algorithm.SelfPointer != null) {
+                    val result = Algorithm.SelfPointer?.sendData(Request)
+                    if (result == null || result == true) return
                     Utils.safeThreadSleep(8000, true)
                 }
                 Utils.safeThreadSleep(666, true)

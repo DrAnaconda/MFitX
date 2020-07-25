@@ -15,7 +15,7 @@ import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.databaseProvider.DatabaseController
 import anonymouls.dev.mgcex.databaseProvider.HRRecordsTable
 import anonymouls.dev.mgcex.databaseProvider.MainRecordsTable
-import anonymouls.dev.mgcex.util.Analytics
+import anonymouls.dev.mgcex.util.FireAnalytics
 import anonymouls.dev.mgcex.util.HRAnalyzer
 import anonymouls.dev.mgcex.util.Utils
 import kotlinx.coroutines.*
@@ -78,7 +78,7 @@ class MultitaskFragment : Fragment() {
         to.set(Calendar.MINUTE, 59)
         val data = initDataBlock(from, to)
         if (this::savedContext.isInitialized)
-            Analytics.getInstance(savedContext)?.sendHRData(data.MinHR, data.AvgHR, data.MaxHR)
+            FireAnalytics.getInstance(savedContext).sendHRData(data.MinHR, data.AvgHR, data.MaxHR)
 
         val SDF = SimpleDateFormat(Utils.SDFPatterns.OverallStats.pattern, Locale.getDefault())
         from.add(Calendar.DAY_OF_MONTH, -7)
