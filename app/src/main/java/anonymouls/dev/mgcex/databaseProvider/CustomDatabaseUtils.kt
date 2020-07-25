@@ -91,6 +91,7 @@ object CustomDatabaseUtils {
         if (record.count < 1) {
             val Buff = Calendar.getInstance()
             Buff.add(Calendar.MONTH, -5)
+            record.close()
             return Buff
         }
         val result = longToCalendar(record.getLong(1), IsShort)

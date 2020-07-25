@@ -1,15 +1,13 @@
 package anonymouls.dev.mgcex.app.backend
 
 import android.content.Context
-import android.database.sqlite.SQLiteDatabase
 import anonymouls.dev.mgcex.app.main.ui.main.MainViewModel
 import anonymouls.dev.mgcex.databaseProvider.*
 import java.util.*
 
 @ExperimentalStdlibApi
-open class CommandCallbacks(context: Context) : CommandInterpreter.CommandReaction {
+open class CommandCallbacks(private val context: Context) : CommandInterpreter.CommandReaction {
 
-    private val database: SQLiteDatabase = DatabaseController.getDCObject(context).writableDatabase
     private var lastSyncMain: Long = -1
     private var lastSyncHR: Long = -1
 
@@ -25,7 +23,8 @@ open class CommandCallbacks(context: Context) : CommandInterpreter.CommandReacti
             MainViewModel.publicModel?._lastStepsIncomed?.postValue(Steps); savedSteps = Steps
             MainViewModel.publicModel?._lastCcalsIncomed?.postValue(Calories); savedCCals = Calories
             MainViewModel.publicModel?.mainInfo(savedSteps, savedCCals)
-            MainRecordsTable.insertRecordV2(Calendar.getInstance(), Steps, Calories, database)
+            MainRecordsTable.insertRecordV2(Calendar.getInstance(), Steps, Calories,
+                    DatabaseController.getDCObject(context).writableDatabase)
         } catch (Ex: Exception) {
 
         }
@@ -61,7 +60,7 @@ open class CommandCallbacks(context: Context) : CommandInterpreter.CommandReacti
         try {
             var ResultHR = HRValue
             if (ResultHR < 0) ResultHR = (ResultHR and 0xFF)
-            HRRecordsTable.insertRecord(Time, ResultHR, database)
+            HRRecordsTable.insertRecord(Time, ResultHR, DatabaseController.getDCObject(context).writableDatabase)
             if (lastSyncHR < CustomDatabaseUtils.calendarToLong(Time, true)) {
                 val record = HRRecord(Time, ResultHR)
                 savedHR = record
@@ -78,7 +77,7 @@ open class CommandCallbacks(context: Context) : CommandInterpreter.CommandReacti
         if (Time.time > Calendar.getInstance().time) return
         if (Steps < 0 || Calories < 0) return
         try {
-            if (MainRecordsTable.insertRecordV2(Time, Steps, Calories, database) > 0) {
+            if (MainRecordsTable.insertRecordV2(Time, Steps, Calories, DatabaseController.getDCObject(context).writableDatabase) > 0) {
                 val current = CustomDatabaseUtils.calendarToLong(Time, true)
                 if (current > lastSyncMain) {
                     savedCCals = Calories; MainViewModel.publicModel?._lastCcalsIncomed?.postValue(Calories)
@@ -98,7 +97,7 @@ open class CommandCallbacks(context: Context) : CommandInterpreter.CommandReacti
         try {
             var newDuration = Duration
             if (newDuration < 0) newDuration = (newDuration and 0xFF)
-            SleepRecordsTable.insertRecord(Time, -1, newDuration, Type, database)
+            SleepRecordsTable.insertRecord(Time, -1, newDuration, Type, DatabaseController.getDCObject(context).writableDatabase)
         } catch (ex: Exception) {
 
         }

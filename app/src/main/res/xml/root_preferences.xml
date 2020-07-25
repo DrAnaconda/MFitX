@@ -38,11 +38,8 @@
             app:summary="@string/summary_idle" />
 
         <anonymouls.dev.mgcex.util.RedifinedEditTextPreference
-            android:maxLength="2"
             android:title="@string/target_steps_count"
-            android:digits="0123456789"
             app:defaultValue="5000"
-            android:inputType="number"
             app:key="TargetStepsSetting"
             app:useSimpleSummaryProvider="true" />
 
@@ -56,10 +53,7 @@
             app:title="@string/enable_battery_saver" />
 
         <anonymouls.dev.mgcex.util.RedifinedEditTextPreference
-            android:inputType="number"
             app:defaultValue="20"
-            android:digits="0123456789"
-            android:maxLength="2"
             app:dependency="BSE"
             app:key="attachment"
             app:title="@string/battery_charge_level_threshold"
@@ -77,8 +71,6 @@
     <anonymouls.dev.mgcex.util.RedifinedEditTextPreference app:defaultValue="5"
         app:dependency="HRMEn"
         app:key="HRMI"
-        android:digits="0123456789"
-        android:inputType="number"
         app:title="@string/collect_every"
         app:useSimpleSummaryProvider="true"/>
 
@@ -107,7 +99,6 @@
 
         <anonymouls.dev.mgcex.util.RedifinedSwitchPreference
             app:key="NotificationsEnabled"
-            app:dependency="bindNotifyService"
             app:summary="@string/summary_notifications"
             app:title="@string/receive_notifications" />
 
@@ -120,14 +111,12 @@
             android:inputType="number"
             app:title="@string/repeat_notification"
             app:defaultValue="3"
-            android:digits="0123456789"
             app:key="repeatsNumber"
             app:useSimpleSummaryProvider="true" />
 
         <anonymouls.dev.mgcex.util.RedifinedEditTextPreference app:dependency="NotificationsEnabled"
             app:title="@string/notify_delay"
             android:inputType="number"
-            android:digits="0123456789"
             app:defaultValue="5"
             app:key="secondsRepeat"
             app:useSimpleSummaryProvider="true" />
@@ -136,36 +125,31 @@
 
     <PreferenceCategory app:title="@string/apps_settings">
 
-    <SwitchPreferenceCompat
+    <SwitchPreferenceCompat app:key="HelpDataSetting"
         app:defaultValue="true"
-        app:key="AnalyticsEnabled"
         app:summary="@string/summary_analytics"
-        app:title="@string/send_anonymous_stats_and_data_usage"/>
+        app:title="@string/send_anonymous_stats_and_data_usage" />
 
-    <SwitchPreferenceCompat
+    <SwitchPreferenceCompat app:summary="@string/summary_light_sleep"
         app:defaultValue="true"
-        app:summary="@string/summary_light_sleep"
-        app:title="@string/ignore_light_sleep_phase"/>
+        app:title="@string/ignore_light_sleep_phase" />
 
-    <SwitchPreferenceCompat app:key="PWL"
+    <SwitchPreferenceCompat app:key="PWL" app:title="@string/keep_cpu_alive"
         app:summary="@string/summary_cpualive"
-        app:title="@string/keep_cpu_alive" />
+         />
 
-    <anonymouls.dev.mgcex.util.RedifinedEditTextPreference
-        android:inputType="number"
+    <anonymouls.dev.mgcex.util.RedifinedEditTextPreference app:title="@string/sync_setting"
         app:defaultValue="5"
-        android:digits="0123456789"
         app:key="AutoSyncInterval"
-        app:title="@string/sync_setting"
         app:useSimpleSummaryProvider="true"/>
 
-    <anonymouls.dev.mgcex.util.RedifinedEditTextPreference
-        android:inputType="numberDecimal"
+    <anonymouls.dev.mgcex.util.RedifinedEditTextPreference app:title="@string/step_size_centimeters"
         app:defaultValue="0,66"
-        android:digits="0123456789"
         app:key="Step_Size"
-        app:title="@string/step_size_centimeters"
         app:useSimpleSummaryProvider="true"/>
+
+
+
 
     </PreferenceCategory>
 

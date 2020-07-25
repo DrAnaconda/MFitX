@@ -1,12 +1,12 @@
 package anonymouls.dev.mgcex.util
 
 import android.app.Activity
-import android.content.Context
 import android.os.AsyncTask
 import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.widget.LinearLayout
+import anonymouls.dev.mgcex.app.backend.ApplicationStarter
 import com.google.android.gms.ads.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -15,7 +15,6 @@ import kotlinx.coroutines.launch
 @ExperimentalStdlibApi
 object AdsController {
     // Test : ca-app-pub-3940256099942544/1033173712 Big xren`
-    private var savedContext: Context? = null
     private var adFree = true
     private var adHandler = Handler(Looper.getMainLooper())
 
@@ -33,7 +32,7 @@ object AdsController {
             return
         }
         GlobalScope.launch { MobileAds.initialize(activity) }
-        savedContext = activity
+        ApplicationStarter.appContext = activity
         //adObject.adListener = defaultListener
         adObject.loadAd(AdRequest.Builder().build())
     }
@@ -41,7 +40,7 @@ object AdsController {
     fun showUltraRare(activity: Activity): InterstitialAd? {
         if (adFree) return null
         if (Math.random().toInt() % 10 == 0) return null
-        savedContext = activity
+        ApplicationStarter.appContext = activity
         //MobileAds.initialize(activity)
         val bigScreen = InterstitialAd(activity)
         bigScreen.adUnitId = RareBigScreenID
@@ -93,45 +92,27 @@ object AdsController {
 
     private val defaultListener = object : AdListener() {
         override fun onAdLoaded() {
-            if (savedContext != null)
-                Analytics.getInstance(savedContext)?.sendCustomEvent(AdLoadedEvent, null)
-            else
-                Analytics.getInstance(null)?.sendCustomEvent(AdLoadedEvent, null)
+                Analytics.getInstance(ApplicationStarter.appContext).sendCustomEvent(AdLoadedEvent, null)
         }
 
         override fun onAdFailedToLoad(errorCode: Int) {
-            if (savedContext != null)
-                Analytics.getInstance(savedContext)?.sendCustomEvent(AdFailedLoadEvent, errorCode.toString())
-            else
-                Analytics.getInstance(null)?.sendCustomEvent(AdFailedLoadEvent, errorCode.toString())
+                Analytics.getInstance(ApplicationStarter.appContext).sendCustomEvent(AdFailedLoadEvent, errorCode.toString())
         }
 
         override fun onAdOpened() {
-            if (savedContext != null)
-                Analytics.getInstance(savedContext)?.sendCustomEvent(AdOpenedEvent, null)
-            else
-                Analytics.getInstance(null)?.sendCustomEvent(AdOpenedEvent, null)
+                Analytics.getInstance(ApplicationStarter.appContext).sendCustomEvent(AdOpenedEvent, null)
         }
 
         override fun onAdClicked() {
-            if (savedContext != null)
-                Analytics.getInstance(savedContext)?.sendCustomEvent(AdClickedEvent, null)
-            else
-                Analytics.getInstance(null)?.sendCustomEvent(AdClickedEvent, null)
+                Analytics.getInstance(ApplicationStarter.appContext).sendCustomEvent(AdClickedEvent, null)
         }
 
         override fun onAdLeftApplication() {
-            if (savedContext != null)
-                Analytics.getInstance(savedContext)?.sendCustomEvent(AdLeftEvent, null)
-            else
-                Analytics.getInstance(null)?.sendCustomEvent(AdLeftEvent, null)
+                Analytics.getInstance(ApplicationStarter.appContext).sendCustomEvent(AdLeftEvent, null)
         }
 
         override fun onAdClosed() {
-            if (savedContext != null)
-                Analytics.getInstance(savedContext)?.sendCustomEvent(AdClosedEvent, null)
-            else
-                Analytics.getInstance(null)?.sendCustomEvent(AdClosedEvent, null)
+                Analytics.getInstance(ApplicationStarter.appContext).sendCustomEvent(AdClosedEvent, null)
         }
     }
 

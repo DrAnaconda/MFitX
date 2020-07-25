@@ -6,10 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.os.AsyncTask
-import android.os.Handler
-import android.os.IBinder
-import android.os.PowerManager
+import android.content.pm.ServiceInfo
+import android.os.*
 import android.view.View
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.MutableLiveData
@@ -26,6 +24,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.random.Random
 
 
 @ExperimentalStdlibApi
@@ -103,9 +102,9 @@ class Algorithm : Service() {
         Handler(commandHandler.looper).postDelayed({ ci.requestSettings() }, 200)
         Handler(commandHandler.looper).postDelayed({ ci.requestBatteryStatus() }, 500)
         Handler(commandHandler.looper).postDelayed({ ci.syncTime(Calendar.getInstance()) }, 800)
-        Handler(commandHandler.looper).postDelayed({ ci.getMainInfoRequest() }, 1100)
-        Handler(commandHandler.looper).postDelayed({ ci.requestSleepHistory(getLastSleepSync()) }, 1400)
-        Handler(commandHandler.looper).postDelayed({ ci.requestHRHistory(getLastHRSync()) }, 2000)
+        Handler(commandHandler.looper).postDelayed({ ci.getMainInfoRequest() }, 1200)
+        Handler(commandHandler.looper).postDelayed({ ci.requestSleepHistory(getLastSleepSync()) }, 1600)
+        Handler(commandHandler.looper).postDelayed({ ci.requestHRHistory(getLastHRSync()) }, 2200)
         if (isFirstTime) forceSyncHR()
         //if (IsAlarmingTriggered && !IsFromActivity) alarmTriggerDecider(0)
     }
@@ -129,8 +128,6 @@ class Algorithm : Service() {
     }
 
     private fun run() {
-        Thread.currentThread().name = "AASyncer"
-        Thread.currentThread().priority = Thread.MIN_PRIORITY
         while (IsActive) {
             workInProgress = true
             uartService.probeConnection()
@@ -149,7 +146,7 @@ class Algorithm : Service() {
     private fun checkDisconnectedTime(): Boolean {
         val now = System.currentTimeMillis() / 1000 / 60
         val startInMin = disconnectedTimestamp / 1000 / 60
-        if (now - startInMin > prefs.getInt(PreferenceListener.Companion.PrefsConsts.disconnectedMonitoring, 5)) { // TODO: Public value
+        if (now - startInMin > prefs.getString(PreferenceListener.Companion.PrefsConsts.disconnectedMonitoring, "5")!!.toInt()) { // TODO: Public value
             StatusCode.postValue(StatusCodes.Dead)
             return false
         }
@@ -237,7 +234,7 @@ class Algorithm : Service() {
 
     private fun checkPowerAlgo(): Boolean {
         return if (Utils.getSharedPrefs(this).getBoolean(PreferenceListener.Companion.PrefsConsts.batterySaverEnabled, true)) {
-            val threshold = Utils.getSharedPrefs(this).getInt(PreferenceListener.Companion.PrefsConsts.batteryThreshold, 20)
+            val threshold = Utils.getSharedPrefs(this).getString(PreferenceListener.Companion.PrefsConsts.batteryThreshold, "20")!!.toInt()
             savedBattery !in 0..threshold
         } else true
     }
@@ -333,6 +330,8 @@ class Algorithm : Service() {
                     }
                 } else return
                 thread = Thread(Runnable {
+                    Thread.currentThread().name = "AASyncer"+ (Random.nextInt() % 50).toString()
+                    Thread.currentThread().priority = Thread.MIN_PRIORITY
                     run()
                 })
                 thread?.start()

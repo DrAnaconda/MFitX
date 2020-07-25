@@ -31,10 +31,17 @@ class NotificationService : NotificationListenerService() {
         super.onCreate()
         instance = this
         Companion.contentResolver = contentResolver
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            this.startForeground(66, Utils.buildForegroundNotification(this))
+        }
+
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Algorithm.tryForceStartListener(this)
+        //Algorithm.tryForceStartListener(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            this.startForeground(66, Utils.buildForegroundNotification(this))
+        }
         return START_STICKY
     }
 
@@ -43,6 +50,9 @@ class NotificationService : NotificationListenerService() {
             IsActive = true
             Repeater = AsyncRepeater()
             Repeater!!.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            this.startForeground(66, Utils.buildForegroundNotification(this))
         }
         Utils.getSharedPrefs(this@NotificationService).edit().putBoolean("bindNotifyService", true).apply()
         super.onListenerConnected()
@@ -54,6 +64,8 @@ class NotificationService : NotificationListenerService() {
         Repeater?.cancel(false)
         Repeater = null
         Utils.getSharedPrefs(this@NotificationService).edit().putBoolean("bindNotifyService", false).apply()
+        this.stopForeground(true)
+        this.stopSelf()
         super.onListenerDisconnected()
     }
 
@@ -63,7 +75,13 @@ class NotificationService : NotificationListenerService() {
         if (!NotifyFilterTable.isEnabled(pack,
                         DatabaseController.getDCObject(applicationContext).readableDatabase))
             return
-        val extras = sbn.notification.extras
+        val extras = (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            sbn.notification.extras
+        } else {
+            this.stopForeground(true)
+            this.stopSelf()
+            null
+        }) ?: return
         val title = extras.getString("android.title")
         var applicationName = ""
         try {
@@ -122,7 +140,7 @@ class NotificationService : NotificationListenerService() {
             this.ID = sbn.id
             if (commandHandler != null)
                 Handler(commandHandler.looper).postDelayed({ this.ready = true },
-                        sharedPrefs!!.getInt(PreferenceListener.Companion.PrefsConsts.secondsNotify, 5).toLong() * 500)
+                        sharedPrefs!!.getString(PreferenceListener.Companion.PrefsConsts.secondsNotify, "5")!!.toLong() * 500)
         }
 
         private fun checkIsActive(): Boolean {
@@ -165,7 +183,7 @@ class NotificationService : NotificationListenerService() {
         fun findAndDeleteByID(ID: Int?) {
             for (CN in PendingList.elements()) {
                 if (CN.ID == ID
-                        || CN.repeats >= sharedPrefs!!.getInt(PreferenceListener.Companion.PrefsConsts.repeatsNumbers, 5)
+                        || CN.repeats >= sharedPrefs!!.getString(PreferenceListener.Companion.PrefsConsts.repeatsNumbers, "5")!!.toInt()
                         || CN.cancelled)
                     PendingList.remove(CN.AppText)
             }
@@ -181,12 +199,11 @@ class NotificationService : NotificationListenerService() {
                     if (Settings.Global.getInt(contentResolver, "zen_mode") == 0) {
                         for (CN in PendingList.elements()) {
                             CN.sendToDevice()
-                            if (CN.repeats >= sharedPrefs!!.getInt(PreferenceListener.Companion.PrefsConsts.repeatsNumbers, 3))
+                            if (CN.repeats >= sharedPrefs!!.getString(PreferenceListener.Companion.PrefsConsts.repeatsNumbers, "3")!!.toInt())
                                 PendingList.remove(CN.AppText)
                             Utils.safeThreadSleep(3000, false)
                         }
                     } else PendingList.clear()
-
                     Utils.safeThreadSleep((sharedPrefs!!.getString(PreferenceListener.Companion.PrefsConsts.secondsNotify, "5")!!.toInt() * 1000).toLong(), false)
                 }
                 return true

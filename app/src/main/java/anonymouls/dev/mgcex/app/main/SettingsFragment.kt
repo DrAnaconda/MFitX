@@ -90,16 +90,60 @@ class SettingsFragment : PreferenceFragmentCompat() {
         while(!this::ci.isInitialized || !this::prefs.isInitialized) continue
         if (prefs.contains("BandAddress"))
             findPreference<Preference>("BandAddress")?.title = this.requireContext().getString(R.string.current_connection) + prefs.getString("BandAddress", null)
-        findPreference<Preference>(PreferenceListener.Companion.PrefsConsts.vibrationSetting)?.isVisible = ci.vibrationSupport
-        findPreference<Preference>(PreferenceListener.Companion.PrefsConsts.targetSteps)?.isVisible = ci.stepsTargetSettingSupport
-        findPreference<Preference>(PreferenceListener.Companion.PrefsConsts.longSittingSetting)?.isVisible = ci.sittingReminderSupport
-        findPreference<PreferenceCategory>("HRMon")?.isVisible = !ci.hRRealTimeControlSupport
+        proceedVibro()
+        proceedTargetSteps()
+        proceedLongSitting()
         proceedNotify()
+        proceedHRBlock()
+        findPreference<Preference>("illuminationSetting")?.setOnPreferenceChangeListener { preference, newValue ->
+            ci.setGyroAction(newValue as Boolean)
+            true
+        }
+    }
+
+    //region Complicated Things
+
+    private fun proceedHRBlock(){
+        findPreference<PreferenceCategory>("HRMon")?.isVisible = !ci.hRRealTimeControlSupport
+        //val isEnabled =
     }
     private fun proceedNotify(){
         prefs.edit().putBoolean("bindNotifyService",NotificationService.instance != null).apply()
         findPreference<Preference>("bindNotifyService")?.isVisible = NotificationService.instance == null
     }
+    private fun proceedTargetSteps(){
+        val targerpref = findPreference<Preference>(PreferenceListener.Companion.PrefsConsts.targetSteps)
+        if (targerpref != null) {
+            targerpref.isVisible = ci.stepsTargetSettingSupport
+            targerpref.setOnPreferenceChangeListener { preference, newValue ->
+                ci.setTargetSteps(newValue.toString().toInt())
+                true
+            }
+        }
+    }
+    private fun proceedLongSitting(){
+        val longSit = findPreference<Preference>(PreferenceListener.Companion.PrefsConsts.longSittingSetting)
+        if (longSit != null){
+            longSit.isVisible = ci.sittingReminderSupport
+            longSit.setOnPreferenceChangeListener { preference, newValue ->
+                ci.setSittingReminder(newValue as Boolean)
+                true
+            }
+        }
+
+    }
+    private fun proceedVibro(){
+        val  vibroPref = findPreference<Preference>(PreferenceListener.Companion.PrefsConsts.vibrationSetting)
+        if (vibroPref != null){
+            vibroPref.isVisible = ci.vibrationSupport
+            vibroPref.setOnPreferenceChangeListener { preference, newValue ->
+                ci.setVibrationSetting(newValue as Boolean)
+                true
+            }
+        }
+    }
+
+    //endregion
 
     private fun showNotConnectedErrorToast() {
         Toast.makeText(this.requireContext(), getString(R.string.connection_not_established), Toast.LENGTH_LONG).show()

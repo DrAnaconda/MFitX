@@ -39,7 +39,6 @@
     <string name="pulse_icon">Pulse icon</string>
     <string name="settings_btn">Settings Btn</string>
     <string name="bluetooth_disabled_or_not_supported">Status : Bluetooth do not supported or disabled.</string>
-    <string name="status_connected_next_sync">"Status : Connected. Next sync in "</string>
     <string name="disconnect_btn_text">Disconnect</string>
     <string name="current_device_default_text">Current Device: …</string>
     <string name="step_size_centimeters">Step size (meters)</string>
@@ -84,7 +83,7 @@
     <string name="manual_sync_status">Manual sync...</string>
     <string name="downloading_data_status">Downloading data...</string>
     <string name="conntecting_status">Status : Connecting...</string>
-    <string name="next_sync_status">Status : Connected. next sync will be @&#160;</string>
+    <string name="next_sync_status">Status : Connected. Next sync will be @&#160;</string>
     <string name="wait_untill_complete">Wait until all operations will complete</string>
     <string name="sleep_not_ready">This function is not realized yet.\nYour sleep history is being downloaded, but will not be displayed\nWe are investigating correctness of this data.
         \nSleep data are suspicious: In original app deep sleep always less than 20 mins.

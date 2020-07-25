@@ -3,6 +3,8 @@ package anonymouls.dev.mgcex.util
 import android.app.TimePickerDialog
 import android.content.Context
 import android.content.res.TypedArray
+import android.text.InputFilter
+import android.text.InputFilter.LengthFilter
 import android.text.InputType
 import android.util.AttributeSet
 import androidx.preference.EditTextPreference
@@ -78,6 +80,7 @@ class RedifinedEditTextPreference(context: Context, attrs: AttributeSet): EditTe
                     it.inputType = (InputType.TYPE_CLASS_NUMBER + InputType.TYPE_NUMBER_FLAG_DECIMAL)
                 if (checkOnlyNumbers()) it.inputType = InputType.TYPE_CLASS_NUMBER
                 it.setSelectAllOnFocus(true)
+                it.filters = arrayOf<InputFilter>(LengthFilter(defValue.length))
             }
         }
     }

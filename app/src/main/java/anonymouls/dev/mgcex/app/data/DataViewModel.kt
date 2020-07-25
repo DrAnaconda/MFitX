@@ -184,19 +184,26 @@ class DataViewModel : ViewModel() {
         val hashCodes = HashSet<String>()
         loader.launch(Dispatchers.Default) {
             fetchDataStageB(activity).collect {
-                if (it != null) {
-                    if (!hashCodes.contains(it.toString())) {
-                        activity.runOnUiThread {
-                            tableAdapter.addRow(tableAdapter.countRows++,
-                                    null, it.getCellsList() as MutableList<Cell?>)
+                try {
+                    if (it != null) {
+                        if (!hashCodes.contains(it.toString())) {
+                            activity.runOnUiThread {
+                                tableAdapter.addRow(tableAdapter.countRows++,
+                                        null, it.getCellsList() as MutableList<Cell?>)
+                            }
                         }
                     }
+                }catch (e: CancellationException){
+                    jobFinished()
+                    this.coroutineContext.cancelChildren()
                 }
             }
         }
     }
 
     fun onCancelClick(v: View?) {
+        this.toLong = -1
+        loader.coroutineContext.cancel(null)
         loader.cancel(null)
         if (manualHRRequesting) {
             fetchCurrentHR(null, true)

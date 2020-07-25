@@ -2,20 +2,43 @@ package anonymouls.dev.mgcex.util
 
 import android.content.Context
 import android.os.Bundle
+import anonymouls.dev.mgcex.app.BuildConfig
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import java.util.*
 
-// TODO Check everything before release
 @ExperimentalStdlibApi
 class Analytics(context: Context) {
 
-    private val fireInstance: FirebaseAnalytics = FirebaseAnalytics.getInstance(context)
-    private val fireCrash: FirebaseCrashlytics = FirebaseCrashlytics.getInstance()
+    private lateinit var fireInstance: FirebaseAnalytics
+    private lateinit var fireCrash: FirebaseCrashlytics
 
-    private val isAllowed: Boolean? = Utils.SharedPrefs.getBoolean(HelpData, true)
-    private val userID = Utils.SharedPrefs.getString(UserID, "")
+    private var isAllowed: Boolean = true
+    private lateinit var userID: String
+
+    init {
+        GlobalScope.launch(Dispatchers.Default) {
+            userID = if (Utils.getSharedPrefs(context).contains(UserID))
+                Utils.getSharedPrefs(context).getString(UserID, "").toString()
+            else
+                UUID.randomUUID().toString()
+
+            isAllowed = Utils.getSharedPrefs(context).getBoolean(HelpData, true)
+            fireInstance = FirebaseAnalytics.getInstance(context)
+            fireCrash = FirebaseCrashlytics.getInstance()
+            checkEnabled()
+        }
+    }
 
     private fun checkEnabled(): Boolean {
+        if (BuildConfig.DEBUG){
+            fireCrash.setCrashlyticsCollectionEnabled(false)
+            fireInstance.setAnalyticsCollectionEnabled(false)
+            return false
+        }
         fireInstance.setUserId(userID)
         if (userID != null && userID.isNotEmpty()) fireCrash.setUserId(userID)
         return if (isAllowed != null) {
@@ -49,15 +72,15 @@ class Analytics(context: Context) {
 
     companion object {
 
-        private var instance: Analytics? = null
+        private lateinit var instance: Analytics
 
         const val HelpData = "HelpDataSetting"
         const val UserID = "UserID"
 
-        fun getInstance(context: Context?): Analytics? {
-            if (instance == null && context != null) {
+        fun getInstance(context: Context): Analytics {
+            if (!this::instance.isInitialized) {
                 instance = Analytics(context)
-            } else if (instance == null && context == null) return null
+            }
             return instance
         }
     }

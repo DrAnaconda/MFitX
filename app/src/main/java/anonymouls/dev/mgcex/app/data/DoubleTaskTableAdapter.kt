@@ -15,6 +15,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.ColorInt
 import androidx.appcompat.widget.SwitchCompat
+import androidx.core.view.children
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.databaseProvider.NotifyFilterTable
 import com.evrencoskun.tableview.adapter.AbstractTableAdapter
@@ -112,6 +113,7 @@ class DoubleTaskTableViewAdapter(private val context: Activity,
     }
     private fun bindNightCompat(viewHolder: MyCellViewHolder){
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            //if (this.DataType == DataTypes.ApplicationMode) return // TODO Fix it?
             val typedValue = TypedValue()
             val theme = context.theme
             theme.resolveAttribute(android.R.attr.colorBackground, typedValue, true)
@@ -119,8 +121,11 @@ class DoubleTaskTableViewAdapter(private val context: Activity,
             when (context.resources.configuration.uiMode.and(Configuration.UI_MODE_NIGHT_MASK)) {
                 Configuration.UI_MODE_NIGHT_YES -> {
                     viewHolder.setBackgroundColor(color)
+                    for (x in viewHolder.cell_container.children)
+                        x.setBackgroundColor(color)
                     viewHolder.cell_container.setBackgroundColor(color)
                     viewHolder.cell_textview?.setTextColor(context.getColor(android.R.color.white))
+                    viewHolder.cell_textview?.setBackgroundColor(color)
                     viewHolder.cell_switch?.setBackgroundColor(color)
                     viewHolder.cell_image?.setBackgroundColor(color)
                 }
@@ -137,7 +142,10 @@ class DoubleTaskTableViewAdapter(private val context: Activity,
         bindNightCompat(viewHolder)
         when(cellItemModel){
             is TextCell -> viewHolder.cell_textview?.text = cellItemModel.data
-            is ImageCell -> viewHolder.cell_image?.setImageDrawable(cellItemModel.image)
+            is ImageCell -> {
+                //viewHolder.cell_image?.max
+                viewHolder.cell_image?.setImageDrawable(cellItemModel.image)
+            }
             is SwitchCell -> {
                 viewHolder.cell_switch?.isChecked = cellItemModel.isActive
                 viewHolder.cell_switch?.setOnClickListener { v ->  initCallback(v, columnPosition, rowPosition) } // TODO
