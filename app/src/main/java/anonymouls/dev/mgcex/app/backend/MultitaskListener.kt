@@ -18,7 +18,7 @@ class MultitaskListener : BroadcastReceiver() {
                         BluetoothAdapter.ERROR)
 
                 when (state) {
-                    BluetoothAdapter.STATE_OFF -> Algorithm.SelfPointer?.thread?.interrupt()
+                    BluetoothAdapter.STATE_OFF -> Algorithm.StatusCode.postValue(Algorithm.StatusCodes.Dead)
                 }
             }
             restartAction, "android.intent.action.MAIN" -> ressurectService(context)

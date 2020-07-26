@@ -89,9 +89,7 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
         db?.enableWriteAheadLogging()
         //if (db != null) initRepairsAndSync(db)
     }
-
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-
         checkCreateAllTables(db)
     }
 
@@ -126,7 +124,6 @@ class DatabaseController(context: Context, name: String, factory: SQLiteDatabase
         }
 
         fun getDCObject(context: Context): DatabaseController {
-
             if (!File(DatabaseDir).exists()) File(DatabaseDir).mkdirs()
             if (DCObject == null) {
                 nameResolver(context)

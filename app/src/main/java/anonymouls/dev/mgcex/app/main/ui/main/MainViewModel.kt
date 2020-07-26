@@ -17,7 +17,7 @@ import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.backend.Algorithm
 import anonymouls.dev.mgcex.app.backend.CommandCallbacks
 import anonymouls.dev.mgcex.app.backend.CommandInterpreter
-import anonymouls.dev.mgcex.app.backend.InsertTask
+import anonymouls.dev.mgcex.app.backend.ServiceRessurecter
 import anonymouls.dev.mgcex.app.data.DataFragment
 import anonymouls.dev.mgcex.app.main.MultitaskFragment
 import anonymouls.dev.mgcex.app.main.SettingsFragment
@@ -89,8 +89,7 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel(), Comma
 
     private fun createStatusObserver(owner: LifecycleOwner) {
         if (Algorithm.StatusCode.hasActiveObservers()
-                && Algorithm.currentAlgoStatus.hasActiveObservers()
-                && InsertTask.insertedRunning.hasActiveObservers()) return
+                && Algorithm.currentAlgoStatus.hasActiveObservers()) return
 
         Algorithm.StatusCode.observe(owner, Observer {
             if (it.code < Algorithm.StatusCodes.GattReady.code) {
@@ -108,9 +107,6 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel(), Comma
 
         Algorithm.currentAlgoStatus.observe(owner, Observer {
             _currentStatus.postValue(it)
-        })
-        InsertTask.insertedRunning.observe(owner, Observer {
-            if (it) workInProgress.postValue(View.VISIBLE) else workInProgress.postValue(View.GONE)
         })
     }
 
@@ -216,14 +212,14 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel(), Comma
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     activity.finishAndRemoveTask()
                 } else activity.finish()
+                ServiceRessurecter.cancelJob(activity)
                 exitProcess(0)
             }
             R.id.SyncNowContainer -> {
                 if (this.workInProgress.value!! != View.GONE) {
                     Toast.makeText(activity, activity.getString(R.string.wait_untill_complete), Toast.LENGTH_LONG).show()
                 } else {
-                    Algorithm.SelfPointer?.bluetoothRejected = false; Algorithm.SelfPointer?.bluetoothRequested = false
-                    Algorithm.SelfPointer?.thread?.interrupt()
+                    Algorithm.SelfPointer?.executeForceSync()
                 }
             }
             R.id.HRContainer -> launchDataGraph(DataFragment.DataTypes.HR)
@@ -266,8 +262,6 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel(), Comma
             createBatteryObserver(owner)
             createStatusObserver(owner)
         }
-
-        Algorithm.SelfPointer?.thread?.interrupt()
 
         if (Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.GattReady.code
                 && CommandInterpreter.getInterpreter(activity).hRRealTimeControlSupport)

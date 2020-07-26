@@ -134,10 +134,6 @@
         app:defaultValue="true"
         app:title="@string/ignore_light_sleep_phase" />
 
-    <SwitchPreferenceCompat app:key="PWL" app:title="@string/keep_cpu_alive"
-        app:summary="@string/summary_cpualive"
-         />
-
     <anonymouls.dev.mgcex.util.RedifinedEditTextPreference app:title="@string/sync_setting"
         app:defaultValue="5"
         app:key="AutoSyncInterval"

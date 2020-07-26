@@ -1,38 +1,38 @@
 package anonymouls.dev.mgcex.app.backend
 
-import android.app.Service
-import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
-import android.os.*
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.view.View
-import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.MutableLiveData
 import anonymouls.dev.mgcex.app.AlarmProvider
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.backend.ApplicationStarter.Companion.commandHandler
 import anonymouls.dev.mgcex.app.main.ui.main.MainViewModel
-import anonymouls.dev.mgcex.databaseProvider.*
+import anonymouls.dev.mgcex.databaseProvider.CustomDatabaseUtils
+import anonymouls.dev.mgcex.databaseProvider.HRRecordsTable
+import anonymouls.dev.mgcex.databaseProvider.MainRecordsTable
+import anonymouls.dev.mgcex.databaseProvider.SleepRecordsTable
 import anonymouls.dev.mgcex.util.PreferenceListener
-import anonymouls.dev.mgcex.util.ReplaceTable
 import anonymouls.dev.mgcex.util.Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.random.Random
+import java.util.concurrent.ConcurrentLinkedQueue
 
 
 @ExperimentalStdlibApi
-class Algorithm : Service() {
+class Algorithm : LifecycleService() {
 
     //region Properties
 
-    private lateinit var database: DatabaseController
     private lateinit var prefs: SharedPreferences
     private var workInProgress = false
     private var isFirstTime = true
@@ -44,14 +44,13 @@ class Algorithm : Service() {
 
     lateinit var ci: CommandInterpreter
     lateinit var uartService: UartService
+    private lateinit var mainSyncTask: Handler
 
-    private lateinit var inserter: InsertTask
     private lateinit var lockedAddress: String
-    private lateinit var wakeLock: PowerManager.WakeLock
 
     var bluetoothRejected = false
     var bluetoothRequested = false
-    var thread: Thread? = null
+    var incomingMessages  = ConcurrentLinkedQueue<SimpleRecord>()
 
     //endregion
 
@@ -84,35 +83,21 @@ class Algorithm : Service() {
 
     private fun getLastHRSync(): Calendar {
         return CustomDatabaseUtils.getLastSyncFromTable(HRRecordsTable.TableName,
-                HRRecordsTable.ColumnsNames, true, database.readableDatabase)
+                HRRecordsTable.ColumnsNames, true)
     }
 
     private fun getLastMainSync(): Calendar {
         return CustomDatabaseUtils.getLastSyncFromTable(MainRecordsTable.TableName,
-                MainRecordsTable.ColumnNames, true, database.readableDatabase)
+                MainRecordsTable.ColumnNames, true)
     }
 
     private fun getLastSleepSync(): Calendar {
-        return CustomDatabaseUtils.longToCalendar(SleepRecordsTable.getLastSync(database.readableDatabase), true)
-    }
-
-    private fun executeForceSync() {
-        bluetoothRequested = false; bluetoothRejected = false
-        GlobalScope.launch(Dispatchers.IO) { database.initRepairsAndSync(database.writableDatabase) }
-        Handler(commandHandler.looper).postDelayed({ ci.requestSettings() }, 200)
-        Handler(commandHandler.looper).postDelayed({ ci.requestBatteryStatus() }, 500)
-        Handler(commandHandler.looper).postDelayed({ ci.syncTime(Calendar.getInstance()) }, 800)
-        Handler(commandHandler.looper).postDelayed({ ci.requestHRHistory(getLastHRSync()) }, 1200)
-        Handler(commandHandler.looper).postDelayed({ ci.requestSleepHistory(getLastSleepSync()) }, 1600)
-        Handler(commandHandler.looper).postDelayed({ ci.getMainInfoRequest() }, 2200)
-        if (isFirstTime) forceSyncHR()
-        //if (IsAlarmingTriggered && !IsFromActivity) alarmTriggerDecider(0)
+        return CustomDatabaseUtils.longToCalendar(SleepRecordsTable.getLastSync(), true)
     }
 
     private fun forceSyncHR() {
-        ci.hRRealTimeControl(true)
-        //ci.requestManualHRMeasure(false)
-        Handler(commandHandler.looper).postDelayed({ ci.hRRealTimeControl(false) }, 10000)
+        Handler(commandHandler.looper).post{ ci.hRRealTimeControl(true) }
+        Handler(commandHandler.looper).postDelayed({ ci.hRRealTimeControl(false) }, 2000)
     }
 
     //endregion
@@ -122,35 +107,12 @@ class Algorithm : Service() {
     private fun deadAlgo() {
         StatusCode.postValue(StatusCodes.Dead)
         IsActive = false
-        inserter.stopInserter()
         SelfPointer = null
         uartService.disconnect()
         SelfPointer = null
-        while (thread != null && thread?.state != Thread.State.TERMINATED
-                && thread?.name != Thread.currentThread().name) {
-            thread?.interrupt()
-            Utils.safeThreadSleep(1000, true)
-        }
-        thread = null
         currentAlgoStatus.postValue(this.getString(R.string.status_label))
         this.stopForeground(true)
         this.stopSelf()
-    }
-
-    private fun run() {
-        while (IsActive) {
-            workInProgress = true
-            when (StatusCode.value!!) {
-                StatusCodes.DeviceLost -> Utils.safeThreadSleep(5*60*1000, false)
-                StatusCodes.GattConnected -> connectedAlgo()
-                StatusCodes.GattReady -> executeMainAlgo()
-                StatusCodes.BluetoothDisabled -> bluetoothDisabledAlgo()
-                StatusCodes.Connected, StatusCodes.Disconnected,
-                StatusCodes.Connecting -> deviceDisconnectedAlgo()
-                StatusCodes.GattConnecting, StatusCodes.GattDiscovering -> connectionAlgos()
-                StatusCodes.Dead -> deadAlgo()
-            }
-        }
     }
 
     private fun executeMainAlgo() {
@@ -174,24 +136,13 @@ class Algorithm : Service() {
         }
         buildStatusMessage()
         workInProgress = false; MainViewModel.publicModel?.workInProgress?.postValue(View.GONE)
-        Utils.safeThreadSleep(syncPeriod.toLong(), false)
-        workInProgress = true; MainViewModel.publicModel?.workInProgress?.postValue(View.VISIBLE)
+        //Utils.safeThreadSleep(syncPeriod.toLong(), false)
+        //workInProgress = true; MainViewModel.publicModel?.workInProgress?.postValue(View.VISIBLE)
+        mainSyncTask.postDelayed({ executeMainAlgo() }, syncPeriod.toLong())
     }
 
     private fun bluetoothDisabledAlgo() {
         isFirstTime = true
-
-        if (Utils.getSharedPrefs(this).getBoolean(PreferenceListener.Companion.PrefsConsts.permitWakeLock, true)) {
-            if (this::wakeLock.isInitialized)
-                wakeLock.acquire()
-            else {
-                wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
-                    newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MFitX::Tag").apply {
-                        acquire()
-                    }
-                }
-            }
-        }
 
         if (Utils.bluetoothEngaging(this))
             StatusCode.postValue(StatusCodes.Disconnected)
@@ -207,18 +158,19 @@ class Algorithm : Service() {
             disconnectedTimestamp = System.currentTimeMillis()
             currentAlgoStatus.postValue(getString(R.string.conntecting_status))
             if (uartService.connect(lockedAddress)) {
-                StatusCode.postValue(StatusCodes.GattConnecting)
+                //StatusCode.postValue(StatusCodes.GattConnecting)
             }
         }
+        mainSyncTask.postDelayed({ deviceDisconnectedAlgo()}, 10000)
     }
 
     private fun connectionAlgos() {
         if (System.currentTimeMillis() > connectionTries + 20000) {
-            StatusCode.postValue(StatusCodes.Disconnected)
             uartService.disconnect()
+            StatusCode.postValue(StatusCodes.Disconnected)
             connectionTries = 0
-        } else
-            Utils.safeThreadSleep(25000, false)
+        }
+        mainSyncTask.postDelayed({ connectionAlgos() }, 10000)
     }
 
     private fun connectedAlgo() {
@@ -227,7 +179,6 @@ class Algorithm : Service() {
                 && StatusCode.value!!.code == StatusCodes.GattConnected.code) {
             connectionTries = System.currentTimeMillis()
             uartService.retryDiscovery()
-            Utils.safeThreadSleep(21000, false)
         }
     }
 
@@ -242,14 +193,9 @@ class Algorithm : Service() {
 
     //region Android
 
-    override fun onBind(intent: Intent): IBinder? {
-        return null
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         deadAlgo()
-        if (this::inserter.isInitialized) inserter.stopInserter()
         this.stopForeground(true)
         SelfPointer = null
         sendBroadcast(Intent(MultitaskListener.restartAction))
@@ -267,30 +213,12 @@ class Algorithm : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        GlobalScope.launch(Dispatchers.IO) { init() }
-        return START_STICKY
-    }
-
-    fun enqueneData(sm: SimpleRecord) {
-        if (sm.characteristic == UartService.PowerTXUUID.toString() ||
-                sm.characteristic == UartService.PowerDescriptor.toString() ||
-                sm.characteristic == UartService.PowerServiceUUID.toString()) {
-            savedBattery = sm.Data[0].toShort()
-            CommandCallbacks.getCallback(this).batteryInfo(sm.Data[0].toInt())
-        } else {
-            inserter.dataToHandle.add(sm)
-            inserter.thread.interrupt()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            this.startForeground(66, Utils.buildForegroundNotification(this),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
         }
-    }
-
-    fun killWakeLock() {
-        if (this::wakeLock.isInitialized) wakeLock.release()
-    }
-
-    fun sendData(Data: ByteArray): Boolean {
-        return if (this::uartService.isInitialized) {
-            this.uartService.writeRXCharacteristic(Data)
-        } else false
+        GlobalScope.launch { init() }
+        return START_STICKY
     }
 
     //endregion
@@ -301,59 +229,93 @@ class Algorithm : Service() {
         deadAlgo()
     }
 
-    fun init() {
-        synchronized(IsActive) {
-            if (!Utils.getSharedPrefs(this).contains(PreferenceListener.Companion.PrefsConsts.bandAddress)) {
-                this.stopForeground(true)
-                this.stopSelf()
-                return
-            } else {
-                StatusCode.postValue(StatusCodes.Disconnected)
+    private fun initVariables(){
+        lockedAddress = Utils.getSharedPrefs(this).getString(PreferenceListener.Companion.PrefsConsts.bandAddress, "").toString()
+        try{
+        if (commandHandler.looper == null
+                && !commandHandler.isAlive) commandHandler.start() }catch (e: Exception) {} // todo magic?
+        mainSyncTask = Handler(commandHandler.looper)
+        SelfPointer = this
+        isFirstTime = true
+        IsActive = true
+        ci = CommandInterpreter.getInterpreter(this)
+        ci.callback = CommandCallbacks.getCallback(this)
+        prefs = Utils.getSharedPrefs(this)
+        uartService = UartService(this)
+        ServiceRessurecter.startJob(this)
+        getLastHRSync()
+        getLastMainSync()
+    }
+
+    fun init() = runBlocking {
+        synchronized(this::class) {
+            if (!Utils.getSharedPrefs(this@Algorithm).contains(PreferenceListener.Companion.PrefsConsts.bandAddress)) {
+                this@Algorithm.stopForeground(true)
+                this@Algorithm.stopSelf()
+                return@runBlocking
             }
-            if (SelfPointer == null) {
-                SelfPointer = this
-                isFirstTime = true
-                IsActive = true
-                ReplaceTable.replaceString("", this)
-                ci = CommandInterpreter.getInterpreter(this)
-                ci.callback = CommandCallbacks.getCallback(this)
-                inserter = InsertTask(ci)
-                inserter.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
-                prefs = Utils.getSharedPrefs(this)
-                database = DatabaseController.getDCObject(this)
-                if (!commandHandler.isAlive)
-                    commandHandler.start()
-                uartService = UartService(this)
-                ServiceRessurecter.startJob(this)
-
-                val service = Intent(this, NotificationService::class.java)
+            if (SelfPointer == null || IsActive) {
+                initVariables()
+                val service = Intent(this@Algorithm, NotificationService::class.java)
                 if (!NotificationService.IsActive) {
-                    Utils.serviceStartForegroundMultiAPI(service, this)
+                    Utils.serviceStartForegroundMultiAPI(service, this@Algorithm)
                 }
-                if (!isNotifyServiceAlive(this))
-                    tryForceStartListener(this)
-                lockedAddress = Utils.getSharedPrefs(this).getString(PreferenceListener.Companion.PrefsConsts.bandAddress, "").toString()
-                Handler(Looper.getMainLooper()).post { StatusCode.value = StatusCodes.Disconnected }
-                if (this::lockedAddress.isInitialized && lockedAddress.isNotEmpty()) {
-                    if (Utils.getSharedPrefs(this).getBoolean(PreferenceListener.Companion.PrefsConsts.permitWakeLock, false)) {
-                        wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
-                            newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MFitX::Tag").apply {
-                                acquire()
-                            }
-                        }
-                    }
-                } else return
-                thread = Thread(Runnable {
-                    Thread.currentThread().name = "AASyncer"+ (Random.nextInt() % 50).toString()
-                    Thread.currentThread().priority = Thread.MIN_PRIORITY
-                    run()
-                })
-                thread?.start()
-
-                getLastHRSync()
-                getLastMainSync()
+                Handler(Looper.getMainLooper()).post { StatusCode.value = StatusCodes.Disconnected; initMainObserver() }
             }
         }
+    }
+    private fun initMainObserver(){
+        StatusCode.observe(this, androidx.lifecycle.Observer {
+            if (!IsActive) return@Observer
+            workInProgress = true
+            mainSyncTask.removeCallbacksAndMessages(null)
+            mainSyncTask.postDelayed({ uartService.probeConnection() }, 10000)
+            synchronized(this::class) {
+                when (it) {
+                    StatusCodes.GattConnected -> connectedAlgo()
+                    StatusCodes.GattReady -> executeMainAlgo()
+                    StatusCodes.BluetoothDisabled -> bluetoothDisabledAlgo()
+                    StatusCodes.Connected, StatusCodes.Disconnected,
+                    StatusCodes.Connecting -> deviceDisconnectedAlgo()
+                    StatusCodes.GattConnecting, StatusCodes.GattDiscovering -> connectionAlgos()
+                    StatusCodes.Dead -> deadAlgo()
+                    StatusCodes.DeviceLost -> {} //todo ?
+                    else -> {}//ignore
+                }
+            }
+        })
+    }
+
+
+    fun enqueneData(sm: SimpleRecord){
+        if (sm.characteristic == UartService.PowerTXUUID.toString() ||
+                sm.characteristic == UartService.PowerDescriptor.toString() ||
+                sm.characteristic == UartService.PowerServiceUUID.toString()) {
+            savedBattery = sm.Data[0].toShort()
+            CommandCallbacks.getCallback(this).batteryInfo(sm.Data[0].toInt())
+        } else {
+            //incomingMessages.add(sm)
+            Handler(commandHandler.looper).post { ci.commandAction(sm.Data, UUID.fromString(sm.characteristic)) }
+        }
+    }
+
+    fun sendData(Data: ByteArray): Boolean {
+        return if (this::uartService.isInitialized) {
+            this.uartService.writeRXCharacteristic(Data)
+        } else false
+    }
+
+    fun executeForceSync() {
+        bluetoothRequested = false; bluetoothRejected = false
+//TODO        GlobalScope.launch(Dispatchers.IO) { database.initRepairsAndSync(database.writableDatabase) }
+        Handler(commandHandler.looper).postDelayed({ ci.requestSettings() }, 200)
+        Handler(commandHandler.looper).postDelayed({ ci.requestBatteryStatus() }, 500)
+        Handler(commandHandler.looper).postDelayed({ ci.syncTime(Calendar.getInstance()) }, 800)
+        Handler(commandHandler.looper).postDelayed({ ci.requestHRHistory(getLastHRSync()) }, 1200)
+        Handler(commandHandler.looper).postDelayed({ ci.requestSleepHistory(getLastSleepSync()) }, 1600)
+        Handler(commandHandler.looper).postDelayed({ ci.getMainInfoRequest() }, 2200)
+        if (isFirstTime) forceSyncHR()
+        //if (IsAlarmingTriggered && !IsFromActivity) alarmTriggerDecider(0)
     }
 
     //endregion
@@ -390,20 +352,7 @@ class Algorithm : Service() {
         var IsAlarmingTriggered = false
         var IsAlarmKilled = false
 
-        var IsActive = true
-
-        fun isNotifyServiceAlive(context: Context): Boolean {
-            val Names = NotificationManagerCompat.getEnabledListenerPackages(context)
-            return Names.contains(context.packageName)
-        }
-
-        fun tryForceStartListener(context: Context) {
-            val pm = context.packageManager
-            pm.setComponentEnabledSetting(ComponentName(context, NotificationService::class.java),
-                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
-            pm.setComponentEnabledSetting(ComponentName(context, NotificationService::class.java),
-                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
-        }
+        var IsActive = false
 
         fun updateStatusCode(newStatus: StatusCodes) {
             if (newStatus == StatusCodes.Dead) SelfPointer?.killService()
@@ -411,7 +360,6 @@ class Algorithm : Service() {
                 return
             } else {
                 StatusCode.postValue(newStatus)
-                SelfPointer?.thread?.interrupt()
             }
         }
     }

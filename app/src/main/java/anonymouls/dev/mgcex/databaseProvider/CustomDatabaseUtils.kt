@@ -1,8 +1,10 @@
 package anonymouls.dev.mgcex.databaseProvider
 
 import android.database.sqlite.SQLiteDatabase
+import anonymouls.dev.mgcex.app.backend.ApplicationStarter
 import java.util.*
 
+@ExperimentalStdlibApi
 object CustomDatabaseUtils {
 
     private fun checkForLength(Target: Calendar, FieldID: Int): String {
@@ -84,20 +86,18 @@ object CustomDatabaseUtils {
         return java.lang.Long.parseLong(Result)
     }
 
-    fun getLastSyncFromTable(TableName: String, ReqColumns: Array<String>, IsShort: Boolean, Operator: SQLiteDatabase): Calendar {
-        val record = Operator.query(TableName, ReqColumns, null, null, null, null,
-                ReqColumns[1] + " DESC", "1")
-        record.moveToFirst()
-        if (record.count < 1) {
-            val Buff = Calendar.getInstance()
-            Buff.add(Calendar.MONTH, -5)
-            record.close()
-            return Buff
+    fun getLastSyncFromTable(TableName: String, ReqColumns: Array<String>, IsShort: Boolean): Calendar {
+        val db = DatabaseController.getDCObject(ApplicationStarter.appContext).readableDatabase
+        db.query(TableName, ReqColumns, null, null, null, null,
+                ReqColumns[1] + " DESC", "1").use {
+            it.moveToFirst()
+            if (it.count < 1) {
+                val Buff = Calendar.getInstance()
+                Buff.add(Calendar.MONTH, -5)
+                return Buff
+            }
+            return longToCalendar(it.getLong(1), IsShort)
         }
-        val result = longToCalendar(record.getLong(1), IsShort)
-        record.close()
-        return result
-
     }
 
     fun niceSQLFunctionBuilder(function: String, param: String): String {

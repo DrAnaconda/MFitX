@@ -136,7 +136,7 @@ object MainRecordsTable {
             from = CustomDatabaseUtils.calendarToLong(From, true)
             to = CustomDatabaseUtils.calendarToLong(To, true)
         }
-        val curs = Operator.query(MainRecordsTable.TableName,
+        val curs = Operator.query(TableName,
                 arrayOf(CustomDatabaseUtils.niceSQLFunctionBuilder("COUNT", "*"),
                         CustomDatabaseUtils.niceSQLFunctionBuilder("SUM", ColumnNames[2]),
                         CustomDatabaseUtils.niceSQLFunctionBuilder("SUM", ColumnNames[3])),
@@ -148,19 +148,18 @@ object MainRecordsTable {
     }
 
     fun getUnAnalyzedInInterval(To: Long): Queue<MainRecord> {
-        DatabaseController.getDCObject(ApplicationStarter.appContext).readableDatabase.use {
-            it.query(TableName + "COPY", ColumnsForExtraction, "${ColumnNamesCloneAdditional[0]} = 0 AND ${ColumnsForExtraction[0]} < ?",
-                    arrayOf(To.toString()), null, null, "${ColumnsForExtraction[0]} ASC").use {
-                return if (it.count > 0){
-                    val result: Queue<MainRecord> = LinkedList()
-                    it.moveToFirst()
-                    do{
-                        result.add(MainRecord(CustomDatabaseUtils.longToCalendar(it.getLong(0), true),
-                                it.getInt(1), it.getInt(2)))
-                    }while (it.moveToNext())
-                    result
-                } else LinkedList()
-            }
+        val db = DatabaseController.getDCObject(ApplicationStarter.appContext).readableDatabase
+        db.query(TableName + "COPY", ColumnsForExtraction, "${ColumnNamesCloneAdditional[0]} = 0 AND ${ColumnsForExtraction[0]} < ?",
+                arrayOf(To.toString()), null, null, "${ColumnsForExtraction[0]} ASC").use {
+            return if (it.count > 0) {
+                val result: Queue<MainRecord> = LinkedList()
+                it.moveToFirst()
+                do {
+                    result.add(MainRecord(CustomDatabaseUtils.longToCalendar(it.getLong(0), true),
+                            it.getInt(1), it.getInt(2)))
+                } while (it.moveToNext())
+                result
+            } else LinkedList()
         }
     }
 
@@ -169,18 +168,17 @@ object MainRecordsTable {
     //region Single Data Extract
 
     fun getTopUnAnalyzed(): MainRecord? {
-        DatabaseController.getDCObject(ApplicationStarter.appContext).readableDatabase.use {
-            val cursor = it.query(TableName+"COPY", ColumnsForExtraction,
-                    "${ColumnNamesCloneAdditional[0]} = 0",
-                    null, null, null, "${ColumnsForExtraction[0]} DESC", "1")
-            cursor.use {
-                it.moveToFirst()
-                return if (it.count > 0)
-                    MainRecord(CustomDatabaseUtils.longToCalendar(it.getLong(0), true),
-                            it.getInt(1), it.getInt(2))
-                else
-                    null
-            }
+        val db = DatabaseController.getDCObject(ApplicationStarter.appContext).readableDatabase
+        val cursor = db.query(TableName + "COPY", ColumnsForExtraction,
+                "${ColumnNamesCloneAdditional[0]} = 0",
+                null, null, null, "${ColumnsForExtraction[0]} DESC", "1")
+        cursor.use {
+            it.moveToFirst()
+            return if (it.count > 0)
+                MainRecord(CustomDatabaseUtils.longToCalendar(it.getLong(0), true),
+                        it.getInt(1), it.getInt(2))
+            else
+                null
         }
     }
 

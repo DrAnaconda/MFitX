@@ -3,6 +3,7 @@ package anonymouls.dev.mgcex.databaseProvider
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
 import androidx.lifecycle.MutableLiveData
+import anonymouls.dev.mgcex.app.backend.ApplicationStarter
 import java.util.*
 
 @ExperimentalStdlibApi
@@ -22,15 +23,17 @@ object SleepRecordsTable {
                 ");"
     }
 
-    fun getLastSync(db: SQLiteDatabase): Long {
-        val curs = db.query(TableName, arrayOf(ColumnNames[1]), null, null, null, null, ColumnNames[1] + " DESC", "1")
-        if (curs.count > 0) {
-            curs.moveToFirst()
-            return curs.getLong(0)
+    fun getLastSync(): Long {
+        val db = DatabaseController.getDCObject(ApplicationStarter.appContext).readableDatabase
+        db.query(TableName, arrayOf(ColumnNames[1]), null, null,
+                null, null, ColumnNames[1] + " DESC", "1").use {
+            if (it.count > 0) {
+                it.moveToFirst()
+                return it.getLong(0)
+            }
+            val result = Calendar.getInstance(); result.add(Calendar.MONTH, -6)
+            return CustomDatabaseUtils.calendarToLong(result, true)
         }
-        curs.close()
-        val result = Calendar.getInstance(); result.add(Calendar.MONTH, -6)
-        return CustomDatabaseUtils.calendarToLong(result, true)
     }
 
     private fun assignSSID(recordDate: Long, Duration: Int, Type: Int, Operator: SQLiteDatabase): Long {

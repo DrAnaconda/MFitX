@@ -31,9 +31,14 @@ class ServiceRessurecter : JobService() {
                                 PreferenceListener.Companion.PrefsConsts.disconnectedMonitoring, 5).toLong() * 1000 * 60)
 
                 val jobScheduler = context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
-                val test = jobScheduler.schedule(pendingJob.build())
+                jobScheduler.schedule(pendingJob.build())
                 isSchleduled = true
             }
+        }
+        fun cancelJob(context: Context){
+            val jobScheduler = context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
+            jobScheduler.cancel(JobID)
+            isSchleduled = false
         }
     }
 

@@ -25,7 +25,7 @@ class UartService(private val context: Context) {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             Thread.currentThread().name = "AAConnecter" + (Random().nextInt() % 50)
             synchronized(this@UartService::class) {
-                if (status == BluetoothGatt.GATT_SUCCESS || status == 8) {
+                if (status == BluetoothGatt.GATT_SUCCESS) {
                     when (newState) {
                         BluetoothProfile.STATE_CONNECTED -> {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
@@ -34,7 +34,6 @@ class UartService(private val context: Context) {
                             gatt.discoverServices()
                             if (Algorithm.StatusCode.value!!.code < Algorithm.StatusCodes.GattDiscovering.code)
                                 Algorithm.updateStatusCode(Algorithm.StatusCodes.GattDiscovering)
-                            Algorithm.SelfPointer?.thread?.interrupt()
                         }
                         BluetoothProfile.STATE_DISCONNECTING, BluetoothProfile.STATE_DISCONNECTED -> {
                             isConnected = false; isDiscovered = false
@@ -50,7 +49,8 @@ class UartService(private val context: Context) {
                     }
                 } else {
                     gatt.close()
-                    mBluetoothGatt = null; isConnected = false; isDiscovered = false; existsUnclosedConnection = false
+                    isConnected = false; isDiscovered = false
+                    Algorithm.updateStatusCode(Algorithm.StatusCodes.Disconnected)
                 }
             }
         }
@@ -63,12 +63,12 @@ class UartService(private val context: Context) {
                     this@UartService.enableTXNotification(RX_SERVICE_UUID, TX_CHAR_UUID, TXServiceDesctiptor)
                     this@UartService.enableTXNotification(PowerServiceUUID, PowerTXUUID, PowerDescriptor)
                     Algorithm.updateStatusCode(Algorithm.StatusCodes.GattReady)
+                    isDiscovered = true
                 } else {
                     gatt.discoverServices()
-                    Algorithm.updateStatusCode(Algorithm.StatusCodes.GattConnected)
+                    Algorithm.updateStatusCode(Algorithm.StatusCodes.GattDiscovering)
                 }
                 discoveringPending = false
-                Algorithm.SelfPointer?.thread?.interrupt()
             }
         }
 
@@ -93,16 +93,13 @@ class UartService(private val context: Context) {
     fun connect(address: String): Boolean {
         synchronized(this::class) {
             mBluetoothAdapter.startDiscovery()
-            if (existsUnclosedConnection){
-                return true
-            }
             if (isConnected && mBluetoothGatt != null) {
                 if (Algorithm.StatusCode.value!!.code < Algorithm.StatusCodes.GattConnected.code)
                     Algorithm.updateStatusCode(Algorithm.StatusCodes.GattConnected)
                 return true
             } else { isConnected = false }
 
-            if (this::mBluetoothDeviceAddress.isInitialized
+            if (this@UartService::mBluetoothDeviceAddress.isInitialized
                     && address == mBluetoothDeviceAddress
                     && mBluetoothGatt != null) {
 
@@ -113,7 +110,7 @@ class UartService(private val context: Context) {
                     false
                 }
             }
-            Algorithm.StatusCode.postValue(Algorithm.StatusCodes.Connecting)
+            if (!mBluetoothAdapter.isEnabled) mBluetoothAdapter.enable()
             discoveringPending = false
             this.mBluetoothDeviceAddress = address
             device = mBluetoothAdapter.getRemoteDevice(address) ?: return false
@@ -202,6 +199,8 @@ class UartService(private val context: Context) {
                 if (discoveringPending) {
                     Algorithm.StatusCode.postValue(Algorithm.StatusCodes.GattDiscovering)
                     return false
+                } else if (isDiscovered){
+                    return true
                 }
             }
         }

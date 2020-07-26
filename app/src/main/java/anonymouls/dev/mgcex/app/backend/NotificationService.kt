@@ -29,7 +29,6 @@ import java.util.concurrent.ConcurrentHashMap
 class NotificationService : NotificationListenerService() {
     override fun onCreate() {
         super.onCreate()
-        instance = this
         Companion.contentResolver = contentResolver
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             this.startForeground(66, Utils.buildForegroundNotification(this))
@@ -46,6 +45,7 @@ class NotificationService : NotificationListenerService() {
     }
 
     override fun onListenerConnected() {
+        instance = this
         if (!IsActive) {
             IsActive = true
             Repeater = AsyncRepeater()
