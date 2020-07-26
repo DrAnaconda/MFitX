@@ -279,7 +279,7 @@ object Utils {
         return channelId
     }
 
-    private fun buildForegroundNotification(context: Context): Notification? {
+    fun buildForegroundNotification(context: Context): Notification {
         val channelId =
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     createNotificationChannel(context, context.getString(R.string.background_runner_label),

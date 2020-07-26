@@ -19,7 +19,6 @@ class UartService(private val context: Context) {
     private var device: BluetoothDevice? = null
     private var isConnected = false
     private var isDiscovered = false
-    private var existsUnclosedConnection = false
 
     private val mGattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
@@ -37,7 +36,6 @@ class UartService(private val context: Context) {
                         }
                         BluetoothProfile.STATE_DISCONNECTING, BluetoothProfile.STATE_DISCONNECTED -> {
                             isConnected = false; isDiscovered = false
-                            if (!existsUnclosedConnection) { gatt.close(); mBluetoothGatt = null }
                             if (!isDiscovered)
                                 Algorithm.updateStatusCode(Algorithm.StatusCodes.Disconnected)
                             else
@@ -117,7 +115,6 @@ class UartService(private val context: Context) {
             // WARNING Auto connect param impacting of productivity
             mBluetoothGatt = device?.connectGatt(context, false, mGattCallback)
             return if (mBluetoothGatt != null) {
-                existsUnclosedConnection = true
                 mBluetoothDeviceAddress = address
                 mBluetoothGatt?.connect()
                 if (Algorithm.StatusCode.value!!.code < Algorithm.StatusCodes.GattConnecting.code)
@@ -133,8 +130,6 @@ class UartService(private val context: Context) {
         synchronized(this::class) {
             mBluetoothGatt?.disconnect()
             mBluetoothGatt?.close()
-            mBluetoothGatt = null
-            existsUnclosedConnection = false
         }
     }
 
@@ -193,7 +188,6 @@ class UartService(private val context: Context) {
         } else {
             if (mBluetoothGatt == null || device == null) {
                 Algorithm.updateStatusCode(Algorithm.StatusCodes.Disconnected)
-                //connect(mBluetoothDeviceAddress)
                 return false
             } else {
                 if (discoveringPending) {

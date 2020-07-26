@@ -41,6 +41,7 @@ class Algorithm : LifecycleService() {
     private var nextSyncHR: Calendar? = null
     private var savedBattery: Short = 100
     private var disconnectedTimestamp: Long = System.currentTimeMillis()
+    private var connectionChecker = Timer("AAConnectionChecker", false)
 
     lateinit var ci: CommandInterpreter
     lateinit var uartService: UartService
@@ -105,6 +106,8 @@ class Algorithm : LifecycleService() {
     //region Background Taskforce
 
     private fun deadAlgo() {
+        this.connectionChecker.cancel()
+        this.connectionChecker.purge()
         StatusCode.postValue(StatusCodes.Dead)
         IsActive = false
         SelfPointer = null
@@ -232,8 +235,10 @@ class Algorithm : LifecycleService() {
     private fun initVariables(){
         lockedAddress = Utils.getSharedPrefs(this).getString(PreferenceListener.Companion.PrefsConsts.bandAddress, "").toString()
         try{
-        if (commandHandler.looper == null
-                && !commandHandler.isAlive) commandHandler.start() }catch (e: Exception) {} // todo magic?
+            if (commandHandler.looper == null
+                    && !commandHandler.isAlive) commandHandler.start()
+        } catch (e: Exception) {
+        } // todo magic?
         mainSyncTask = Handler(commandHandler.looper)
         SelfPointer = this
         isFirstTime = true
@@ -242,6 +247,11 @@ class Algorithm : LifecycleService() {
         ci.callback = CommandCallbacks.getCallback(this)
         prefs = Utils.getSharedPrefs(this)
         uartService = UartService(this)
+        connectionChecker.schedule(object : TimerTask() {
+            override fun run() {
+                uartService.probeConnection()
+            }
+        }, 10000, 10000)
         ServiceRessurecter.startJob(this)
         getLastHRSync()
         getLastMainSync()
@@ -269,7 +279,6 @@ class Algorithm : LifecycleService() {
             if (!IsActive) return@Observer
             workInProgress = true
             mainSyncTask.removeCallbacksAndMessages(null)
-            mainSyncTask.postDelayed({ uartService.probeConnection() }, 10000)
             synchronized(this::class) {
                 when (it) {
                     StatusCodes.GattConnected -> connectedAlgo()
