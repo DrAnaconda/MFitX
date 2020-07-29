@@ -3,11 +3,9 @@
 package anonymouls.dev.mgcex.app.backend
 
 import android.content.Context
-import android.nfc.FormatException
 import android.widget.Toast
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.util.PreferenceListener
-
 import anonymouls.dev.mgcex.util.Utils
 import java.util.*
 
@@ -23,14 +21,13 @@ abstract class CommandInterpreter {
     }
 
     var callback: CommandReaction? = null
-    private var blocker: Any = Any()
 
     //region Special Features
 
-    var hRRealTimeControlSupport = false
-    var stepsTargetSettingSupport = false
-    var sittingReminderSupport = false
-    var vibrationSupport = false
+    abstract val hRRealTimeControlSupport: Boolean
+    abstract val stepsTargetSettingSupport: Boolean
+    abstract val sittingReminderSupport: Boolean
+    abstract val vibrationSupport: Boolean
 
     //endregion
 
@@ -55,6 +52,16 @@ abstract class CommandInterpreter {
             return ActiveInterpreter!!
         }
     }
+
+    abstract val UARTServiceUUIDString: String
+    abstract val UARTRXUUIDString : String
+    abstract val UARTTXUUIDString : String
+    abstract val UARTDescriptor : String
+    abstract val PowerServiceString : String
+    abstract val PowerTXString : String
+    abstract val PowerTX2String : String
+    abstract val PowerDescriptor : String
+
 
     protected fun hexStringToByteArray(s: String): ByteArray {
         var s = s
@@ -111,17 +118,7 @@ abstract class CommandInterpreter {
     }
 
     fun postCommand(Request: ByteArray) {
-        synchronized(blocker) {
-            try {
-                while (Algorithm.SelfPointer != null) {
-                    val result = Algorithm.SelfPointer?.sendData(Request)
-                    if (result == null || result == true) return
-                    Utils.safeThreadSleep(8000, true)
-                }
-                Utils.safeThreadSleep(666, true)
-            } catch (e: FormatException) {
-            }
-        }
+        Algorithm.SelfPointer?.sendData(Request)
     }
 
     abstract fun syncTime(SyncTime: Calendar?)

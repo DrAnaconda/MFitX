@@ -2,8 +2,6 @@ package anonymouls.dev.mgcex.app.backend
 
 import android.os.Handler
 import anonymouls.dev.mgcex.app.backend.ApplicationStarter.Companion.commandHandler
-import anonymouls.dev.mgcex.util.PreferenceListener
-
 import anonymouls.dev.mgcex.util.Utils
 import java.nio.ByteBuffer
 import java.util.*
@@ -27,22 +25,41 @@ class MGCOOL4CommandInterpreter : CommandInterpreter() {
         private const val LongMessageHeaderPartTwo = "FF72800102"
         private const val ShortMessageHeader = "AB0029FF72800302"
         private const val StopLongAlarmHeader = "AB0005FF72800202"
-        private const val UARTRXServiceUUIDString = "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
-        private const val UARTRXUUIDString = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
-        private const val UARTTXUUIDString = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
-        private const val UARTDescriptor = "00002902-0000-1000-8000-00805f9b34fb"
     }
 
-    init {
-        this.hRRealTimeControlSupport = true
+    //region Special features
 
-        UartService.RX_CHAR_UUID = UUID.fromString(UARTRXUUIDString)
-        UartService.TX_CHAR_UUID = UUID.fromString(UARTTXUUIDString)
-        UartService.RX_SERVICE_UUID = UUID.fromString(UARTRXServiceUUIDString)
-        UartService.TXServiceDesctiptor = UUID.fromString(UARTDescriptor)
-        if (Algorithm.SelfPointer != null)
-            Utils.getSharedPrefs(Algorithm.SelfPointer!!.baseContext).edit().remove(PreferenceListener.Companion.PrefsConsts.targetSteps).apply()
-    }
+    override val hRRealTimeControlSupport: Boolean
+        get() = true
+    override val stepsTargetSettingSupport: Boolean
+        get() = false
+    override val sittingReminderSupport: Boolean
+        get() = true // TODO not realized
+    override val vibrationSupport: Boolean
+        get() = false
+
+    //endregion
+
+    //region UUIDs
+
+    override val UARTServiceUUIDString: String
+        get() = "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
+    override val UARTRXUUIDString: String
+        get() = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
+    override val UARTTXUUIDString: String
+        get() = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
+    override val UARTDescriptor: String
+        get() = "00002902-0000-1000-8000-00805f9b34fb"
+    override val PowerServiceString: String
+        get() = "00000000-0000-0000-0000-000000000000" // not suppoted
+    override val PowerTXString: String
+        get() = "00000000-0000-0000-0000-000000000000"
+    override val PowerTX2String: String
+        get() = "00000000-0000-0000-0000-000000000000"
+    override val PowerDescriptor: String
+        get() = "00000000-0000-0000-0000-000000000000"
+
+    //endregion
 
     override fun getMainInfoRequest() {
         val CUtil = Calendar.getInstance()

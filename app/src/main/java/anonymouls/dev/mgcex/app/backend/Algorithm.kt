@@ -1,5 +1,6 @@
 package anonymouls.dev.mgcex.app.backend
 
+import android.bluetooth.BluetoothDevice
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.ServiceInfo
@@ -23,13 +24,38 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import no.nordicsemi.android.ble.observer.ConnectionObserver
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
 
 @ExperimentalStdlibApi
-class Algorithm : LifecycleService() {
+class Algorithm : LifecycleService(), ConnectionObserver {
+
+    companion object {
+
+        var SelfPointer: Algorithm? = null
+        var StatusCode = MutableLiveData(StatusCodes.Disconnected)
+
+        val currentAlgoStatus = MutableLiveData<String>(ApplicationStarter.appContext.getString(R.string.status_label))
+
+        var ApproachingAlarm: AlarmProvider? = null
+        var IsAlarmWaiting = false
+        var IsAlarmingTriggered = false
+        var IsAlarmKilled = false
+
+        var IsActive = false
+
+        fun updateStatusCode(newStatus: StatusCodes) {
+            if (newStatus == StatusCodes.Dead) SelfPointer?.killService()
+            if (StatusCode.value!!.code == StatusCodes.Dead.code) {
+                return
+            } else {
+                StatusCode.postValue(newStatus)
+            }
+        }
+    }
 
     //region Properties
 
@@ -41,10 +67,9 @@ class Algorithm : LifecycleService() {
     private var nextSyncHR: Calendar? = null
     private var savedBattery: Short = 100
     private var disconnectedTimestamp: Long = System.currentTimeMillis()
-    private var connectionChecker = Timer("AAConnectionChecker", false)
 
     lateinit var ci: CommandInterpreter
-    lateinit var uartService: UartService
+    lateinit var uartService: UartServiceMK2
     private lateinit var mainSyncTask: Handler
 
     private lateinit var lockedAddress: String
@@ -106,8 +131,6 @@ class Algorithm : LifecycleService() {
     //region Background Taskforce
 
     private fun deadAlgo() {
-        this.connectionChecker.cancel()
-        this.connectionChecker.purge()
         StatusCode.postValue(StatusCodes.Dead)
         IsActive = false
         SelfPointer = null
@@ -119,7 +142,7 @@ class Algorithm : LifecycleService() {
     }
 
     private fun executeMainAlgo() {
-        if (!uartService.probeConnection()) return
+        //if (!uartService.probeConnection()) return
         val syncPeriod = prefs.getString(PreferenceListener.Companion.PrefsConsts.mainSyncMinutes, "5")!!.toInt() * 60 * 1000
         nextSyncMain = Calendar.getInstance()
         nextSyncMain.add(Calendar.MILLISECOND, syncPeriod)
@@ -152,28 +175,7 @@ class Algorithm : LifecycleService() {
         else {
             StatusCode.postValue(StatusCodes.BluetoothDisabled)
         }
-        uartService.forceEnableBluetooth()
-    }
-
-    private fun deviceDisconnectedAlgo() {
-        if (StatusCode.value!!.code < StatusCodes.GattConnecting.code) {
-            connectionTries = System.currentTimeMillis()
-            disconnectedTimestamp = System.currentTimeMillis()
-            currentAlgoStatus.postValue(getString(R.string.conntecting_status))
-            if (uartService.connect(lockedAddress)) {
-                //StatusCode.postValue(StatusCodes.GattConnecting)
-            }
-        }
-        mainSyncTask.postDelayed({ deviceDisconnectedAlgo()}, 10000)
-    }
-
-    private fun connectionAlgos() {
-        if (System.currentTimeMillis() > connectionTries + 20000) {
-            uartService.disconnect()
-            StatusCode.postValue(StatusCodes.Disconnected)
-            connectionTries = 0
-        }
-        mainSyncTask.postDelayed({ connectionAlgos() }, 10000)
+        //uartService.forceEnableBluetooth()
     }
 
     private fun connectedAlgo() {
@@ -181,7 +183,7 @@ class Algorithm : LifecycleService() {
         if (StatusCode.value!!.code < StatusCodes.GattDiscovering.code
                 && StatusCode.value!!.code == StatusCodes.GattConnected.code) {
             connectionTries = System.currentTimeMillis()
-            uartService.retryDiscovery()
+            //uartService.retryDiscovery()
         }
     }
 
@@ -246,12 +248,7 @@ class Algorithm : LifecycleService() {
         ci = CommandInterpreter.getInterpreter(this)
         ci.callback = CommandCallbacks.getCallback(this)
         prefs = Utils.getSharedPrefs(this)
-        uartService = UartService(this)
-        connectionChecker.schedule(object : TimerTask() {
-            override fun run() {
-                uartService.probeConnection()
-            }
-        }, 10000, 10000)
+        uartService = UartServiceMK2(this)
         ServiceRessurecter.startJob(this)
         getLastHRSync()
         getLastMainSync()
@@ -284,22 +281,21 @@ class Algorithm : LifecycleService() {
                     StatusCodes.GattConnected -> connectedAlgo()
                     StatusCodes.GattReady -> executeMainAlgo()
                     StatusCodes.BluetoothDisabled -> bluetoothDisabledAlgo()
-                    StatusCodes.Connected, StatusCodes.Disconnected,
-                    StatusCodes.Connecting -> deviceDisconnectedAlgo()
-                    StatusCodes.GattConnecting, StatusCodes.GattDiscovering -> connectionAlgos()
                     StatusCodes.Dead -> deadAlgo()
-                    StatusCodes.DeviceLost -> {} //todo ?
                     else -> {}//ignore
                 }
             }
         })
+        uartService.connectToDevice(this.lockedAddress)
     }
 
 
     fun enqueneData(sm: SimpleRecord){
-        if (sm.characteristic == UartService.PowerTXUUID.toString() ||
-                sm.characteristic == UartService.PowerDescriptor.toString() ||
-                sm.characteristic == UartService.PowerServiceUUID.toString()) {
+        if (sm.Data == null) return
+        if (sm.characteristic == ci.PowerServiceString ||
+                sm.characteristic == ci.PowerDescriptor ||
+                sm.characteristic == ci.PowerTXString ||
+                sm.characteristic == ci.PowerTX2String) {
             savedBattery = sm.Data[0].toShort()
             CommandCallbacks.getCallback(this).batteryInfo(sm.Data[0].toInt())
         } else {
@@ -308,10 +304,8 @@ class Algorithm : LifecycleService() {
         }
     }
 
-    fun sendData(Data: ByteArray): Boolean {
-        return if (this::uartService.isInitialized) {
-            this.uartService.writeRXCharacteristic(Data)
-        } else false
+    fun sendData(Data: ByteArray){
+        this.uartService.sendDataToRX(Data)
     }
 
     fun executeForceSync() {
@@ -349,33 +343,37 @@ class Algorithm : LifecycleService() {
         buildStatusMessage()
     }
 
-    companion object {
+    //region Implementation of connection observer
 
-        var SelfPointer: Algorithm? = null
-        var StatusCode = MutableLiveData(StatusCodes.Disconnected)
-
-        val currentAlgoStatus = MutableLiveData<String>(ApplicationStarter.appContext.getString(R.string.status_label))
-
-        var ApproachingAlarm: AlarmProvider? = null
-        var IsAlarmWaiting = false
-        var IsAlarmingTriggered = false
-        var IsAlarmKilled = false
-
-        var IsActive = false
-
-        fun updateStatusCode(newStatus: StatusCodes) {
-            if (newStatus == StatusCodes.Dead) SelfPointer?.killService()
-            if (StatusCode.value!!.code == StatusCodes.Dead.code) {
-                return
-            } else {
-                StatusCode.postValue(newStatus)
-            }
-        }
+    override fun onDeviceDisconnecting(device: BluetoothDevice) {
+        StatusCode.postValue(StatusCodes.Disconnected)
     }
+
+    override fun onDeviceDisconnected(device: BluetoothDevice, reason: Int) {
+        StatusCode.postValue(StatusCodes.Disconnected)
+    }
+
+    override fun onDeviceReady(device: BluetoothDevice) {
+        StatusCode.postValue(StatusCodes.GattReady)
+    }
+
+    override fun onDeviceConnected(device: BluetoothDevice) {
+        StatusCode.postValue(StatusCodes.GattConnected)
+    }
+
+    override fun onDeviceFailedToConnect(device: BluetoothDevice, reason: Int) {
+        StatusCode.postValue(StatusCodes.Disconnected)
+    }
+
+    override fun onDeviceConnecting(device: BluetoothDevice) {
+        StatusCode.postValue(StatusCodes.Connecting)
+    }
+
+    //endregion
 
 }
 
 // TODO Integrate data sleep visualization
 // TODO Integrate 3d party services
 // TODO Battery health tracker
-// TODO LM: Other settings (dnd, alarms)
+// TODO LM: Other settings (alarms)

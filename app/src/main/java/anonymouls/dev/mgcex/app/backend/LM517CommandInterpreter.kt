@@ -15,33 +15,50 @@ import java.util.*
 class LM517CommandInterpreter : CommandInterpreter() {
     companion object {
         const val CodeName = "LM716"
-
-        private const val syncTimeCommandHeader = "CD00091201010004"
-        private const val longAlarmHeader = "CD0014120111000F"
-
-        private const val UARTServiceUUIDString = "6e400001-b5a3-f393-e0a9-e50e24dcca9d"
-        private const val UARTRXUUIDString = "6e400002-b5a3-f393-e0a9-e50e24dcca9d"
-        private const val UARTTXUUIDString = "6e400003-b5a3-f393-e0a9-e50e24dcca9d"
-        private const val UARTDescriptor = "00002902-0000-1000-8000-00805f9b34fb" // 00002902-0000-1000-8000-00805f9b34fb
-        private const val PowerServiceString = "0000180f-0000-1000-8000-00805f9b34fb"
-        private const val PowerTXString = "00002a19-0000-1000-8000-00805f9b34fb"
-        private const val PowerTX2String = "00002a19-0000-0000-8000-00805f9b34fb"
-        private const val PowerDescriptor = "00002902-0000-1000-8000-00805f9b34fb"
     }
 
-    init {
-        UartService.RX_SERVICE_UUID = UUID.fromString(UARTServiceUUIDString)
-        UartService.RX_CHAR_UUID = UUID.fromString(UARTRXUUIDString)
-        UartService.TX_CHAR_UUID = UUID.fromString(UARTTXUUIDString)
-        UartService.TXServiceDesctiptor = UUID.fromString(UARTDescriptor)
-        UartService.PowerServiceUUID = UUID.fromString(PowerServiceString)
-        UartService.PowerTXUUID = UUID.fromString(PowerTXString)
-        UartService.PowerDescriptor = UUID.fromString(PowerDescriptor)
-        this.hRRealTimeControlSupport = false
-        this.vibrationSupport = true
-        this.stepsTargetSettingSupport = true
-        this.sittingReminderSupport = true
-    }
+    //region Special features
+
+    override val hRRealTimeControlSupport: Boolean
+        get() = false
+    override val stepsTargetSettingSupport: Boolean
+        get() = true
+    override val sittingReminderSupport: Boolean
+        get() = true
+    override val vibrationSupport: Boolean
+        get() = true
+
+    //endregion
+
+    //region Headers
+
+    private val syncTimeCommandHeader: String
+        get() = "CD00091201010004"
+    private val longAlarmHeader: String
+        get() = "CD0014120111000F"
+
+    //endregion
+
+    //region Uart UUIDs
+
+    override val UARTServiceUUIDString: String
+        get() = "6e400001-b5a3-f393-e0a9-e50e24dcca9d"
+    override val UARTRXUUIDString: String
+        get() = "6e400002-b5a3-f393-e0a9-e50e24dcca9d"
+    override val UARTTXUUIDString: String
+        get() = "6e400003-b5a3-f393-e0a9-e50e24dcca9d"
+    override val UARTDescriptor: String
+        get() = "00002902-0000-1000-8000-00805f9b34fb"
+    override val PowerServiceString: String
+        get() = "0000180f-0000-1000-8000-00805f9b34fb"
+    override val PowerTXString: String
+        get() = "00002a19-0000-1000-8000-00805f9b34fb"
+    override val PowerTX2String: String
+        get() = "00002a19-0000-0000-8000-00805f9b34fb"
+    override val PowerDescriptor: String
+        get() = "00002902-0000-1000-8000-00805f9b34fb"
+
+    //endregion
 
     //region Helpers
 
@@ -255,8 +272,8 @@ class LM517CommandInterpreter : CommandInterpreter() {
     }
 
     override fun requestBatteryStatus() {
-        Algorithm.SelfPointer?.uartService?.readCharacteristic(
-                UartService.PowerServiceUUID, UartService.PowerTXUUID)
+        //Algorithm.SelfPointer?.uartService?.readCharacteristic(
+          //      UartService.PowerServiceUUID, UartService.PowerTXUUID) TODO
     }
 
     override fun requestManualHRMeasure(cancel: Boolean) {

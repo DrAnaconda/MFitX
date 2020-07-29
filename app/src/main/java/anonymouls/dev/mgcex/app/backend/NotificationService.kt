@@ -189,7 +189,7 @@ class NotificationService : NotificationListenerService() {
             }
         }
 
-        class AsyncRepeater : AsyncTask<String, Void, Boolean>() {
+        class AsyncRepeater : AsyncTask<String, Void, Boolean>() { // TODO: This deprecated. Need to use timer or looper
             override fun doInBackground(vararg params: String?): Boolean {
                 if (sharedPrefs == null)
                     sharedPrefs = Utils.getSharedPrefs(instance!!)
