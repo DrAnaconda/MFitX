@@ -189,4 +189,7 @@
     <string name="grant_perm">Grant permission</string>
     <string name="summary_notifyListener">This function requires permission to listen notification. Click here and fix problem</string>
     <string name="app_filter">App Filter</string>
+    <string name="status_connecting">Status : Connecting...</string>
+    <string name="status_failed_to_connect">Status: Failed to connect</string>
+    <string name="status_disconnected">Status: Disconnected</string>
 </resources>

@@ -41,7 +41,7 @@ class MyViewModelFactory(private val activity: FragmentActivity) : ViewModelProv
 
 @ExperimentalStdlibApi
 class MainViewModel(private val activity: FragmentActivity) : ViewModel(), CommandInterpreter.CommandReaction {
-    val workInProgress = MutableLiveData(View.GONE)
+    private val workInProgress = MutableLiveData(View.GONE)
     val _batteryHolder = MutableLiveData(-1)
     val _lastHearthRateIncomed = MutableLiveData<HRRecord>(HRRecord(Calendar.getInstance(), -1))
     val _lastCcalsIncomed = MutableLiveData<Int>(-1)

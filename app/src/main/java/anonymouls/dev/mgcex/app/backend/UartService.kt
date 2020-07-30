@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothManager
 import no.nordicsemi.android.ble.BleManager
+import no.nordicsemi.android.ble.PhyRequest
 import java.util.*
 
 
@@ -21,7 +22,7 @@ class UartServiceMK2(private val Algo: Algorithm) : BleManager(Algo) {
 
     private val uartServiceUUID = UUID.fromString(Algo.ci.UARTServiceUUIDString)
     private val rxCharUUID = UUID.fromString(Algo.ci.UARTRXUUIDString)
-    private var txCharUUID = UUID.fromString(Algo.ci.UARTTXUUIDString)
+    private val txCharUUID = UUID.fromString(Algo.ci.UARTTXUUIDString)
 
     //endregion
 
@@ -36,16 +37,21 @@ class UartServiceMK2(private val Algo: Algorithm) : BleManager(Algo) {
 
     //endregion
 
-
     override fun getGattCallback(): BleManagerGattCallback {
         return GattCallback()
     }
 
     fun connectToDevice(address: String){
         val bManager = context.getSystemService(Service.BLUETOOTH_SERVICE) as BluetoothManager
+        if (!bManager.adapter.isEnabled) bManager.adapter.enable()
         val device = bManager.adapter.getRemoteDevice(address)
         this.setConnectionObserver(Algo)
-        this.connect(device).retry(Int.MAX_VALUE/2, 3000)
+        waitIf { bManager.adapter.isEnabled }
+        this.connect(device)
+                .usePreferredPhy(PhyRequest.PHY_LE_2M_MASK)
+                .timeout(5 * 60 * 1000)
+                .retry(Int.MAX_VALUE / 2, 3000)
+                .fail { _, status -> this.disconnect(); this.close(); }
                 .enqueue()
     }
 
@@ -86,17 +92,6 @@ class UartServiceMK2(private val Algo: Algorithm) : BleManager(Algo) {
                     Algo.enqueneData(SimpleRecord(transmitChar?.uuid.toString(), data.value))
                 }
             }.enqueue()
-
-            //beginAtomicRequestQueue()
-              //      .add(enableNotifications(powerChar))
-                //    .add(enableNotifications(transmitChar))
-                  //  .add(enableNotifications(receiveChar))
-                    //.add(enableIndications(transmitChar))
-                    //.add(enableIndications(receiveChar))
-                    //.add(enableIndications(powerChar))
-                    //.enqueue()
-
-
-            }
         }
     }
+}

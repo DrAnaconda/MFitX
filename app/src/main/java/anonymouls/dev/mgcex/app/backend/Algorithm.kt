@@ -7,27 +7,23 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.view.View
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.MutableLiveData
 import anonymouls.dev.mgcex.app.AlarmProvider
 import anonymouls.dev.mgcex.app.R
 import anonymouls.dev.mgcex.app.backend.ApplicationStarter.Companion.commandHandler
-import anonymouls.dev.mgcex.app.main.ui.main.MainViewModel
 import anonymouls.dev.mgcex.databaseProvider.CustomDatabaseUtils
 import anonymouls.dev.mgcex.databaseProvider.HRRecordsTable
 import anonymouls.dev.mgcex.databaseProvider.MainRecordsTable
 import anonymouls.dev.mgcex.databaseProvider.SleepRecordsTable
 import anonymouls.dev.mgcex.util.PreferenceListener
 import anonymouls.dev.mgcex.util.Utils
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import no.nordicsemi.android.ble.observer.ConnectionObserver
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.concurrent.ConcurrentLinkedQueue
 
 
 @ExperimentalStdlibApi
@@ -60,23 +56,18 @@ class Algorithm : LifecycleService(), ConnectionObserver {
     //region Properties
 
     private lateinit var prefs: SharedPreferences
-    private var workInProgress = false
     private var isFirstTime = true
-    private var connectionTries: Long = 0
     private var nextSyncMain: Calendar = Calendar.getInstance()
     private var nextSyncHR: Calendar? = null
     private var savedBattery: Short = 100
-    private var disconnectedTimestamp: Long = System.currentTimeMillis()
+
+    private var mainSyncTimer = Timer("AAMainTimer", false)
+    private var hrSyncTimer = Timer("AAHRSyncTimer", false)
+    private var disabledTimer = Timer("AADisabledTimer", false)
 
     lateinit var ci: CommandInterpreter
     lateinit var uartService: UartServiceMK2
-    private lateinit var mainSyncTask: Handler
-
     private lateinit var lockedAddress: String
-
-    var bluetoothRejected = false
-    var bluetoothRequested = false
-    var incomingMessages  = ConcurrentLinkedQueue<SimpleRecord>()
 
     //endregion
 
@@ -122,13 +113,28 @@ class Algorithm : LifecycleService(), ConnectionObserver {
     }
 
     private fun forceSyncHR() {
-        Handler(commandHandler.looper).post{ ci.hRRealTimeControl(true) }
+        ci.hRRealTimeControl(true)
         Handler(commandHandler.looper).postDelayed({ ci.hRRealTimeControl(false) }, 2000)
     }
 
     //endregion
 
     //region Background Taskforce
+
+    private fun checkPowerAlgo(): Boolean {
+        return if (Utils.getSharedPrefs(this).getBoolean(PreferenceListener.Companion.PrefsConsts.batterySaverEnabled, true)) {
+            val threshold = Utils.getSharedPrefs(this).getString(PreferenceListener.Companion.PrefsConsts.batteryThreshold, "20")!!.toInt()
+            savedBattery !in 0..threshold
+        } else true
+    }
+    private fun reWipeTimers(){
+        mainSyncTimer.cancel(); mainSyncTimer.purge()
+        hrSyncTimer.cancel();   hrSyncTimer.purge()
+        disabledTimer = Timer("AADisabledTimer", false)
+        disabledTimer.schedule(object : TimerTask(){
+            override fun run() { killService() }
+        }, 5*60*1000)
+    }
 
     private fun deadAlgo() {
         StatusCode.postValue(StatusCodes.Dead)
@@ -140,15 +146,14 @@ class Algorithm : LifecycleService(), ConnectionObserver {
         this.stopForeground(true)
         this.stopSelf()
     }
-
     private fun executeMainAlgo() {
-        //if (!uartService.probeConnection()) return
-        val syncPeriod = prefs.getString(PreferenceListener.Companion.PrefsConsts.mainSyncMinutes, "5")!!.toInt() * 60 * 1000
+        disabledTimer.cancel(); disabledTimer.purge()
+        mainSyncTimer.cancel(); mainSyncTimer.purge()
+        val syncPeriod = prefs.getString(PreferenceListener.Companion.PrefsConsts.mainSyncMinutes, "5")!!.toLong() * 60 * 1000
         nextSyncMain = Calendar.getInstance()
-        nextSyncMain.add(Calendar.MILLISECOND, syncPeriod)
+        nextSyncMain.add(Calendar.MILLISECOND, syncPeriod.toInt())
 
         if (checkPowerAlgo()) {
-            connectionTries = 0
             currentAlgoStatus.postValue(getString(R.string.connected_syncing))
             executeForceSync()
             if ((!ci.hRRealTimeControlSupport && isFirstTime
@@ -161,37 +166,33 @@ class Algorithm : LifecycleService(), ConnectionObserver {
             buildStatusMessage()
         }
         buildStatusMessage()
-        workInProgress = false; MainViewModel.publicModel?.workInProgress?.postValue(View.GONE)
-        //Utils.safeThreadSleep(syncPeriod.toLong(), false)
-        //workInProgress = true; MainViewModel.publicModel?.workInProgress?.postValue(View.VISIBLE)
-        mainSyncTask.postDelayed({ executeMainAlgo() }, syncPeriod.toLong())
+        mainSyncTimer = Timer("AAMainTimer", false)
+        mainSyncTimer.schedule(object : TimerTask() {
+            override fun run() { executeMainAlgo() }
+        }, syncPeriod, syncPeriod)
     }
-
-    private fun bluetoothDisabledAlgo() {
-        isFirstTime = true
-
-        if (Utils.bluetoothEngaging(this))
-            StatusCode.postValue(StatusCodes.Disconnected)
-        else {
-            StatusCode.postValue(StatusCodes.BluetoothDisabled)
+    private fun manualHRHack() {
+        if (StatusCode.value!!.code == StatusCodes.Dead.code
+                || ci.hRRealTimeControlSupport) return
+        this.hrSyncTimer.cancel(); this.hrSyncTimer.purge()
+        val startString = prefs.getString(PreferenceListener.Companion.PrefsConsts.hrMeasureStart, "00:00")
+        val endString = prefs.getString(PreferenceListener.Companion.PrefsConsts.hrMeasureEnd, "00:00")
+        var targetString = Utils.subIntegerConversionCheck(Calendar.getInstance().get(Calendar.HOUR_OF_DAY).toString())
+        targetString += ":"
+        targetString += Utils.subIntegerConversionCheck(Calendar.getInstance().get(Calendar.MINUTE).toString())
+        val isActive = if (startString == endString) true; else Utils.isTimeInInterval(startString!!, endString!!, targetString)
+        if (isActive && prefs.getBoolean(PreferenceListener.Companion.PrefsConsts.hrMonitoringEnabled, false)
+                && checkPowerAlgo()
+                && StatusCode.value!!.code >= StatusCodes.GattReady.code) {
+            ci.requestManualHRMeasure(false)
         }
-        //uartService.forceEnableBluetooth()
-    }
-
-    private fun connectedAlgo() {
-        currentAlgoStatus.postValue(getString(R.string.discovering))
-        if (StatusCode.value!!.code < StatusCodes.GattDiscovering.code
-                && StatusCode.value!!.code == StatusCodes.GattConnected.code) {
-            connectionTries = System.currentTimeMillis()
-            //uartService.retryDiscovery()
-        }
-    }
-
-    private fun checkPowerAlgo(): Boolean {
-        return if (Utils.getSharedPrefs(this).getBoolean(PreferenceListener.Companion.PrefsConsts.batterySaverEnabled, true)) {
-            val threshold = Utils.getSharedPrefs(this).getString(PreferenceListener.Companion.PrefsConsts.batteryThreshold, "20")!!.toInt()
-            savedBattery !in 0..threshold
-        } else true
+        val interval = prefs.getString(PreferenceListener.Companion.PrefsConsts.hrMeasureInterval, "5")!!.toLong() * 60 *1000
+        this.nextSyncHR = Calendar.getInstance(); this.nextSyncHR?.add(Calendar.MINUTE, interval.toInt())
+        buildStatusMessage()
+        hrSyncTimer = Timer("AAHRSyncTimer", false)
+        hrSyncTimer.schedule(object : TimerTask() {
+            override fun run() { manualHRHack() }
+        }, interval, interval)
     }
 
     //endregion
@@ -204,11 +205,8 @@ class Algorithm : LifecycleService(), ConnectionObserver {
         this.stopForeground(true)
         SelfPointer = null
         sendBroadcast(Intent(MultitaskListener.restartAction))
-    }
-
-    override fun onCreate() {
-        super.onCreate()
-        GlobalScope.launch(Dispatchers.Default) { init() }
+        this.uartService.disconnect()
+        this.uartService.close()
     }
 
     override fun stopService(name: Intent?): Boolean {
@@ -241,7 +239,6 @@ class Algorithm : LifecycleService(), ConnectionObserver {
                     && !commandHandler.isAlive) commandHandler.start()
         } catch (e: Exception) {
         } // todo magic?
-        mainSyncTask = Handler(commandHandler.looper)
         SelfPointer = this
         isFirstTime = true
         IsActive = true
@@ -267,26 +264,10 @@ class Algorithm : LifecycleService(), ConnectionObserver {
                 if (!NotificationService.IsActive) {
                     Utils.serviceStartForegroundMultiAPI(service, this@Algorithm)
                 }
-                Handler(Looper.getMainLooper()).post { StatusCode.value = StatusCodes.Disconnected; initMainObserver() }
+                uartService.connectToDevice(this@Algorithm.lockedAddress)
+                Handler(Looper.getMainLooper()).post { StatusCode.value = StatusCodes.Disconnected; }
             }
         }
-    }
-    private fun initMainObserver(){
-        StatusCode.observe(this, androidx.lifecycle.Observer {
-            if (!IsActive) return@Observer
-            workInProgress = true
-            mainSyncTask.removeCallbacksAndMessages(null)
-            synchronized(this::class) {
-                when (it) {
-                    StatusCodes.GattConnected -> connectedAlgo()
-                    StatusCodes.GattReady -> executeMainAlgo()
-                    StatusCodes.BluetoothDisabled -> bluetoothDisabledAlgo()
-                    StatusCodes.Dead -> deadAlgo()
-                    else -> {}//ignore
-                }
-            }
-        })
-        uartService.connectToDevice(this.lockedAddress)
     }
 
 
@@ -309,64 +290,51 @@ class Algorithm : LifecycleService(), ConnectionObserver {
     }
 
     fun executeForceSync() {
-        bluetoothRequested = false; bluetoothRejected = false
 //TODO        GlobalScope.launch(Dispatchers.IO) { database.initRepairsAndSync(database.writableDatabase) }
-        Handler(commandHandler.looper).postDelayed({ ci.requestSettings() }, 200)
-        Handler(commandHandler.looper).postDelayed({ ci.requestBatteryStatus() }, 500)
-        Handler(commandHandler.looper).postDelayed({ ci.syncTime(Calendar.getInstance()) }, 800)
-        Handler(commandHandler.looper).postDelayed({ ci.requestHRHistory(getLastHRSync()) }, 1200)
-        Handler(commandHandler.looper).postDelayed({ ci.requestSleepHistory(getLastSleepSync()) }, 1600)
-        Handler(commandHandler.looper).postDelayed({ ci.getMainInfoRequest() }, 2200)
+        ci.requestSettings()
+        ci.requestBatteryStatus()
+        ci.syncTime(Calendar.getInstance())
+        ci.requestHRHistory(getLastHRSync())
+        ci.requestSleepHistory(getLastSleepSync())
+        ci.getMainInfoRequest()
         if (isFirstTime) forceSyncHR()
         //if (IsAlarmingTriggered && !IsFromActivity) alarmTriggerDecider(0)
     }
 
     //endregion
 
-    private fun manualHRHack() {
-        if (StatusCode.value!!.code == StatusCodes.Dead.code
-                || ci.hRRealTimeControlSupport) return
-        val startString = prefs.getString(PreferenceListener.Companion.PrefsConsts.hrMeasureStart, "00:00")
-        val endString = prefs.getString(PreferenceListener.Companion.PrefsConsts.hrMeasureEnd, "00:00")
-        var targetString = Utils.subIntegerConversionCheck(Calendar.getInstance().get(Calendar.HOUR_OF_DAY).toString())
-        targetString += ":"
-        targetString += Utils.subIntegerConversionCheck(Calendar.getInstance().get(Calendar.MINUTE).toString())
-        val isActive = if (startString == endString) true; else Utils.isTimeInInterval(startString!!, endString!!, targetString)
-        if (isActive && prefs.getBoolean(PreferenceListener.Companion.PrefsConsts.hrMonitoringEnabled, false)
-                && checkPowerAlgo()
-                && StatusCode.value!!.code >= StatusCodes.GattReady.code) {
-            ci.requestManualHRMeasure(false)
-        }
-        val interval = prefs.getString(PreferenceListener.Companion.PrefsConsts.hrMeasureInterval, "5")!!.toInt()
-        this.nextSyncHR = Calendar.getInstance(); this.nextSyncHR?.add(Calendar.MINUTE, interval)
-        Handler(commandHandler.looper).postDelayed({ manualHRHack() }, interval.toLong() * 60 * 1000)
-        buildStatusMessage()
-    }
-
     //region Implementation of connection observer
 
     override fun onDeviceDisconnecting(device: BluetoothDevice) {
+        currentAlgoStatus.postValue(getString(R.string.status_disconnected))
         StatusCode.postValue(StatusCodes.Disconnected)
+        reWipeTimers()
     }
 
     override fun onDeviceDisconnected(device: BluetoothDevice, reason: Int) {
+        currentAlgoStatus.postValue(getString(R.string.status_disconnected))
         StatusCode.postValue(StatusCodes.Disconnected)
+        reWipeTimers()
     }
 
     override fun onDeviceReady(device: BluetoothDevice) {
+        currentAlgoStatus.postValue(getString(R.string.connected_syncing))
         StatusCode.postValue(StatusCodes.GattReady)
+        executeMainAlgo(); manualHRHack()
     }
 
     override fun onDeviceConnected(device: BluetoothDevice) {
+        currentAlgoStatus.postValue(getString(R.string.connected_syncing))
         StatusCode.postValue(StatusCodes.GattConnected)
     }
 
     override fun onDeviceFailedToConnect(device: BluetoothDevice, reason: Int) {
-        StatusCode.postValue(StatusCodes.Disconnected)
+        uartService.connectToDevice(this.lockedAddress)
     }
 
     override fun onDeviceConnecting(device: BluetoothDevice) {
-        StatusCode.postValue(StatusCodes.Connecting)
+        currentAlgoStatus.postValue(getString(R.string.status_connecting))
+        StatusCode.postValue(StatusCodes.GattConnecting)
     }
 
     //endregion
