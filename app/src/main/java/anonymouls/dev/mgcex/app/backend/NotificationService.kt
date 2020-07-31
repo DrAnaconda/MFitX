@@ -3,7 +3,6 @@ package anonymouls.dev.mgcex.app.backend
 import android.content.ContentResolver
 import android.content.Intent
 import android.content.SharedPreferences
-import android.os.AsyncTask
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -12,7 +11,6 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.annotation.RequiresApi
 import anonymouls.dev.mgcex.app.backend.ApplicationStarter.Companion.commandHandler
-
 import anonymouls.dev.mgcex.databaseProvider.DatabaseController
 import anonymouls.dev.mgcex.databaseProvider.NotifyFilterTable
 import anonymouls.dev.mgcex.util.PreferenceListener
@@ -46,11 +44,6 @@ class NotificationService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         instance = this
-        if (!IsActive) {
-            IsActive = true
-            Repeater = AsyncRepeater()
-            Repeater!!.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
-        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             this.startForeground(66, Utils.buildForegroundNotification(this))
         }
@@ -59,10 +52,7 @@ class NotificationService : NotificationListenerService() {
     }
 
     override fun onListenerDisconnected() {
-        IsActive = false
         instance = null
-        Repeater?.cancel(false)
-        Repeater = null
         Utils.getSharedPrefs(this@NotificationService).edit().putBoolean("bindNotifyService", false).apply()
         this.stopForeground(true)
         this.stopSelf()
@@ -70,7 +60,8 @@ class NotificationService : NotificationListenerService() {
     }
 
     private fun proceedNotify(sbn: StatusBarNotification) {
-        if (!Algorithm.IsActive || Settings.Global.getInt(contentResolver, "zen_mode") > 0) return
+        if (!Algorithm.IsActive
+                || Settings.Global.getInt(contentResolver, "zen_mode") > 0) return
         val pack = sbn.packageName
         if (!NotifyFilterTable.isEnabled(pack,
                         DatabaseController.getDCObject(applicationContext).readableDatabase))
@@ -95,10 +86,11 @@ class NotificationService : NotificationListenerService() {
         } catch (ex: NullPointerException) {
 
         }
-        if (title != null) {
-            addNotifyToQuene(CustomNotification(pack, title, text, sbn))
+        val cNotify = if (title != null) {
+            CustomNotification(pack, title, text, sbn)
         } else
-            addNotifyToQuene(CustomNotification(pack, applicationName, text, sbn))
+            CustomNotification(pack, applicationName, text, sbn)
+        addNotifyToQuene(cNotify); cNotify.enroll()
     }
 
     @RequiresApi(Build.VERSION_CODES.KITKAT) // TODO ???
@@ -114,11 +106,6 @@ class NotificationService : NotificationListenerService() {
             PendingList[notify.AppText] = notify
     }
 
-    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
-        findAndDeleteByID(sbn?.id)
-        super.onNotificationRemoved(sbn)
-    }
-
     override fun onBind(intent: Intent): IBinder? {
         instance = this
         return super.onBind(intent)
@@ -130,84 +117,45 @@ class NotificationService : NotificationListenerService() {
                                    private val sbn: StatusBarNotification) {
 
         var ID: Int = -1
-        var repeats: Int = 0
-        var isLocked: Boolean = false
-        var ready: Boolean = false
-        var cancelled: Boolean = false
+        var repeats: Int = 1
 
 
         init {
             this.ID = sbn.id
-            if (commandHandler != null)
-                Handler(commandHandler.looper).postDelayed({ this.ready = true },
-                        sharedPrefs!!.getString(PreferenceListener.Companion.PrefsConsts.secondsNotify, "5")!!.toLong() * 500)
         }
 
         private fun checkIsActive(): Boolean {
             val aN = activeNotifications
             for (notify in aN) {
                 if (notify.id == this.ID) {
-                    cancelled = true; return true
+                    return true
                 }
             }
             return false
         }
-
-        fun sendToDevice() {
-            if (!isLocked) {
-                isLocked = true
-                return
-            } else {
-                if (!ready || !checkIsActive()) return
-                ready = false
-                if (Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.GattReady.code) {
-                    //val app = extras!!.get("app") as String // TODO integrations
-                    val message = TitleText + "\n" + ContentText
-                    Algorithm.SelfPointer?.ci?.fireNotification(ReplaceTable.replaceString(message))
-                    repeats++
-                }
+        private fun sendToDevice() {
+            if (!checkIsActive()
+                    || repeats > PreferenceListener.repeatNotifications) return
+            if (Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.GattReady.code) {
+                //val app = extras!!.get("app") as String // TODO integrations
+                val message = TitleText + "\n" + ContentText
+                Algorithm.SelfPointer?.ci?.fireNotification(ReplaceTable.replaceString(message))
+                repeats++
+                enroll()
             }
+        }
+        fun enroll(){
+            Handler(commandHandler.looper).postDelayed({sendToDevice()},
+                PreferenceListener.repeatDelayNotification.toLong()*1000)
         }
     }
 
 
     companion object {
 
-        var Repeater: AsyncRepeater? = null
         var instance: NotificationService? = null
-        var IsActive: Boolean = false
         var PendingList: ConcurrentHashMap<String, CustomNotification> = ConcurrentHashMap()
         var sharedPrefs: SharedPreferences? = null
         var contentResolver: ContentResolver? = null
-
-        fun findAndDeleteByID(ID: Int?) {
-            for (CN in PendingList.elements()) {
-                if (CN.ID == ID
-                        || CN.repeats >= sharedPrefs!!.getString(PreferenceListener.Companion.PrefsConsts.repeatsNumbers, "5")!!.toInt()
-                        || CN.cancelled)
-                    PendingList.remove(CN.AppText)
-            }
-        }
-
-        class AsyncRepeater : AsyncTask<String, Void, Boolean>() { // TODO: This deprecated. Need to use timer or looper
-            override fun doInBackground(vararg params: String?): Boolean {
-                if (sharedPrefs == null)
-                    sharedPrefs = Utils.getSharedPrefs(instance!!)
-                Thread.currentThread().name = "NotifyRepeaters"
-                Thread.currentThread().priority = Thread.MAX_PRIORITY
-                while (IsActive) {
-                    if (Settings.Global.getInt(contentResolver, "zen_mode") == 0) {
-                        for (CN in PendingList.elements()) {
-                            CN.sendToDevice()
-                            if (CN.repeats >= sharedPrefs!!.getString(PreferenceListener.Companion.PrefsConsts.repeatsNumbers, "3")!!.toInt())
-                                PendingList.remove(CN.AppText)
-                            Utils.safeThreadSleep(3000, false)
-                        }
-                    } else PendingList.clear()
-                    Utils.safeThreadSleep((sharedPrefs!!.getString(PreferenceListener.Companion.PrefsConsts.secondsNotify, "5")!!.toInt() * 1000).toLong(), false)
-                }
-                return true
-            }
-        }
     }
 }

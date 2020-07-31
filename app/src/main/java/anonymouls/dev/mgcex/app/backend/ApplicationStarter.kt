@@ -6,6 +6,7 @@ import android.os.HandlerThread
 import android.os.StrictMode
 import anonymouls.dev.mgcex.app.BuildConfig
 import anonymouls.dev.mgcex.util.FireAnalytics
+import anonymouls.dev.mgcex.util.PreferenceListener
 import anonymouls.dev.mgcex.util.ReplaceTable
 import anonymouls.dev.mgcex.util.Utils
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +37,7 @@ class ApplicationStarter : Application() {
         if (appContext == null) appContext = applicationContext
         //MainCopyAnalyzer.launchDeltaActivityWithClone() TODO
         GlobalScope.launch(Dispatchers.Default) {
+            PreferenceListener.getPreferenceListener(appContext)
             Utils.getSharedPrefs(applicationContext)
             ReplaceTable.replaceString("", appContext)
             Utils.ressurectService(appContext)

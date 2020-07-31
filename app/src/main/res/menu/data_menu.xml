@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
-        android:title="@string/confirm_str"
+        android:title="@string/ok"
         android:id="@+id/ConfirmMenuBtn"
         android:orderInCategory="200"
         android:visible="false"

@@ -17,12 +17,12 @@ class UartServiceMK2(private val Algo: Algorithm) : BleManager(Algo) {
 
     //region UUIDs
 
-    private val powerServiceUUID = UUID.fromString(Algo.ci.PowerServiceString)
-    private val powerTXUUID = UUID.fromString(Algo.ci.PowerTX2String)
+    private val powerServiceUUID = UUID.fromString(Algo.ci.powerServiceString)
+    private val powerTXUUID = UUID.fromString(Algo.ci.powerTX2String)
 
-    private val uartServiceUUID = UUID.fromString(Algo.ci.UARTServiceUUIDString)
-    private val rxCharUUID = UUID.fromString(Algo.ci.UARTRXUUIDString)
-    private val txCharUUID = UUID.fromString(Algo.ci.UARTTXUUIDString)
+    private val uartServiceUUID = UUID.fromString(Algo.ci.mUARTServiceUUIDString)
+    private val rxCharUUID = UUID.fromString(Algo.ci.mUARTRXUUIDString)
+    private val txCharUUID = UUID.fromString(Algo.ci.mARTTXUUIDString)
 
     //endregion
 
@@ -51,7 +51,7 @@ class UartServiceMK2(private val Algo: Algorithm) : BleManager(Algo) {
                 .usePreferredPhy(PhyRequest.PHY_LE_2M_MASK)
                 .timeout(5 * 60 * 1000)
                 .retry(Int.MAX_VALUE / 2, 1000)
-                .fail { _, status -> this.connectToDevice(address) }
+                .fail { _, _ -> this.connectToDevice(address) }
                 .enqueue()
     }
 

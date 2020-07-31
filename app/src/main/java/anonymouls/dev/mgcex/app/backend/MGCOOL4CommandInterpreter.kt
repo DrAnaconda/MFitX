@@ -1,7 +1,5 @@
 package anonymouls.dev.mgcex.app.backend
 
-import android.os.Handler
-import anonymouls.dev.mgcex.app.backend.ApplicationStarter.Companion.commandHandler
 import anonymouls.dev.mgcex.util.Utils
 import java.nio.ByteBuffer
 import java.util.*
@@ -42,162 +40,180 @@ class MGCOOL4CommandInterpreter : CommandInterpreter() {
 
     //region UUIDs
 
-    override val UARTServiceUUIDString: String
+    override val mUARTServiceUUIDString: String
         get() = "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
-    override val UARTRXUUIDString: String
+    override val mUARTRXUUIDString: String
         get() = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
-    override val UARTTXUUIDString: String
+    override val mARTTXUUIDString: String
         get() = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
-    override val UARTDescriptor: String
+    override val mUARTDescriptor: String
         get() = "00002902-0000-1000-8000-00805f9b34fb"
-    override val PowerServiceString: String
+    override val powerServiceString: String
         get() = "00000000-0000-0000-0000-000000000000" // not suppoted
-    override val PowerTXString: String
+    override val powerTXString: String
         get() = "00000000-0000-0000-0000-000000000000"
-    override val PowerTX2String: String
+    override val powerTX2String: String
         get() = "00000000-0000-0000-0000-000000000000"
-    override val PowerDescriptor: String
+    override val powerDescriptor: String
         get() = "00000000-0000-0000-0000-000000000000"
 
     //endregion
 
     override fun getMainInfoRequest() {
-        val CUtil = Calendar.getInstance()
-        // 00 00        // + 12 + Month + Day + FF FF
-        val Request = (GetMainInfo +
-                getCalendarValueInHex(CUtil, Calendar.MONTH) +
-                getCalendarValueInHex(CUtil, Calendar.DAY_OF_MONTH) +
-                getCalendarValueInHex(CUtil, Calendar.HOUR_OF_DAY) + "00"
-                + "12" +
-                getCalendarValueInHex(CUtil, Calendar.MONTH) +
-                getCalendarValueInHex(CUtil, Calendar.DAY_OF_MONTH) + "FFFF")
-        postCommand(hexStringToByteArray(Request))
+        synchronized(this::class) {
+            val cUtil = Calendar.getInstance()
+            // 00 00        // + 12 + Month + Day + FF FF
+            val request = (GetMainInfo +
+                    getCalendarValueInHex(cUtil, Calendar.MONTH) +
+                    getCalendarValueInHex(cUtil, Calendar.DAY_OF_MONTH) +
+                    getCalendarValueInHex(cUtil, Calendar.HOUR_OF_DAY) + "00"
+                    + "12" +
+                    getCalendarValueInHex(cUtil, Calendar.MONTH) +
+                    getCalendarValueInHex(cUtil, Calendar.DAY_OF_MONTH) + "FFFF")
+            postCommand(hexStringToByteArray(request))
+        }
     }
 
     override fun hRRealTimeControl(Enable: Boolean) {
-        val Request: String
-        if (Enable) {
-            Request = HRRealTimeHeader + "01"
-        } else {
-            Request = HRRealTimeHeader + "00"
+        synchronized(this::class) {
+            val request: String = if (Enable) {
+                HRRealTimeHeader + "01"
+            } else {
+                HRRealTimeHeader + "00"
+            }
+            postCommand(hexStringToByteArray(request))
         }
-        postCommand(hexStringToByteArray(Request))
     }
 
     override fun requestHRHistory(FromDate: Calendar?) {
-        var FromDate = FromDate
-        if (FromDate == null) {
-            FromDate = Calendar.getInstance()
-            FromDate!!.add(Calendar.DAY_OF_MONTH, -3)
+        var fromDate = FromDate
+        if (fromDate == null) {
+            fromDate = Calendar.getInstance()
+            fromDate!!.add(Calendar.DAY_OF_MONTH, -3)
         }
-        val Request = HRHistoryHeader + "12" + getCalendarValueInHex(FromDate, Calendar.MONTH) +
-                getCalendarValueInHex(FromDate, Calendar.DAY_OF_MONTH) +
-                getCalendarValueInHex(FromDate, Calendar.HOUR_OF_DAY) + "0012" +
-                getCalendarValueInHex(FromDate, Calendar.MONTH) +
-                getCalendarValueInHex(FromDate, Calendar.DAY_OF_MONTH) +
-                getCalendarValueInHex(FromDate, Calendar.HOUR_OF_DAY) +
-                getCalendarValueInHex(FromDate, Calendar.MINUTE)
-        postCommand(hexStringToByteArray(Request))
-    }
-
-    override fun syncTime(SyncTime: Calendar?) {
-        var SyncTime = SyncTime
-        if (SyncTime == null) SyncTime = Calendar.getInstance()
-        val Request = TimeSyncHeader + getCalendarValueInHex(SyncTime!!, Calendar.YEAR) +
-                getCalendarValueInHex(SyncTime, Calendar.MONTH) +
-                getCalendarValueInHex(SyncTime, Calendar.DAY_OF_MONTH) +
-                getCalendarValueInHex(SyncTime, Calendar.HOUR_OF_DAY) +
-                getCalendarValueInHex(SyncTime, Calendar.MINUTE) +
-                getCalendarValueInHex(SyncTime, Calendar.SECOND)
-        postCommand(hexStringToByteArray(Request))
-    }
-
-    override fun requestSleepHistory(FromDate: Calendar) {
-        var request: String = SleepHistoryHeader
-        request += getCalendarValueInHex(FromDate, Calendar.MONTH)
-        request += getCalendarValueInHex(FromDate, Calendar.DAY_OF_MONTH) + "0000"
+        val request = HRHistoryHeader + "12" + getCalendarValueInHex(fromDate, Calendar.MONTH) +
+                getCalendarValueInHex(fromDate, Calendar.DAY_OF_MONTH) +
+                getCalendarValueInHex(fromDate, Calendar.HOUR_OF_DAY) + "0012" +
+                getCalendarValueInHex(fromDate, Calendar.MONTH) +
+                getCalendarValueInHex(fromDate, Calendar.DAY_OF_MONTH) +
+                getCalendarValueInHex(fromDate, Calendar.HOUR_OF_DAY) +
+                getCalendarValueInHex(fromDate, Calendar.MINUTE)
         postCommand(hexStringToByteArray(request))
     }
 
+    override fun syncTime(SyncTime: Calendar?) {
+        synchronized(this::class) {
+            var syncTime = SyncTime
+            if (syncTime == null) syncTime = Calendar.getInstance()
+            val request = TimeSyncHeader + getCalendarValueInHex(syncTime!!, Calendar.YEAR) +
+                    getCalendarValueInHex(syncTime, Calendar.MONTH) +
+                    getCalendarValueInHex(syncTime, Calendar.DAY_OF_MONTH) +
+                    getCalendarValueInHex(syncTime, Calendar.HOUR_OF_DAY) +
+                    getCalendarValueInHex(syncTime, Calendar.MINUTE) +
+                    getCalendarValueInHex(syncTime, Calendar.SECOND)
+            postCommand(hexStringToByteArray(request))
+        }
+    }
+
+    override fun requestSleepHistory(FromDate: Calendar) {
+        synchronized(this::class) {
+            var request: String = SleepHistoryHeader
+            request += getCalendarValueInHex(FromDate, Calendar.MONTH)
+            request += getCalendarValueInHex(FromDate, Calendar.DAY_OF_MONTH) + "0000"
+            postCommand(hexStringToByteArray(request))
+        }
+    }
+
     override fun eraseDatabase() {
-        postCommand(hexStringToByteArray(EraseDataHeader))
+        synchronized(this::class) {
+            postCommand(hexStringToByteArray(EraseDataHeader))
+        }
     }
 
     override fun restoreToDefaults() {
-        postCommand(hexStringToByteArray(RestoreCommandHeader))
+        synchronized(this::class) {
+            postCommand(hexStringToByteArray(RestoreCommandHeader))
+        }
     }
 
     override fun setAlarm(AlarmID: Long, IsEnabled: Boolean, Hour: Int, Minute: Int, Days: Int) {
-        var Command = AlarmHeader
-        Command += Utils.subIntegerConversionCheck(java.lang.Long.toHexString(AlarmID))
-        if (IsEnabled) Command += "01" else Command += "00"
-        Command += Utils.subIntegerConversionCheck(Integer.toHexString(Hour))
-        Command += Utils.subIntegerConversionCheck(Integer.toHexString(Minute))
-        Command += Utils.subIntegerConversionCheck(Integer.toHexString(Days))
-        postCommand(hexStringToByteArray(Command))
+        synchronized(this::class) {
+            var command = AlarmHeader
+            command += Utils.subIntegerConversionCheck(java.lang.Long.toHexString(AlarmID))
+            command += if (IsEnabled) "01" else "00"
+            command += Utils.subIntegerConversionCheck(Integer.toHexString(Hour))
+            command += Utils.subIntegerConversionCheck(Integer.toHexString(Minute))
+            command += Utils.subIntegerConversionCheck(Integer.toHexString(Days))
+            postCommand(hexStringToByteArray(command))
+        }
     }
 
     override fun stopLongAlarm() {
-        postCommand(hexStringToByteArray(StopLongAlarmHeader))
+        synchronized(this::class) {
+            postCommand(hexStringToByteArray(StopLongAlarmHeader))
+        }
     }
 
     override fun setGyroAction(IsEnabled: Boolean) {
-        var command = GyroActionCommandHeader
-        if (IsEnabled) command += "01" else command = "00"
-        postCommand(hexStringToByteArray(command))
+        synchronized(this::class) {
+            var command = GyroActionCommandHeader
+            if (IsEnabled) command += "01" else command = "00"
+            postCommand(hexStringToByteArray(command))
+        }
     }
 
     private fun buildNotify(Message: String): ByteArray {
-        var Request = ShortMessageHeader
-        val Msg = Message.toByteArray()
-        var Offset = 0
+        var request = ShortMessageHeader
+        val msg = Message.toByteArray()
+        var offset = 0
         for (i in 0..34) {
             if (i == 12) {
-                Request += "00"
-                Offset++
+                request += "00"
+                offset++
                 continue
             }
             if (i == 32) {
-                Request += "01"
-                Offset++
+                request += "01"
+                offset++
                 continue
             }
-            if (i < Msg.size && !(i >= Msg.size)) {
-                if (Msg[i - Offset] > 0)
-                    Request += Utils.subIntegerConversionCheck(Integer.toHexString(Msg[i - Offset].toInt()))
+            request += if (i < msg.size && i < msg.size) {
+                if (msg[i - offset] > 0)
+                    Utils.subIntegerConversionCheck(Integer.toHexString(msg[i - offset].toInt()))
                 else
-                    Request += Utils.subIntegerConversionCheck(Integer.toHexString((Msg[i - Offset]).toInt() and 0xFF))
+                    Utils.subIntegerConversionCheck(Integer.toHexString((msg[i - offset]).toInt() and 0xFF))
             } else
-                Request += "00"
+                "00"
         }
-        return hexStringToByteArray(Request + "2E2E2E")
+        return hexStringToByteArray(request + "2E2E2E")
     }
 
     override fun buildLongNotify(Message: String) {
-        val MessageBytes = Message.toByteArray()
-        var Lenght = 5 + MessageBytes.size//MAX 12 bytes
-        if (Lenght > 17) Lenght = 17
-        var Request = (LongMessageHeaderPartOne + Utils.subIntegerConversionCheck(Integer.toHexString(Lenght))
-                + LongMessageHeaderPartTwo)
-        for (i in 0..11) {
-            if (i < MessageBytes.size) {
-                if (MessageBytes[i] > 0)
-                    Request += Utils.subIntegerConversionCheck(Integer.toHexString(MessageBytes[i].toInt()))
-                else
-                    Request += Utils.subIntegerConversionCheck(Integer.toHexString(MessageBytes[i].toInt() and 0xFF))
-            } else break
+        synchronized(this::class){
+            val messageBytes = Message.toByteArray()
+            var lenght = 5 + messageBytes.size//MAX 12 bytes
+            if (lenght > 17) lenght = 17
+            var request = (LongMessageHeaderPartOne + Utils.subIntegerConversionCheck(Integer.toHexString(lenght))
+                    + LongMessageHeaderPartTwo)
+            for (i in 0..11) {
+                request += if (i < messageBytes.size) {
+                    if (messageBytes[i] > 0)
+                        Utils.subIntegerConversionCheck(Integer.toHexString(messageBytes[i].toInt()))
+                    else
+                        Utils.subIntegerConversionCheck(Integer.toHexString(messageBytes[i].toInt() and 0xFF))
+                } else break
+            }
+            postCommand(hexStringToByteArray(request))
         }
-        postCommand(hexStringToByteArray(Request))
     }
 
     private fun commandID14(Input: ByteArray) {
         if (Input[4].toInt() != 81 && Input[5].toInt() != 8) return
-        var Buff: ByteBuffer
-        Buff = ByteBuffer.wrap(Input, 7, 2)
-        val Steps = Buff.short
-        Buff = ByteBuffer.wrap(Input, 10, 2)
-        val Calories = Buff.short
-        callback?.mainInfo(Steps.toInt(), Calories.toInt())
+        var buff: ByteBuffer = ByteBuffer.wrap(Input, 7, 2)
+        val steps = buff.short
+        buff = ByteBuffer.wrap(Input, 10, 2)
+        val calories = buff.short
+        callback?.mainInfo(steps.toInt(), calories.toInt())
     }
 
     private fun hRRTHandler(Input: ByteArray) {
@@ -207,24 +223,22 @@ class MGCOOL4CommandInterpreter : CommandInterpreter() {
 
     private fun hRHistoryHandler(Input: ByteArray) {
         try {
-            val CRecord = Calendar.getInstance()
-            CRecord.set(CRecord.get(Calendar.YEAR), Input[7] - 1, Input[8].toInt(), Input[9].toInt(), Input[10].toInt())
-            callback?.hrHistoryRecord(CRecord, Input[11].toInt())
-        } catch (Ex: Exception) {
-
-        }
+            val cRecord = Calendar.getInstance()
+            cRecord.set(cRecord.get(Calendar.YEAR), Input[7] - 1, Input[8].toInt(), Input[9].toInt(), Input[10].toInt())
+            callback?.hrHistoryRecord(cRecord, Input[11].toInt())
+        } catch (Ex: Exception) {}
 
     }
 
     private fun mainHistoryHandler(Input: ByteArray) {
         if (Input[4].toInt() != 81 && Input[5].toInt() != 32) return
-        val RecordTime = Calendar.getInstance()
-        RecordTime.set(RecordTime.get(Calendar.YEAR), Input[7].toInt(), Input[8].toInt(), Input[9].toInt(), 0)
-        var Buff = ByteBuffer.wrap(Input, 11, 2)
-        val Steps = Buff.short
-        Buff = ByteBuffer.wrap(Input, 14, 2)
-        val Calories = Buff.short
-        callback?.mainHistoryRecord(RecordTime, Steps.toInt(), Calories.toInt())
+        val recordTime = Calendar.getInstance()
+        recordTime.set(recordTime.get(Calendar.YEAR), Input[7].toInt(), Input[8].toInt(), Input[9].toInt(), 0)
+        var buff = ByteBuffer.wrap(Input, 11, 2)
+        val steps = buff.short
+        buff = ByteBuffer.wrap(Input, 14, 2)
+        val calories = buff.short
+        callback?.mainHistoryRecord(recordTime, steps.toInt(), calories.toInt())
     }
 
     private fun batteryCommandHandler(Input: ByteArray) {
@@ -232,18 +246,17 @@ class MGCOOL4CommandInterpreter : CommandInterpreter() {
     }
 
     private fun sleepHistoryHandler(Input: ByteArray) {
-        val RecordTime = Calendar.getInstance()
-        RecordTime.set(RecordTime.get(Calendar.YEAR), Input[7] - 1, Input[8].toInt(),
+        val recordTime = Calendar.getInstance()
+        recordTime.set(recordTime.get(Calendar.YEAR), Input[7] - 1, Input[8].toInt(),
                 Input[9].toInt(), Input[10].toInt(), 0)
         val type: Int = Input[11].toInt()
         val duration: Int = Input[13].toInt()
-        callback?.sleepHistoryRecord(RecordTime, duration, type)
+        callback?.sleepHistoryRecord(recordTime, duration, type)
     }
 
     override fun commandAction(Input: ByteArray, characteristic: UUID) {
-        if (characteristic == UUID.fromString(UARTTXUUIDString)) {
-            val CommandID = Input[2]
-            when (CommandID) {
+        if (characteristic == UUID.fromString(mARTTXUUIDString)) {
+            when (Input[2]) {
                 (14).toByte() -> commandID14(Input)
                 (9).toByte() -> hRHistoryHandler(Input)
                 (5).toByte() -> batteryCommandHandler(Input)
@@ -255,14 +268,15 @@ class MGCOOL4CommandInterpreter : CommandInterpreter() {
     }
 
     override fun fireNotification(Input: String) {
-        val Req = buildNotify(Input)
-        var Req1 = Req.copyOfRange(0, 20)
-        postCommand(Req1)
-        Utils.safeThreadSleep(50, false)
-        Req1 = Req.copyOfRange(20, 40)
-        Handler(commandHandler.looper).postDelayed({ postCommand(Req1) }, 50)
-        Req1 = Req.copyOfRange(40, 46)
-        Handler(commandHandler.looper).postDelayed({ postCommand(Req1) }, 110)
+        synchronized(this::class) {
+            val req = buildNotify(Input)
+            var req1 = req.copyOfRange(0, 20)
+            postCommand(req1)
+            req1 = req.copyOfRange(20, 40)
+            postCommand(req1)
+            req1 = req.copyOfRange(40, 46)
+            postCommand(req1)
+        }
     }
 
     override fun requestBatteryStatus() {

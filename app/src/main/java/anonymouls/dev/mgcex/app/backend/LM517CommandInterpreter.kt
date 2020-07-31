@@ -41,21 +41,21 @@ class LM517CommandInterpreter : CommandInterpreter() {
 
     //region Uart UUIDs
 
-    override val UARTServiceUUIDString: String
+    override val mUARTServiceUUIDString: String
         get() = "6e400001-b5a3-f393-e0a9-e50e24dcca9d"
-    override val UARTRXUUIDString: String
+    override val mUARTRXUUIDString: String
         get() = "6e400002-b5a3-f393-e0a9-e50e24dcca9d"
-    override val UARTTXUUIDString: String
+    override val mARTTXUUIDString: String
         get() = "6e400003-b5a3-f393-e0a9-e50e24dcca9d"
-    override val UARTDescriptor: String
+    override val mUARTDescriptor: String
         get() = "00002902-0000-1000-8000-00805f9b34fb"
-    override val PowerServiceString: String
+    override val powerServiceString: String
         get() = "0000180f-0000-1000-8000-00805f9b34fb"
-    override val PowerTXString: String
+    override val powerTXString: String
         get() = "00002a19-0000-1000-8000-00805f9b34fb"
-    override val PowerTX2String: String
+    override val powerTX2String: String
         get() = "00002a19-0000-0000-8000-00805f9b34fb"
-    override val PowerDescriptor: String
+    override val powerDescriptor: String
         get() = "00002902-0000-1000-8000-00805f9b34fb"
 
     //endregion
@@ -210,10 +210,10 @@ class LM517CommandInterpreter : CommandInterpreter() {
 
     override fun commandAction(Input: ByteArray, characteristic: UUID) {
         when (characteristic) {
-            UUID.fromString(UARTTXUUIDString) -> {
+            UUID.fromString(mARTTXUUIDString) -> {
                 commandsEntryPoint(Input)
             }
-            UUID.fromString(PowerTX2String), UUID.fromString(PowerTXString) -> {
+            UUID.fromString(powerTX2String), UUID.fromString(powerTXString) -> {
                 this.callback?.batteryInfo(Input[Input.size - 1].toInt())
             }
         }

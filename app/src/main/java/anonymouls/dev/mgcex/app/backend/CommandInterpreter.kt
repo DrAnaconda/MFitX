@@ -53,14 +53,14 @@ abstract class CommandInterpreter {
         }
     }
 
-    abstract val UARTServiceUUIDString: String
-    abstract val UARTRXUUIDString : String
-    abstract val UARTTXUUIDString : String
-    abstract val UARTDescriptor : String
-    abstract val PowerServiceString : String
-    abstract val PowerTXString : String
-    abstract val PowerTX2String : String
-    abstract val PowerDescriptor : String
+    abstract val mUARTServiceUUIDString: String
+    abstract val mUARTRXUUIDString : String
+    abstract val mARTTXUUIDString : String
+    abstract val mUARTDescriptor : String
+    abstract val powerServiceString : String
+    abstract val powerTXString : String
+    abstract val powerTX2String : String
+    abstract val powerDescriptor : String
 
 
     protected fun hexStringToByteArray(s: String): ByteArray {

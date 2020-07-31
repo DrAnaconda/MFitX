@@ -233,7 +233,7 @@ class Algorithm : LifecycleService(), ConnectionObserver {
             deadAlgo(true)
             stopSelfResult(startId)
         }
-        return Service.START_REDELIVER_INTENT
+        return Service.START_STICKY
     }
 
     //endregion
@@ -273,7 +273,7 @@ class Algorithm : LifecycleService(), ConnectionObserver {
             if (SelfPointer == null || !IsActive) {
                 initVariables()
                 val service = Intent(this@Algorithm, NotificationService::class.java)
-                if (!NotificationService.IsActive) {
+                if (NotificationService.instance == null) {
                     Utils.serviceStartForegroundMultiAPI(service, this@Algorithm)
                 }
                 uartService.connectToDevice(this@Algorithm.lockedAddress)
@@ -285,10 +285,10 @@ class Algorithm : LifecycleService(), ConnectionObserver {
 
     fun enqueneData(sm: SimpleRecord){
         if (sm.Data == null) return
-        if (sm.characteristic == ci.PowerServiceString ||
-                sm.characteristic == ci.PowerDescriptor ||
-                sm.characteristic == ci.PowerTXString ||
-                sm.characteristic == ci.PowerTX2String) {
+        if (sm.characteristic == ci.powerServiceString ||
+                sm.characteristic == ci.powerDescriptor ||
+                sm.characteristic == ci.powerTXString ||
+                sm.characteristic == ci.powerTX2String) {
             savedBattery = sm.Data[0].toShort()
             CommandCallbacks.getCallback(this).batteryInfo(sm.Data[0].toInt())
         } else {

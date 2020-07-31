@@ -234,7 +234,7 @@ object Utils {
         return false
     }
 
-    fun startSyncingService(service: Intent, context: Context) {
+    private fun startSyncingService(service: Intent, context: Context) {
         service.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or
                 Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION or
                 Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
@@ -247,10 +247,10 @@ object Utils {
     }
 
     fun ressurectService(context: Context) {
-        if (Utils.getSharedPrefs(context).contains(PreferenceListener.Companion.PrefsConsts.bandAddress)) {
+        if (getSharedPrefs(context).contains(PreferenceListener.Companion.PrefsConsts.bandAddress)) {
             val intent = Intent(context, Algorithm::class.java)
             intent.action = "ACTION_START"
-            Utils.startSyncingService(intent, context)
+            startSyncingService(intent, context)
         }
     }
 

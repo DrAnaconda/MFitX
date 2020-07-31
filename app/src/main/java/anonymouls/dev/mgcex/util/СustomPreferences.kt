@@ -71,7 +71,7 @@ class TimePreference(context: Context, attrs: AttributeSet) : Preference(context
 @ExperimentalStdlibApi
 class RedifinedEditTextPreference(context: Context, attrs: AttributeSet): EditTextPreference(context, attrs){
 
-    val defValue = Utils.getSharedPrefs(context).getString(this.key, null)
+    private val defValue = Utils.getSharedPrefs(context).getString(this.key, null)
 
     init {
         this.setOnBindEditTextListener {
