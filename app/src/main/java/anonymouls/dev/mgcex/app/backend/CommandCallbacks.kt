@@ -20,8 +20,8 @@ open class CommandCallbacks(private val context: Context) : CommandInterpreter.C
     override fun mainInfo(Steps: Int, Calories: Int) {
         try {
             lastSyncMain = CustomDatabaseUtils.calendarToLong(Calendar.getInstance(), true)
-            MainViewModel.publicModel?._lastStepsIncomed?.postValue(Steps); savedSteps = Steps
-            MainViewModel.publicModel?._lastCcalsIncomed?.postValue(Calories); savedCCals = Calories
+            MainViewModel.publicModel?.mLastStepsIncomed?.postValue(Steps); savedSteps = Steps
+            MainViewModel.publicModel?.mLastCcalsIncomed?.postValue(Calories); savedCCals = Calories
             MainViewModel.publicModel?.mainInfo(savedSteps, savedCCals)
             MainRecordsTable.insertRecordV2(Calendar.getInstance(), Steps, Calories,
                     DatabaseController.getDCObject(context).writableDatabase)
@@ -33,7 +33,7 @@ open class CommandCallbacks(private val context: Context) : CommandInterpreter.C
     override fun batteryInfo(Charge: Int) {
         try {
             if (Charge > 5) {
-                MainViewModel.publicModel?._batteryHolder?.postValue(Charge)
+                MainViewModel.publicModel?.mbatteryHolder?.postValue(Charge)
                 savedBattery = Charge
             }
             // TODO Power consumption and battery health
@@ -49,7 +49,7 @@ open class CommandCallbacks(private val context: Context) : CommandInterpreter.C
         if (ResultHR > 220 || ResultHR < 6) return
         if (lastSyncHR <= CustomDatabaseUtils.calendarToLong(Time, true)) {
             val record = HRRecord(Time, ResultHR)
-            savedHR = record; MainViewModel.publicModel?._lastHearthRateIncomed?.postValue(record)
+            savedHR = record; MainViewModel.publicModel?.mLastHearthRateIncomed?.postValue(record)
             lastSyncHR = CustomDatabaseUtils.calendarToLong(Time, true)
             MainViewModel.publicModel?.hrIncome(Time, HRValue)
         }
@@ -64,7 +64,7 @@ open class CommandCallbacks(private val context: Context) : CommandInterpreter.C
             if (lastSyncHR < CustomDatabaseUtils.calendarToLong(Time, true)) {
                 val record = HRRecord(Time, ResultHR)
                 savedHR = record
-                MainViewModel.publicModel?._lastHearthRateIncomed?.postValue(record)
+                MainViewModel.publicModel?.mLastHearthRateIncomed?.postValue(record)
                 lastSyncHR = CustomDatabaseUtils.calendarToLong(Time, true)
                 MainViewModel.publicModel?.hrHistoryRecord(Time, HRValue)
             }
@@ -80,8 +80,8 @@ open class CommandCallbacks(private val context: Context) : CommandInterpreter.C
             if (MainRecordsTable.insertRecordV2(Time, Steps, Calories, DatabaseController.getDCObject(context).writableDatabase) > 0) {
                 val current = CustomDatabaseUtils.calendarToLong(Time, true)
                 if (current > lastSyncMain) {
-                    savedCCals = Calories; MainViewModel.publicModel?._lastCcalsIncomed?.postValue(Calories)
-                    savedSteps = Steps; MainViewModel.publicModel?._lastStepsIncomed?.postValue(Steps)
+                    savedCCals = Calories; MainViewModel.publicModel?.mLastCcalsIncomed?.postValue(Calories)
+                    savedSteps = Steps; MainViewModel.publicModel?.mLastStepsIncomed?.postValue(Steps)
                     lastSyncMain = CustomDatabaseUtils.calendarToLong(Time, true)
                     MainViewModel.publicModel?.mainHistoryRecord(Time, Steps, Calories)
                 }

@@ -20,7 +20,6 @@ import androidx.core.app.ActivityCompat.invalidateOptionsMenu
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import anonymouls.dev.mgcex.app.R
-import anonymouls.dev.mgcex.app.backend.MultitaskListener
 import anonymouls.dev.mgcex.app.main.ui.main.MainFragment
 import anonymouls.dev.mgcex.util.DialogHelpers
 import anonymouls.dev.mgcex.util.FireAnalytics
@@ -181,7 +180,7 @@ class ScanFragment : Fragment() {
         fm.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
         transaction.disallowAddToBackStack()
         transaction.replace(R.id.container, frag)
-        MultitaskListener.ressurectService(requireContext())
+        Utils.ressurectService(requireContext())
         this.requireActivity().runOnUiThread { transaction.commitNow() }
     }
 

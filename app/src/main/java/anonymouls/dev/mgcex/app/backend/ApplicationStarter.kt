@@ -31,17 +31,14 @@ class ApplicationStarter : Application() {
                     .penaltyLog()
                     .build())
         }
-        try {
-            appContext = applicationContext
-        } catch (e: Throwable) {
-        }
+        try {appContext = applicationContext} catch (e: Throwable) {}
         super.onCreate()
         if (appContext == null) appContext = applicationContext
         //MainCopyAnalyzer.launchDeltaActivityWithClone() TODO
         GlobalScope.launch(Dispatchers.Default) {
             Utils.getSharedPrefs(applicationContext)
             ReplaceTable.replaceString("", appContext)
-            MultitaskListener.ressurectService(appContext)
+            Utils.ressurectService(appContext)
             FireAnalytics.getInstance(appContext)
         }
     }

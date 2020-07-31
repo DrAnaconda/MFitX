@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+    <string name="define_evrencoskuntableview"></string>
+    <!-- Author section -->
+    <string name="library_evrencoskuntableview_author">Evren Coskun</string>
+    <string name="library_evrencoskuntableview_authorWebsite">http://evrencoskun.com/</string>
+    <!-- Library section -->
+    <string name="library_evrencoskuntableview_libraryName">TableView</string>
+    <string name="library_evrencoskuntableview_libraryDescription">TableView is a powerful Android library for displaying complex data structures and rendering tabular data composed of rows, columns and cells</string>
+    <string name="library_evrencoskuntableview_libraryWebsite">https://github.com/evrencoskun/TableView</string>
+    <string name="library_evrencoskuntableview_libraryVersion">0.8.7a</string>
+    <!-- OpenSource section -->
+    <string name="library_evrencoskuntableview_isOpenSource">true</string>
+    <string name="library_evrencoskuntableview_repositoryLink">https://github.com/evrencoskun/TableView</string>
+    <!-- ClassPath for autoDetect section -->
+    <string name="library_evrencoskuntableview_classPath">com.evrencoskun.library:tableview</string>
+    <!-- License section -->
+    <string name="library_evrencoskuntableview_licenseId">mit</string>
+    <!-- Custom variables section -->
+</resources>

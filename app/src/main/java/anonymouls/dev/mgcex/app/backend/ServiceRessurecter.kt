@@ -29,6 +29,7 @@ class ServiceRessurecter : JobService() {
                 pendingJob.setPeriodic(
                         Utils.getSharedPrefs(context).getInt(
                                 PreferenceListener.Companion.PrefsConsts.disconnectedMonitoring, 5).toLong() * 1000 * 60)
+                        .setRequiresDeviceIdle(true)
 
                 val jobScheduler = context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
                 jobScheduler.schedule(pendingJob.build())
@@ -42,16 +43,17 @@ class ServiceRessurecter : JobService() {
         }
     }
 
+    private fun jobReaction(){
+        Utils.ressurectService(this)
+        Algorithm.SelfPointer?.init()
+    }
+
     override fun onStopJob(params: JobParameters?): Boolean {
-        MultitaskListener.ressurectService(this)
+        jobReaction()
         return true
-
     }
-
     override fun onStartJob(params: JobParameters?): Boolean {
-        MultitaskListener.ressurectService(this)
+        jobReaction()
         return true
     }
-
-
 }

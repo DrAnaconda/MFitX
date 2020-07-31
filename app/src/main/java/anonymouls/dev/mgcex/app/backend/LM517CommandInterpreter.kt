@@ -188,7 +188,6 @@ class LM517CommandInterpreter : CommandInterpreter() {
     }
 
     override fun stopLongAlarm() {
-        // TODO: TEST
         postCommand(hexStringToByteArray(longAlarmHeader + "000000000000"))
     }
 
@@ -218,7 +217,6 @@ class LM517CommandInterpreter : CommandInterpreter() {
                 this.callback?.batteryInfo(Input[Input.size - 1].toInt())
             }
         }
-        //TODO("Not yet implemented")
     }
 
     override fun getMainInfoRequest() {

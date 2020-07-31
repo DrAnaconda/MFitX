@@ -17,6 +17,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.PRIORITY_MIN
 import androidx.preference.PreferenceManager
 import anonymouls.dev.mgcex.app.R
+import anonymouls.dev.mgcex.app.backend.Algorithm
 import anonymouls.dev.mgcex.databaseProvider.SleepRecordsTable
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -245,6 +246,14 @@ object Utils {
         }
     }
 
+    fun ressurectService(context: Context) {
+        if (Utils.getSharedPrefs(context).contains(PreferenceListener.Companion.PrefsConsts.bandAddress)) {
+            val intent = Intent(context, Algorithm::class.java)
+            intent.action = "ACTION_START"
+            Utils.startSyncingService(intent, context)
+        }
+    }
+
     fun serviceStartForegroundMultiAPI(service: Intent, context: Service) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForeground(66, buildForegroundNotification(context))
@@ -297,6 +306,7 @@ object Utils {
                 .setPriority(PRIORITY_MIN)
                 //.setCategory(Notification.CATEGORY_SERVICE)
                 .build()
+        notification.flags = Notification.FLAG_NO_CLEAR + Notification.FLAG_ONGOING_EVENT
         return notification
     }
 }

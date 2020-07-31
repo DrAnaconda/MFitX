@@ -1,6 +1,7 @@
 package anonymouls.dev.mgcex.app.main.ui.main
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.view.View
 import android.widget.ImageView
@@ -24,6 +25,11 @@ import anonymouls.dev.mgcex.app.main.SettingsFragment
 import anonymouls.dev.mgcex.databaseProvider.HRRecord
 import anonymouls.dev.mgcex.util.PreferenceListener
 import anonymouls.dev.mgcex.util.Utils
+import com.mikepenz.aboutlibraries.Libs
+import com.mikepenz.aboutlibraries.Libs.SpecialButton
+import com.mikepenz.aboutlibraries.LibsBuilder
+import com.mikepenz.aboutlibraries.LibsConfiguration.LibsListener
+import com.mikepenz.aboutlibraries.LibsConfiguration.LibsListenerImpl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -39,35 +45,39 @@ class MyViewModelFactory(private val activity: FragmentActivity) : ViewModelProv
 
 }
 
+@ExperimentalUnsignedTypes
 @ExperimentalStdlibApi
 class MainViewModel(private val activity: FragmentActivity) : ViewModel(), CommandInterpreter.CommandReaction {
     private val workInProgress = MutableLiveData(View.GONE)
-    val _batteryHolder = MutableLiveData(-1)
-    val _lastHearthRateIncomed = MutableLiveData<HRRecord>(HRRecord(Calendar.getInstance(), -1))
-    val _lastCcalsIncomed = MutableLiveData<Int>(-1)
-    val _lastStepsIncomed = MutableLiveData(-1)
-    val _currentStatus = MutableLiveData<String>(activity.getString(R.string.status_label))
-    val _hrVisibility = MutableLiveData<Int>(View.GONE)
+    private val mCurrentStatus = MutableLiveData<String>(activity.getString(R.string.status_label))
+    private val mHRVisibility = MutableLiveData<Int>(View.GONE)
+
+    val mbatteryHolder = MutableLiveData(-1)
+    val mLastHearthRateIncomed = MutableLiveData<HRRecord>(HRRecord(Calendar.getInstance(), -1))
+    val mLastCcalsIncomed = MutableLiveData<Int>(-1)
+    val mLastStepsIncomed = MutableLiveData(-1)
+
+    //region Live Data
 
     private val currentSteps: LiveData<Int>
         get() {
-            return _lastStepsIncomed
+            return mLastStepsIncomed
         }
     val currentHR: LiveData<HRRecord>
         get() {
-            return _lastHearthRateIncomed
+            return mLastHearthRateIncomed
         }
     private val currentBattery: LiveData<Int>
         get() {
-            return _batteryHolder
+            return mbatteryHolder
         }
     private val currentCcals: LiveData<Int>
         get() {
-            return _lastCcalsIncomed
+            return mLastCcalsIncomed
         }
     val currentStatus: LiveData<String>
         get() {
-            return _currentStatus
+            return mCurrentStatus
         }
     val progressVisibility: LiveData<Int>
         get() {
@@ -75,7 +85,7 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel(), Comma
         }
     val hrVisibility: LiveData<Int>
         get() {
-            return _hrVisibility
+            return mHRVisibility
         }
     //endregion
 
@@ -85,28 +95,28 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel(), Comma
         publicModel = this
     }
 
-    //region Observes
+    //region Observers
 
     private fun createStatusObserver(owner: LifecycleOwner) {
-        if (Algorithm.StatusCode.hasActiveObservers()
-                && Algorithm.currentAlgoStatus.hasActiveObservers()) return
+        Algorithm.StatusCode.removeObservers(owner)
+        Algorithm.currentAlgoStatus.removeObservers(owner)
 
         Algorithm.StatusCode.observe(owner, Observer {
             if (it.code < Algorithm.StatusCodes.GattReady.code) {
-                _hrVisibility.postValue(View.GONE)
+                mHRVisibility.postValue(View.GONE)
                 workInProgress.postValue(View.VISIBLE)
             } else {
                 workInProgress.postValue(View.GONE)
                 if (CommandInterpreter.getInterpreter(activity).hRRealTimeControlSupport)
-                    _hrVisibility.postValue(View.VISIBLE)
+                    mHRVisibility.postValue(View.VISIBLE)
                 else
-                    _hrVisibility.postValue(View.GONE)
+                    mHRVisibility.postValue(View.GONE)
                 if (firstLaunch) firstLaunch = false
             }
         })
 
         Algorithm.currentAlgoStatus.observe(owner, Observer {
-            _currentStatus.postValue(it)
+            mCurrentStatus.postValue(it)
         })
     }
 
@@ -147,8 +157,7 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel(), Comma
     private fun <T> createTextObserverUniversal(id: Int, dataToObserve: LiveData<T>, owner: LifecycleOwner) {
         if (dataToObserve.hasActiveObservers()) return
         dataToObserve.observe(owner, Observer {
-            var string = ""
-            string = when (it) {
+            val string: String = when (it) {
                 is HRRecord -> it.hr.toString()
                 is Int -> it.toString()
                 else -> it as String
@@ -171,9 +180,9 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel(), Comma
 
     private fun demoMode(): Boolean {
         return if (!Utils.getSharedPrefs(activity).contains(PreferenceListener.Companion.PrefsConsts.bandAddress)) {
-            _currentStatus.postValue(activity.getString(R.string.demo_mode))
-            activity.runOnUiThread { _currentStatus.value = activity.getString(R.string.demo_mode) }
-            _hrVisibility.postValue(View.GONE)
+            mCurrentStatus.postValue(activity.getString(R.string.demo_mode))
+            activity.runOnUiThread { mCurrentStatus.value = activity.getString(R.string.demo_mode) }
+            mHRVisibility.postValue(View.GONE)
             workInProgress.postValue(View.GONE)
             true
         } else
@@ -207,11 +216,14 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel(), Comma
             }
             R.id.ExitBtnContainer -> {
                 Algorithm.IsActive = false
-                Algorithm.SelfPointer?.stopSelf()
+                Algorithm.SelfPointer?.killService()
                 activity.stopService(Intent(activity, Algorithm::class.java))
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     activity.finishAndRemoveTask()
                 } else activity.finish()
+                val stopIntent = Intent(activity, Algorithm::class.java)
+                stopIntent.action = "ACTION_STOP"
+                activity.startService(stopIntent)
                 ServiceRessurecter.cancelJob(activity)
                 exitProcess(0)
             }
@@ -240,9 +252,40 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel(), Comma
             } else {
                 launchActivity(Intent(activity, AlarmActivity::class.java))
             }
-            //R.id.InfoContainer -> // TODO About dialog
+            R.id.InfoContainer ->{
+                val fragment = LibsBuilder()
+                        .withFields(R.string::class.java.fields)
+                        .withLibraryModification("aboutlibraries", Libs.LibraryFields.LIBRARY_NAME, "_AboutLibraries") // optionally apply modifications for library information
+                        .withAboutIconShown(true)
+                        //.withAboutVersionShownCode(true)
+                        .withVersionShown(true)
+                        .withLicenseShown(true)
+                        //.withAboutAppName(activity.getString(R.string.app_name))
+                        .withAboutDescription(activity.getString(R.string.about_description))
+                        .withListener(aboutButtonListener)
+                        .withAboutSpecial1(activity.getString(R.string.privacy_policy))
+                        .supportFragment()
+                changeFragment(fragment)
+            } // TODO About dialog
             // TODO one day R.id.SleepContainer ->
             R.id.BatteryContainer -> Toast.makeText(activity, activity.getString(R.string.battery_health_not_ready), Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private val aboutButtonListener: LibsListener = object : LibsListenerImpl() {
+        override fun onIconClicked(v: View) {
+            // ignore
+        }
+
+        override fun onExtraClicked(view: View, specialButton: SpecialButton): Boolean {
+            return when (specialButton) {
+                SpecialButton.SPECIAL1 -> {
+                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://gist.github.com/anonymouls/82b8749e96e69370963f8ba61152068e"))
+                    activity.startActivity(browserIntent)
+                    true
+                }
+                else -> super.onExtraClicked(view, specialButton)
+            }
         }
     }
 
@@ -265,38 +308,38 @@ class MainViewModel(private val activity: FragmentActivity) : ViewModel(), Comma
 
         if (Algorithm.StatusCode.value!!.code >= Algorithm.StatusCodes.GattReady.code
                 && CommandInterpreter.getInterpreter(activity).hRRealTimeControlSupport)
-            _hrVisibility.postValue(View.VISIBLE)
+            mHRVisibility.postValue(View.VISIBLE)
         else
-            _hrVisibility.postValue(View.GONE)
+            mHRVisibility.postValue(View.GONE)
         restore()
     }
     fun restore(){
         GlobalScope.launch(Dispatchers.Default) {
             if (CommandCallbacks.getCallback(activity).savedCCals != 0)
-                _lastCcalsIncomed.postValue(CommandCallbacks.getCallback(activity).savedCCals)
+                mLastCcalsIncomed.postValue(CommandCallbacks.getCallback(activity).savedCCals)
             if (CommandCallbacks.getCallback(activity).savedSteps != 0)
-                _lastStepsIncomed.postValue(CommandCallbacks.getCallback(activity).savedSteps)
+                mLastStepsIncomed.postValue(CommandCallbacks.getCallback(activity).savedSteps)
             if (CommandCallbacks.getCallback(activity).savedBattery != 0)
-                _batteryHolder.postValue(CommandCallbacks.getCallback(activity).savedBattery)
+                mbatteryHolder.postValue(CommandCallbacks.getCallback(activity).savedBattery)
             if (CommandCallbacks.getCallback(activity).savedHR.hr > -1)
-                _lastHearthRateIncomed.postValue(CommandCallbacks.getCallback(activity).savedHR)
+                mLastHearthRateIncomed.postValue(CommandCallbacks.getCallback(activity).savedHR)
             if (Algorithm.SelfPointer != null)
-                _currentStatus.postValue(Algorithm.currentAlgoStatus.value!!)
+                mCurrentStatus.postValue(Algorithm.currentAlgoStatus.value!!)
         }
     }
 
     //region Command Reaction
 
     override fun mainInfo(Steps: Int, Calories: Int) {
-        _lastStepsIncomed.postValue(Steps); _lastCcalsIncomed.postValue(Calories)
+        mLastStepsIncomed.postValue(Steps); mLastCcalsIncomed.postValue(Calories)
     }
 
     override fun batteryInfo(Charge: Int) {
-        _batteryHolder.postValue(Charge)
+        mbatteryHolder.postValue(Charge)
     }
 
     override fun hrIncome(Time: Calendar, HRValue: Int) {
-        _lastHearthRateIncomed.postValue(HRRecord(Time, HRValue))
+        mLastHearthRateIncomed.postValue(HRRecord(Time, HRValue))
     }
 
     override fun hrHistoryRecord(Time: Calendar, HRValue: Int) {

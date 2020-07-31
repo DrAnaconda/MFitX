@@ -1,6 +1,9 @@
 package anonymouls.dev.mgcex.app.backend
 
+import android.app.NotificationManager
+import android.app.Service
 import android.bluetooth.BluetoothDevice
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.ServiceInfo
@@ -24,6 +27,7 @@ import kotlinx.coroutines.runBlocking
 import no.nordicsemi.android.ble.observer.ConnectionObserver
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.system.exitProcess
 
 
 @ExperimentalStdlibApi
@@ -136,15 +140,22 @@ class Algorithm : LifecycleService(), ConnectionObserver {
         }, 5*60*1000)
     }
 
-    private fun deadAlgo() {
+    private fun deadAlgo(manualKill: Boolean) {
         StatusCode.postValue(StatusCodes.Dead)
         IsActive = false
         SelfPointer = null
-        uartService.disconnect()
-        SelfPointer = null
+        uartService.disconnect(); uartService.close()
         currentAlgoStatus.postValue(this.getString(R.string.status_label))
-        this.stopForeground(true)
-        this.stopSelf()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            stopForeground(true)
+        }
+        if (manualKill) {
+            ServiceRessurecter.cancelJob(this)
+            this.stopSelf()
+        }
+        (this.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(66)
+        super.onDestroy()
+        exitProcess(0)
     }
     private fun executeMainAlgo() {
         disabledTimer.cancel(); disabledTimer.purge()
@@ -201,27 +212,28 @@ class Algorithm : LifecycleService(), ConnectionObserver {
 
     override fun onDestroy() {
         super.onDestroy()
-        deadAlgo()
-        this.stopForeground(true)
-        SelfPointer = null
-        sendBroadcast(Intent(MultitaskListener.restartAction))
-        this.uartService.disconnect()
-        this.uartService.close()
+        deadAlgo(false)
     }
 
     override fun stopService(name: Intent?): Boolean {
-        deadAlgo()
+        deadAlgo(true)
         return super.stopService(name)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            this.startForeground(66, Utils.buildForegroundNotification(this),
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+        if (intent == null || !intent.action.equals("ACTION_STOP")) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // todo test remove
+                this.startForeground(66, Utils.buildForegroundNotification(this),
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+            } else
+                this.startForeground(66, Utils.buildForegroundNotification(this))
+            GlobalScope.launch { init() }
+        }else {
+            deadAlgo(true)
+            stopSelfResult(startId)
         }
-        GlobalScope.launch { init() }
-        return START_STICKY
+        return Service.START_REDELIVER_INTENT
     }
 
     //endregion
@@ -229,7 +241,7 @@ class Algorithm : LifecycleService(), ConnectionObserver {
     //region Interacting
 
     fun killService(){
-        deadAlgo()
+        deadAlgo(true)
     }
 
     private fun initVariables(){
@@ -258,7 +270,7 @@ class Algorithm : LifecycleService(), ConnectionObserver {
                 this@Algorithm.stopSelf()
                 return@runBlocking
             }
-            if (SelfPointer == null || IsActive) {
+            if (SelfPointer == null || !IsActive) {
                 initVariables()
                 val service = Intent(this@Algorithm, NotificationService::class.java)
                 if (!NotificationService.IsActive) {
@@ -280,7 +292,6 @@ class Algorithm : LifecycleService(), ConnectionObserver {
             savedBattery = sm.Data[0].toShort()
             CommandCallbacks.getCallback(this).batteryInfo(sm.Data[0].toInt())
         } else {
-            //incomingMessages.add(sm)
             Handler(commandHandler.looper).post { ci.commandAction(sm.Data, UUID.fromString(sm.characteristic)) }
         }
     }
@@ -290,7 +301,7 @@ class Algorithm : LifecycleService(), ConnectionObserver {
     }
 
     fun executeForceSync() {
-//TODO        GlobalScope.launch(Dispatchers.IO) { database.initRepairsAndSync(database.writableDatabase) }
+//todo        GlobalScope.launch(Dispatchers.IO) { database.initRepairsAndSync(database.writableDatabase) }
         ci.requestSettings()
         ci.requestBatteryStatus()
         ci.syncTime(Calendar.getInstance())
@@ -315,6 +326,7 @@ class Algorithm : LifecycleService(), ConnectionObserver {
         currentAlgoStatus.postValue(getString(R.string.status_disconnected))
         StatusCode.postValue(StatusCodes.Disconnected)
         reWipeTimers()
+        uartService.connectToDevice(this.lockedAddress)
     }
 
     override fun onDeviceReady(device: BluetoothDevice) {

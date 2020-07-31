@@ -113,7 +113,6 @@ class DoubleTaskTableViewAdapter(private val context: Activity,
     }
     private fun bindNightCompat(viewHolder: MyCellViewHolder){
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            //if (this.DataType == DataTypes.ApplicationMode) return // TODO Fix it?
             val typedValue = TypedValue()
             val theme = context.theme
             theme.resolveAttribute(android.R.attr.colorBackground, typedValue, true)
@@ -148,7 +147,7 @@ class DoubleTaskTableViewAdapter(private val context: Activity,
             }
             is SwitchCell -> {
                 viewHolder.cell_switch?.isChecked = cellItemModel.isActive
-                viewHolder.cell_switch?.setOnClickListener { v ->  initCallback(v, columnPosition, rowPosition) } // TODO
+                viewHolder.cell_switch?.setOnClickListener { v ->  initCallback(v, columnPosition, rowPosition) }
             }
         }
 

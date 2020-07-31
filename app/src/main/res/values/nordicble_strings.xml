@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+    <string name="define_nordicandroidblelibrary"></string>
+    <!-- Author section -->
+    <string name="library_nordicandroidblelibrary_author">Nordic Semiconductor</string>
+    <string name="library_nordicandroidblelibrary_authorWebsite">https://www.nordicsemi.com/</string>
+    <!-- Library section -->
+    <string name="library_nordicandroidblelibrary_libraryName">Android-BLE-Library</string>
+    <string name="library_nordicandroidblelibrary_libraryDescription">"A library that makes working with Bluetooth LE on Android a pleasure. Seriously"</string>
+    <string name="library_nordicandroidblelibrary_libraryWebsite">https://github.com/NordicSemiconductor/Android-BLE-Library</string>
+    <string name="library_nordicandroidblelibrary_libraryVersion">2.2.3</string>
+    <!-- OpenSource section -->
+    <string name="library_nordicandroidblelibrary_isOpenSource">true</string>
+    <string name="library_nordicandroidblelibrary_repositoryLink">https://github.com/NordicSemiconductor/Android-BLE-Library</string>
+    <!-- ClassPath for autoDetect section -->
+    <string name="library_nordicandroidblelibrary_classPath">no.nordicsemi.android:ble</string>
+    <!-- License section -->
+    <string name="library_nordicandroidblelibrary_licenseId">bsd_3</string>
+    <!-- Custom variables section -->
+</resources>

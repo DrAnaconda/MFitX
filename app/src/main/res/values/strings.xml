@@ -85,16 +85,6 @@
     <string name="conntecting_status">Status : Connecting...</string>
     <string name="next_sync_status">Status : Connected. Next sync will be @&#160;</string>
     <string name="wait_untill_complete">Wait until all operations will complete</string>
-    <string name="sleep_not_ready">This function is not realized yet.\nYour sleep history is being downloaded, but will not be displayed\nWe are investigating correctness of this data.
-        \nSleep data are suspicious: In original app deep sleep always less than 20 mins.
-        It is wrong. Only "fast phase" may be with this duration. Also hearth rate and sleep phases does have weak correlation.\n
-        Also device starts recording sleep stats after setting up "sleep start" param, it is wrong, device should do it automatically.\n\nSleeping data is critical for hearth rate anomalies detection, so we are working about it. We will inform you about status
-        of developing this function here.\nCurrent status: Analyzing correlation. Differential analysis heath rate and sleep stats.
-        Progress: Data seems some useless, but there is some part information, that can be used.\n
-        UDP: Data is being proceeding by some algos. Developing data visualisation modules\n
-        \n\n
-        Keep calm and wait for updates.
-    </string>
     <string name="battery_health_not_ready">Battery Health Analyzer is not ready yet</string>
     <string name="about_application_page"><a href="https://gist.github.com/anonymouls/c75da35e3d9e26134692213af86ff5e4">About Application Page</a></string>
     <string name="privacy_policy"><a href="https://gist.github.com/anonymouls/82b8749e96e69370963f8ba61152068e">Privacy Policy</a></string>
@@ -192,4 +182,5 @@
     <string name="status_connecting">Status : Connecting...</string>
     <string name="status_failed_to_connect">Status: Failed to connect</string>
     <string name="status_disconnected">Status: Disconnected</string>
+    <string name="about_description">Handmade app for managing a couple of chinese bracelets by DrAnaconda Labs. Supported devices: MGCOOL Band 4, LM715 / M4 tracker. </string>
 </resources>

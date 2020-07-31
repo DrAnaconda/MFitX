@@ -1,5 +1,5 @@
 package anonymouls.dev.mgcex.app.data
-// TODO Warning. Optimizations needed. Есть костыли, которые фиксят дублирование данных, однако надо вырезать костыли нахрен
+
 import android.app.Activity
 import android.content.Context
 import android.content.Intent

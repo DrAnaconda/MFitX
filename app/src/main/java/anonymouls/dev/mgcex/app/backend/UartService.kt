@@ -50,8 +50,8 @@ class UartServiceMK2(private val Algo: Algorithm) : BleManager(Algo) {
         this.connect(device)
                 .usePreferredPhy(PhyRequest.PHY_LE_2M_MASK)
                 .timeout(5 * 60 * 1000)
-                .retry(Int.MAX_VALUE / 2, 3000)
-                .fail { _, status -> this.disconnect(); this.close(); }
+                .retry(Int.MAX_VALUE / 2, 1000)
+                .fail { _, status -> this.connectToDevice(address) }
                 .enqueue()
     }
 
