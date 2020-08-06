@@ -29,3 +29,5 @@ object MainCopyAnalyzer{
         }
     }
 }
+
+// Todo Reject sleep data to hell. Try ML and trees for detecting sleep activity

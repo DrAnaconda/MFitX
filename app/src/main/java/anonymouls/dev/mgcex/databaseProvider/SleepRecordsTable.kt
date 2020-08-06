@@ -40,10 +40,10 @@ object SleepRecordsTable {
         var result: Long = -1
         when (Type) {
             SleepRecord.RecordTypes.LightOrOverall.code -> {
-                if (Duration > 90) {
-                    result = SleepSessionsTable.insertRecord(recordDate, Operator)
+                result = if (Duration > 90) {
+                    SleepSessionsTable.insertRecord(recordDate, Operator)
                 } else {
-                    result = SleepSessionsTable.findAssigment(recordDate, Operator)
+                    SleepSessionsTable.findAssigment(recordDate, Operator)
                 }
             }
             SleepRecord.RecordTypes.Deep.code -> {
@@ -54,16 +54,16 @@ object SleepRecordsTable {
     }
 
     fun insertRecord(RecordTime: Calendar, SSID: Long, Duration: Int, Type: Int, Operator: SQLiteDatabase): Long {
-        val Values = ContentValues()
-        var SSID = SSID
+        val values = ContentValues()
+        var ssID = SSID
         val recordDate = CustomDatabaseUtils.calendarToLong(RecordTime, true)
-        Values.put(ColumnNames[1], recordDate)
-        if (SSID < 0) {
-            SSID = assignSSID(CustomDatabaseUtils.calendarToLong(RecordTime, true), Duration, Type, Operator)
+        values.put(ColumnNames[1], recordDate)
+        if (ssID < 0) {
+            ssID = assignSSID(CustomDatabaseUtils.calendarToLong(RecordTime, true), Duration, Type, Operator)
         }
-        Values.put(ColumnNames[2], SSID)
-        Values.put(ColumnNames[3], Duration)
-        Values.put(ColumnNames[4], Type)
+        values.put(ColumnNames[2], ssID)
+        values.put(ColumnNames[3], Duration)
+        values.put(ColumnNames[4], Type)
         RecordTime.add(Calendar.MINUTE, Duration)
         HRRecordsTable.updateAnalyticalViaSleepInterval(
                 CustomDatabaseUtils.longToCalendar(recordDate, true),
@@ -76,7 +76,7 @@ object SleepRecordsTable {
                 curs.close(); -1
             } else {
                 curs.close()
-                Operator.insert(TableName, null, Values)
+                Operator.insert(TableName, null, values)
             }
         } catch (ex: Exception) {
             -1
