@@ -63,7 +63,7 @@ class UartServiceMK2(private val Algo: Algorithm) : BleManager(Algo) {
     private inner class GattCallback : BleManagerGattCallback() {
         public override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
             powerService = gatt.getService(powerServiceUUID)
-            powerChar = powerService?.getCharacteristic(powerTXUUID)
+            powerChar = powerService?.characteristics?.get(0)
             uartService = gatt.getService(uartServiceUUID)
             receiveChar = uartService?.getCharacteristic(rxCharUUID)
             transmitChar = uartService?.getCharacteristic(txCharUUID)

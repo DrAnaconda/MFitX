@@ -157,16 +157,18 @@ class SettingsFragment : PreferenceFragmentCompat() {
     private val deAuthDevice = {
         GlobalScope.launch(Dispatchers.Default) {
             CommandCallbacks.wipeSaved()
-            Algorithm.updateStatusCode(Algorithm.StatusCodes.Dead)
             prefs.edit().remove(PreferenceListener.Companion.PrefsConsts.bandAddress).apply()
             prefs.edit().remove(PreferenceListener.Companion.PrefsConsts.bandIDConst).apply()
+            Algorithm.updateStatusCode(Algorithm.StatusCodes.Disconnected)
+            Algorithm.SelfPointer?.killService()
             val frag = ScanFragment()
             val transaction = this@SettingsFragment.requireActivity().supportFragmentManager.beginTransaction()
             val fm = this@SettingsFragment.requireActivity().supportFragmentManager
             fm.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
             transaction.disallowAddToBackStack()
             transaction.replace(R.id.container, frag)
-            this@SettingsFragment.requireActivity().runOnUiThread { transaction.commit() }
+            //this@SettingsFragment.requireActivity().runOnUiThread { transaction.commit() }
+            transaction.commitNow()
         }
     }
     private val sendEraseDatabaseCommand = {

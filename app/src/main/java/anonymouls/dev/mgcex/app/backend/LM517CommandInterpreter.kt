@@ -52,7 +52,7 @@ class LM517CommandInterpreter : CommandInterpreter() {
     override val powerServiceString: String
         get() = "0000180f-0000-1000-8000-00805f9b34fb"
     override val powerTXString: String
-        get() = "00002a19-0000-1000-8000-00805f9b34fb"
+        get() = "00002a19-0000-1000-8000-00805f9b34fb"//"00002a19-0000-1000-8000-00805f9b34fb"
     override val powerTX2String: String
         get() = "00002a19-0000-0000-8000-00805f9b34fb"
     override val powerDescriptor: String
@@ -74,9 +74,13 @@ class LM517CommandInterpreter : CommandInterpreter() {
         return result
     }
 
-    private fun decryptDays(offset: Short, targetCalendar: Calendar?, isHR: Boolean = false): Calendar {
-        val result = targetCalendar ?: createSpecialCalendar(isHR)
-        result.add(Calendar.DAY_OF_YEAR, offset.toInt())
+    private fun decryptDays(offset: Short, targetCalendar: Calendar?, isHistory: Boolean = false): Calendar {
+        val result = targetCalendar ?: createSpecialCalendar(isHistory)
+        val special = Calendar.getInstance(); special.set(Calendar.MONTH, 6); special.set(Calendar.YEAR, 2020)
+        var multiplier = Utils.getDiffInMon(Calendar.getInstance(), special)
+        multiplier += multiplier/2
+        if (multiplier %2 == 0) multiplier--
+        result.add(Calendar.DAY_OF_YEAR, offset.toInt()-multiplier)
         return result
     }
 
@@ -96,7 +100,9 @@ class LM517CommandInterpreter : CommandInterpreter() {
         // WARNING. Shit like pressure and ox% is ignoring
         if (Input.size != 20) return
         var buffer = ByteBuffer.wrap(Input, 8, 2)
-        var recordTime = decryptDays(buffer.short, null, true)
+        val days = buffer.short
+        //var recordTime = decryptDays(days, null, true) //TODO: wtf, they are joking, aren`t they?
+        var recordTime = Calendar.getInstance()
         buffer = ByteBuffer.wrap(Input, 13, 4)
         recordTime = decryptTime(byteArrayToInt(buffer.array(), 13, 3), recordTime)
         val hrValue = Input[Input.size - 1]
@@ -106,7 +112,8 @@ class LM517CommandInterpreter : CommandInterpreter() {
     private fun mainRecordProceeder(Input: ByteArray) {
         if (Input.size != 20) return
         var buffer = ByteBuffer.wrap(Input, 8, 2)
-        val recordTime = decryptDays(buffer.short, null, true)
+        //val recordTime = decryptDays(buffer.short, null, true)
+        val recordTime = Calendar.getInstance()
         recordTime.set(Calendar.HOUR_OF_DAY, Calendar.getInstance().get(Calendar.HOUR_OF_DAY))
         recordTime.set(Calendar.MINUTE, Calendar.getInstance().get(Calendar.MINUTE))
         recordTime.set(Calendar.SECOND, Calendar.getInstance().get(Calendar.SECOND))

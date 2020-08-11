@@ -3,13 +3,16 @@ package anonymouls.dev.mgcex.app.backend
 import android.app.NotificationManager
 import android.app.Service
 import android.bluetooth.BluetoothDevice
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.service.notification.NotificationListenerService.requestRebind
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.MutableLiveData
 import anonymouls.dev.mgcex.app.AlarmProvider
@@ -27,7 +30,6 @@ import kotlinx.coroutines.runBlocking
 import no.nordicsemi.android.ble.observer.ConnectionObserver
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.system.exitProcess
 
 
 @ExperimentalStdlibApi
@@ -155,7 +157,6 @@ class Algorithm : LifecycleService(), ConnectionObserver {
         }
         (this.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(66)
         super.onDestroy()
-        exitProcess(0)
     }
     private fun executeMainAlgo() {
         disabledTimer.cancel(); disabledTimer.purge()
@@ -238,12 +239,22 @@ class Algorithm : LifecycleService(), ConnectionObserver {
 
     //endregion
 
-    //region Interacting
+    //region Utils
 
-    fun killService(){
-        deadAlgo(true)
+    private fun tryReconnectService() {
+        toggleNotificationListenerService()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val componentName = ComponentName(applicationContext, NotificationService::class.java)
+            requestRebind(componentName)
+        }
     }
-
+    private fun toggleNotificationListenerService() {
+        val pm = packageManager
+        pm.setComponentEnabledSetting(ComponentName(this, NotificationService::class.java),
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
+        pm.setComponentEnabledSetting(ComponentName(this, NotificationService::class.java),
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+    }
     private fun initVariables(){
         lockedAddress = Utils.getSharedPrefs(this).getString(PreferenceListener.Companion.PrefsConsts.bandAddress, "").toString()
         try{
@@ -263,6 +274,14 @@ class Algorithm : LifecycleService(), ConnectionObserver {
         getLastMainSync()
     }
 
+    //endregion
+
+    //region Interacting
+
+    fun killService(){
+        deadAlgo(true)
+    }
+
     fun init() = runBlocking {
         synchronized(this::class) {
             if (!Utils.getSharedPrefs(this@Algorithm).contains(PreferenceListener.Companion.PrefsConsts.bandAddress)) {
@@ -270,6 +289,7 @@ class Algorithm : LifecycleService(), ConnectionObserver {
                 this@Algorithm.stopSelf()
                 return@runBlocking
             }
+            tryReconnectService()
             if (SelfPointer == null || !IsActive) {
                 initVariables()
                 val service = Intent(this@Algorithm, NotificationService::class.java)

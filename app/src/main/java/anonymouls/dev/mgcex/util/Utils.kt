@@ -254,26 +254,20 @@ object Utils {
         }
     }
 
+    fun getDiffInMon(from: Calendar, to: Calendar): Int{
+        val yearsInBetween = (to[Calendar.YEAR]
+                - from[Calendar.YEAR])
+        val monthsDiff = (to[Calendar.MONTH]
+                - from[Calendar.MONTH])
+        return kotlin.math.abs(yearsInBetween * 12 + monthsDiff)
+    }
+
     fun serviceStartForegroundMultiAPI(service: Intent, context: Service) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForeground(66, buildForegroundNotification(context))
             context.startForegroundService(service)
         } else {
             context.startService(service)
-        }
-    }
-
-    fun safeThreadSleep(milis: Long, deepSleep: Boolean) {
-        val startTime = System.currentTimeMillis()
-        while (System.currentTimeMillis() < startTime + milis) {
-            try {
-                Thread.sleep(milis)
-            } catch (e: InterruptedException) {
-                if (deepSleep)
-                    Thread.currentThread().interrupt()
-                else
-                    break
-            }
         }
     }
 

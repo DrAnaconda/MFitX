@@ -35,7 +35,7 @@ class ApplicationStarter : Application() {
         try {appContext = applicationContext} catch (e: Throwable) {}
         super.onCreate()
         if (appContext == null) appContext = applicationContext
-        //MainCopyAnalyzer.launchDeltaActivityWithClone() TODO
+        //MainCopyAnalyzer.launchDeltaActivityWithClone() // todo it works. Need to test in stress mode.
         GlobalScope.launch(Dispatchers.Default) {
             PreferenceListener.getPreferenceListener(appContext)
             Utils.getSharedPrefs(applicationContext)

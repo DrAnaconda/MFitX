@@ -5,6 +5,7 @@ import anonymouls.dev.mgcex.app.main.ui.main.MainViewModel
 import anonymouls.dev.mgcex.databaseProvider.*
 import java.util.*
 
+@ExperimentalUnsignedTypes
 @ExperimentalStdlibApi
 open class CommandCallbacks(private val context: Context) : CommandInterpreter.CommandReaction {
 

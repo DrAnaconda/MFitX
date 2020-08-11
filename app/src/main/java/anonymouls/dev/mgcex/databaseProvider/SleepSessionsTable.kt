@@ -59,16 +59,16 @@ object SleepSessionsTable {
     }
 
     class SleepRecordSession(var TimeRecord: Long, var Duration: Int, var DeepDuration: Int) {
-        private var LightDuration = -1
+        private var lightDuration = -1
 
-        private fun AutoCalculateLight() {
-            if (Duration != -1 && LightDuration != -1) {
-                LightDuration = Duration - DeepDuration
+        private fun autoCalculateLight() {
+            if (Duration != -1 && lightDuration != -1) {
+                lightDuration = Duration - DeepDuration
             }
         }
 
         init {
-            AutoCalculateLight()
+            autoCalculateLight()
         }
     }
 
